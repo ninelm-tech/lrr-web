@@ -123,10 +123,10 @@ export default function RegisterPage() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        background: "#f8fbff"
+        background: "#F6FAFF"
       }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ color: "#0070f3", fontWeight: 600 }}>Redirecting...</p>
+          <p style={{ color: "#003DB4", fontWeight: 600 }}>Redirecting...</p>
         </div>
       </div>
     );
@@ -138,11 +138,11 @@ export default function RegisterPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "radial-gradient(circle at 60% 40%, #e0f3ff 0%, #f8fbff 100%)",
+      background: "radial-gradient(circle at 60% 40%, #dde8f8 0%, #F6FAFF 100%)",
       padding: "2rem 1rem"
     }}>
       <div style={{
-        boxShadow: "0 8px 40px 0 rgba(0,112,243,0.13)",
+        boxShadow: "0 8px 40px 0 rgba(0,61,180,0.13)",
         background: "#fff",
         borderRadius: 18,
         padding: "2.5rem",
@@ -150,14 +150,14 @@ export default function RegisterPage() {
         maxWidth: 750,
         animation: "fadeInUp .7s cubic-bezier(.23,1.01,.32,1)"
       }}>
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#0070f3", marginBottom: 24, letterSpacing: "-1px" }}>
+        <h2 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#003DB4", marginBottom: 24, letterSpacing: "-1px" }}>
           Become an Operator
         </h2>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {/* Business Information Section */}
           <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0070f3", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #e0f3ff" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
               Business Information
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -175,8 +175,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -198,8 +198,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -221,8 +221,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: phoneError ? "#fff5f5" : "#f8fbff",
-                    border: `1.5px solid ${phoneError ? "#ffcccc" : "#e0f3ff"}`,
+                    background: phoneError ? "#fff5f5" : "#F6FAFF",
+                    border: `1.5px solid ${phoneError ? "#ffcccc" : "#dde8f8"}`,
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box",
@@ -235,7 +235,7 @@ export default function RegisterPage() {
                   </p>
                 )}
                 {formData.phoneNumber && !phoneError && (
-                  <p style={{ fontSize: "0.85rem", color: "#00c6ff", marginTop: 6, margin: "6px 0 0 0" }}>
+                  <p style={{ fontSize: "0.85rem", color: "#003DB4", marginTop: 6, margin: "6px 0 0 0" }}>
                     ✓ Valid number
                   </p>
                 )}
@@ -252,8 +252,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box",
@@ -283,8 +283,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -296,7 +296,7 @@ export default function RegisterPage() {
 
           {/* Service Location Section */}
           <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0070f3", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #e0f3ff" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
               Service Location
             </h3>
             <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
@@ -312,8 +312,8 @@ export default function RegisterPage() {
                 style={{
                   width: "100%",
                   fontSize: "1rem",
-                  background: "#f8fbff",
-                  border: "1.5px solid #e0f3ff",
+                  background: "#F6FAFF",
+                  border: "1.5px solid #dde8f8",
                   borderRadius: 8,
                   padding: "0.9rem 1rem",
                   boxSizing: "border-box"
@@ -326,7 +326,7 @@ export default function RegisterPage() {
                   left: 0,
                   right: 0,
                   background: "#fff",
-                  border: "1.5px solid #e0f3ff",
+                  border: "1.5px solid #dde8f8",
                   borderTop: "none",
                   borderRadius: "0 0 8px 8px",
                   maxHeight: 200,
@@ -340,12 +340,12 @@ export default function RegisterPage() {
                       style={{
                         padding: "0.75rem 1rem",
                         cursor: "pointer",
-                        borderBottom: "1px solid #e0f3ff",
+                        borderBottom: "1px solid #dde8f8",
                         fontSize: "0.95rem",
                         transition: "background 0.2s"
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#f8fbff";
+                        e.currentTarget.style.background = "#F6FAFF";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = "#fff";
@@ -358,7 +358,7 @@ export default function RegisterPage() {
               )}
             </div>
             {latLng && (
-              <p style={{ fontSize: "0.85rem", color: "#00c6ff", marginTop: 8 }}>
+              <p style={{ fontSize: "0.85rem", color: "#003DB4", marginTop: 8 }}>
                 📍 Coordinates: {latLng.lat.toFixed(4)}, {latLng.lng.toFixed(4)}
               </p>
             )}
@@ -366,7 +366,7 @@ export default function RegisterPage() {
 
           {/* Login Credentials Section */}
           <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0070f3", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #e0f3ff" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
               Login Credentials
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
@@ -384,8 +384,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -407,8 +407,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -430,8 +430,8 @@ export default function RegisterPage() {
                   style={{
                     width: "100%",
                     fontSize: "1rem",
-                    background: "#f8fbff",
-                    border: "1.5px solid #e0f3ff",
+                    background: "#F6FAFF",
+                    border: "1.5px solid #dde8f8",
                     borderRadius: 8,
                     padding: "0.9rem 1rem",
                     boxSizing: "border-box"
@@ -448,12 +448,12 @@ export default function RegisterPage() {
             style={{
               fontWeight: 700,
               fontSize: "1.1rem",
-              background: "linear-gradient(90deg,#0070f3,#00c6ff)",
+              background: "linear-gradient(90deg,#003DB4,#003DB4)",
               border: 0,
               borderRadius: 8,
               color: "#fff",
               padding: "0.9rem 1.1rem",
-              boxShadow: "0 2px 12px rgba(0,112,243,0.09)",
+              boxShadow: "0 2px 12px rgba(0,61,180,0.09)",
               letterSpacing: ".5px",
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.7 : 1,
@@ -462,12 +462,12 @@ export default function RegisterPage() {
             onMouseEnter={(e) => {
               if (!loading) {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,112,243,0.2)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,61,180,0.2)";
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,112,243,0.09)";
+              e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,61,180,0.09)";
             }}
           >
             {loading ? "Creating Account..." : "Become an Operator"}
@@ -491,11 +491,11 @@ export default function RegisterPage() {
 
         {/* Login / Customer Links */}
         <p style={{ marginTop: 32, fontSize: "1rem", textAlign: "center" }}>
-          Already have an account? <a href="/login" style={{ color: "#0070f3", fontWeight: 700, textDecoration: "underline" }}>Login</a>
+          Already have an account? <a href="/login" style={{ color: "#003DB4", fontWeight: 700, textDecoration: "underline" }}>Login</a>
         </p>
         <p style={{ marginTop: 10, fontSize: "0.88rem", textAlign: "center", color: "#aaa" }}>
           Looking for personal roadside cover?{" "}
-          <a href="/register/customer" style={{ color: "#0070f3", textDecoration: "underline" }}>Sign up as a customer</a>
+          <a href="/register/customer" style={{ color: "#003DB4", textDecoration: "underline" }}>Sign up as a customer</a>
         </p>
 
         <style>{`

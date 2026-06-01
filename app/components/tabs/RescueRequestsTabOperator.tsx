@@ -62,7 +62,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
   if (loading && requests.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "2rem" }}>
-        <p style={{ color: "#0070f3" }}>Loading rescue requests...</p>
+        <p style={{ color: "#003DB4" }}>Loading rescue requests...</p>
       </div>
     );
   }
@@ -76,7 +76,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
           borderRadius: 12,
           padding: "1.5rem",
           marginBottom: "2rem",
-          boxShadow: "0 1px 4px rgba(0,112,243,0.08)",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
         }}
       >
         <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.05rem", fontWeight: 600, color: "#333" }}>
@@ -100,7 +100,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
               style={{
                 width: "100%",
                 padding: "0.6rem",
-                border: "1px solid #e0f3ff",
+                border: "1px solid #dde8f8",
                 borderRadius: 6,
                 fontSize: "0.9rem",
               }}
@@ -117,7 +117,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
             onClick={applyFilters}
             style={{
               padding: "0.6rem 1.5rem",
-              background: "#0070f3",
+              background: "#003DB4",
               color: "#fff",
               border: "none",
               borderRadius: 6,
@@ -153,13 +153,13 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
           background: "#fff",
           borderRadius: 12,
           overflow: "hidden",
-          boxShadow: "0 1px 4px rgba(0,112,243,0.08)",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
         }}
       >
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "#f8fbff", borderBottom: "2px solid #e0f3ff" }}>
+              <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Time
                 </th>
@@ -187,7 +187,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
               {requests.map((request: RescueRequestListItem) => {
                 const colors = STATUS_COLORS[request.status] || { bg: "#e2e3e5", text: "#383d41" };
                 return (
-                  <tr key={request.id} style={{ borderBottom: "1px solid #e0f3ff" }}>
+                  <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>{formatTime(request.createdAt)}</span>
                     </td>
@@ -234,7 +234,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                         onClick={() => setSelectedRequest(request)}
                         style={{
                           padding: "0.4rem 0.8rem",
-                          background: "#0070f3",
+                          background: "#003DB4",
                           color: "#fff",
                           border: "none",
                           borderRadius: 4,
@@ -278,7 +278,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
             onClick={() => fetchList({ page: page - 1, limit })}
             style={{
               padding: "0.6rem 1.2rem",
-              background: page === 1 ? "#e0e0e0" : "#0070f3",
+              background: page === 1 ? "#e0e0e0" : "#003DB4",
               color: page === 1 ? "#999" : "#fff",
               border: "none",
               borderRadius: 6,
@@ -292,7 +292,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
             onClick={() => fetchList({ page: page + 1, limit })}
             style={{
               padding: "0.6rem 1.2rem",
-              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#0070f3",
+              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#003DB4",
               color: page >= Math.ceil(total / limit) ? "#999" : "#fff",
               border: "none",
               borderRadius: 6,
@@ -330,7 +330,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 1rem 0", color: "#0070f3" }}>Request Details</h2>
+            <h2 style={{ margin: "0 0 1rem 0", color: "#003DB4" }}>Request Details</h2>
             <div style={{ color: "#333", lineHeight: 1.8 }}>
               <p>
                 <strong>ID:</strong> {selectedRequest.id}
@@ -362,9 +362,9 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
               style={{
                 marginTop: "1.5rem",
                 padding: "0.6rem 1.5rem",
-                background: "#e0f3ff",
-                color: "#0070f3",
-                border: "1px solid #0070f3",
+                background: "#dde8f8",
+                color: "#003DB4",
+                border: "1px solid #003DB4",
                 borderRadius: 6,
                 cursor: "pointer",
                 fontWeight: 600,

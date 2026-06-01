@@ -35,7 +35,7 @@ function TowsBar({ used, total }: { used: number; total: number }) {
           {left} / {total}
         </span>
       </div>
-      <div style={{ height: 10, background: "#e0f3ff", borderRadius: 999, overflow: "hidden" }}>
+      <div style={{ height: 10, background: "#dde8f8", borderRadius: 999, overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 999, transition: "width 0.4s" }} />
       </div>
     </div>
@@ -98,7 +98,7 @@ export default function CustomerDashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fbff" }}>
+    <div style={{ minHeight: "100vh", background: "#F6FAFF" }}>
       {/* Toast */}
       {toast && (
         <div style={{
@@ -116,12 +116,12 @@ export default function CustomerDashboardPage() {
 
       {/* Header */}
       <header style={{
-        background: "#fff", borderBottom: "1px solid #e0f3ff",
+        background: "#fff", borderBottom: "1px solid #dde8f8",
         padding: "0 2rem", height: 64,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0070f3" }}>LRR</span>
+          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#003DB4" }}>LRR</span>
           <span style={{ color: "#ccc" }}>|</span>
           <span style={{ color: "#666", fontSize: "0.95rem" }}>My Account</span>
         </div>
@@ -141,7 +141,7 @@ export default function CustomerDashboardPage() {
       </header>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "2.5rem 1rem" }}>
-        <h1 style={{ margin: "0 0 0.25rem 0", fontSize: "1.8rem", fontWeight: 700, color: "#0070f3" }}>
+        <h1 style={{ margin: "0 0 0.25rem 0", fontSize: "1.8rem", fontWeight: 700, color: "#003DB4" }}>
           {userName ? `Welcome, ${userName.split(" ")[0]}!` : "My Dashboard"}
         </h1>
         <p style={{ margin: "0 0 2rem 0", color: "#999", fontSize: "0.95rem" }}>
@@ -149,7 +149,7 @@ export default function CustomerDashboardPage() {
         </p>
 
         {loading && mySubscriptions.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#0070f3" }}>Loading your account…</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: "#003DB4" }}>Loading your account…</div>
         )}
 
         {error && (
@@ -162,7 +162,7 @@ export default function CustomerDashboardPage() {
         {activeSubscription ? (
           <div style={{
             background: "#fff", borderRadius: 16, padding: "2rem",
-            border: "2px solid #0070f3", boxShadow: "0 4px 20px rgba(0,112,243,0.12)",
+            border: "2px solid #003DB4", boxShadow: "0 4px 20px rgba(0,61,180,0.12)",
             marginBottom: "1.5rem",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
@@ -188,8 +188,8 @@ export default function CustomerDashboardPage() {
             <div style={{
               display: "grid", gridTemplateColumns: "1fr 1fr",
               gap: "1rem", margin: "1.5rem 0",
-              padding: "1.25rem", background: "#f8fbff", borderRadius: 10,
-              border: "1px solid #e0f3ff",
+              padding: "1.25rem", background: "#F6FAFF", borderRadius: 10,
+              border: "1px solid #dde8f8",
             }}>
               {[
                 { label: "Tows included / month", value: activeSubscription.towsIncludedPerMonth },
@@ -245,7 +245,7 @@ export default function CustomerDashboardPage() {
                   <button
                     onClick={() => setCancelConfirm(false)}
                     style={{
-                      padding: "0.5rem 1.2rem", background: "#e0f3ff", color: "#0070f3",
+                      padding: "0.5rem 1.2rem", background: "#dde8f8", color: "#003DB4",
                       border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600,
                     }}
                   >
@@ -273,10 +273,10 @@ export default function CustomerDashboardPage() {
               onClick={() => router.push("/plans")}
               style={{
                 padding: "0.85rem 2rem",
-                background: "linear-gradient(90deg,#0070f3,#00c6ff)",
+                background: "linear-gradient(90deg,#003DB4,#003DB4)",
                 color: "#fff", border: "none", borderRadius: 8,
                 fontWeight: 700, fontSize: "1rem", cursor: "pointer",
-                boxShadow: "0 2px 12px rgba(0,112,243,0.2)",
+                boxShadow: "0 2px 12px rgba(0,61,180,0.2)",
               }}
             >
               View Plans →
@@ -286,7 +286,7 @@ export default function CustomerDashboardPage() {
 
         {/* Subscription history */}
         {mySubscriptions.filter((s) => s.status !== "ACTIVE").length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #e0f3ff" }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #dde8f8" }}>
             <h3 style={{ margin: "0 0 1rem 0", color: "#333", fontSize: "1.05rem", fontWeight: 600 }}>
               Subscription History
             </h3>
@@ -298,7 +298,7 @@ export default function CustomerDashboardPage() {
                     key={sub.id}
                     style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "0.75rem 1rem", background: "#f8fbff", borderRadius: 8, border: "1px solid #e0f3ff",
+                      padding: "0.75rem 1rem", background: "#F6FAFF", borderRadius: 8, border: "1px solid #dde8f8",
                     }}
                   >
                     <div>
@@ -323,7 +323,7 @@ export default function CustomerDashboardPage() {
         )}
 
         {/* How it works */}
-        <div style={{ marginTop: "2rem", background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #e0f3ff" }}>
+        <div style={{ marginTop: "2rem", background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #dde8f8" }}>
           <h3 style={{ margin: "0 0 1rem 0", color: "#333", fontSize: "1.05rem", fontWeight: 600 }}>How to use your coverage</h3>
           {[
             { step: "1", text: "Save our WhatsApp number in your phone: 0805-577-XXXX" },
@@ -333,9 +333,9 @@ export default function CustomerDashboardPage() {
           ].map(({ step, text }) => (
             <div key={step} style={{ display: "flex", gap: 12, marginBottom: "0.75rem", alignItems: "flex-start" }}>
               <div style={{
-                minWidth: 28, height: 28, background: "#e0f3ff", borderRadius: "50%",
+                minWidth: 28, height: 28, background: "#dde8f8", borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#0070f3", fontWeight: 700, fontSize: "0.85rem",
+                color: "#003DB4", fontWeight: 700, fontSize: "0.85rem",
               }}>
                 {step}
               </div>

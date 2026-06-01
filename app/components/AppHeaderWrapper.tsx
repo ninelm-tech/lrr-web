@@ -3,48 +3,33 @@ import { usePathname } from "next/navigation";
 
 export default function AppHeaderWrapper() {
   const pathname = usePathname();
-  
-  // Hide header on dashboard and other authenticated routes
-  if (pathname.startsWith("/dashboard")) {
+
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/customer")) {
     return null;
   }
 
   return (
     <header style={{
       width: "100%",
-      background: "linear-gradient(90deg,#0070f3,#00c6ff)",
-      padding: "1.5rem 0 1.2rem 0",
-      marginBottom: 32,
+      background: "#fff",
+      borderBottom: "1px solid #dde8f8",
+      padding: "0 2rem",
+      height: 64,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      boxShadow: "0 1px 4px rgba(0,61,180,0.05)",
     }}>
-      <div style={{
-        maxWidth: 1100,
-        margin: "0 auto",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 2rem"
-      }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-          <span style={{
-            fontWeight: 900,
-            fontSize: "2rem",
-            color: "#fff",
-            letterSpacing: "-1px",
-            fontFamily: "inherit"
-          }}>LRR</span>
-          <span style={{
-            color: "#e0f3ff",
-            fontWeight: 500,
-            fontSize: "1.1rem",
-            marginLeft: 4
-          }}>Roadside Rescue</span>
+      <a href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+        <img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 36, objectFit: "contain" }} />
+      </a>
+      <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
+        <a href="/plans" style={{ color: "#555", fontWeight: 500, fontSize: "0.92rem", textDecoration: "none" }}>Plans</a>
+        <a href="/login" style={{ color: "#555", fontWeight: 500, fontSize: "0.92rem", textDecoration: "none" }}>Login</a>
+        <a href="/register/customer" style={{ padding: "0.45rem 1.1rem", borderRadius: 7, background: "#003DB4", color: "#fff", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none" }}>
+          Get Covered
         </a>
-        <nav style={{ display: "flex", gap: 24 }}>
-          <a href="/" style={{ color: "#fff", fontWeight: 600, fontSize: "1.08rem", textDecoration: "none" }}>Home</a>
-          <a href="/login" style={{ color: "#fff", fontWeight: 600, fontSize: "1.08rem", textDecoration: "none" }}>Login</a>
-          <a href="/register" style={{ color: "#fff", fontWeight: 600, fontSize: "1.08rem", textDecoration: "none" }}>Become an Operator</a>
-        </nav>
-      </div>
+      </nav>
     </header>
   );
 }

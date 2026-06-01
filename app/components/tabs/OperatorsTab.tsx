@@ -61,7 +61,7 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ margin: "0 0 0.25rem 0", color: "#0070f3" }}>{operator.businessName}</h2>
+        <h2 style={{ margin: "0 0 0.25rem 0", color: "#003DB4" }}>{operator.businessName}</h2>
         <p style={{ margin: "0 0 1.5rem 0", color: "#999", fontSize: "0.9rem" }}>
           {TYPE_LABELS[operator.type] ?? operator.type} · {operator.phoneNumber}
         </p>
@@ -84,7 +84,7 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
         </div>
 
         {/* Performance stats */}
-        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", color: "#333", borderTop: "1px solid #e0f3ff", paddingTop: "1rem" }}>
+        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", color: "#333", borderTop: "1px solid #dde8f8", paddingTop: "1rem" }}>
           30-Day Performance
         </h3>
         {stats ? (
@@ -100,11 +100,11 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
               <div
                 key={label}
                 style={{
-                  background: "#f8fbff", borderRadius: 8, padding: "0.75rem",
-                  border: "1px solid #e0f3ff", textAlign: "center",
+                  background: "#F6FAFF", borderRadius: 8, padding: "0.75rem",
+                  border: "1px solid #dde8f8", textAlign: "center",
                 }}
               >
-                <p style={{ margin: "0 0 4px 0", fontSize: "1.4rem", fontWeight: 700, color: "#0070f3" }}>{value}</p>
+                <p style={{ margin: "0 0 4px 0", fontSize: "1.4rem", fontWeight: 700, color: "#003DB4" }}>{value}</p>
                 <p style={{ margin: 0, fontSize: "0.75rem", color: "#999" }}>{label}</p>
               </div>
             ))}
@@ -117,8 +117,8 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
           onClick={onClose}
           style={{
             marginTop: "1.5rem", width: "100%",
-            padding: "0.7rem", background: "#e0f3ff", color: "#0070f3",
-            border: "1px solid #0070f3", borderRadius: 6, cursor: "pointer", fontWeight: 600,
+            padding: "0.7rem", background: "#dde8f8", color: "#003DB4",
+            border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600,
           }}
         >
           Close
@@ -216,16 +216,16 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
         {[
-          { label: "Total Operators", value: operators.length, color: "#0070f3" },
+          { label: "Total Operators", value: operators.length, color: "#003DB4" },
           { label: "Pending Approval", value: pendingCount, color: "#856404" },
           { label: "Active", value: activeCount, color: "#155724" },
-          { label: "Available Now", value: availCount, color: "#00c6ff" },
+          { label: "Available Now", value: availCount, color: "#003DB4" },
         ].map(({ label, value, color }) => (
           <div
             key={label}
             style={{
               background: "#fff", padding: "1.25rem", borderRadius: 10,
-              boxShadow: "0 2px 8px rgba(0,112,243,0.08)", border: "1px solid #e0f3ff",
+              boxShadow: "0 2px 8px rgba(0,61,180,0.08)", border: "1px solid #dde8f8",
             }}
           >
             <p style={{ margin: "0 0 4px 0", fontSize: "0.85rem", color: "#999" }}>{label}</p>
@@ -235,14 +235,14 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
       </div>
 
       {/* Filters */}
-      <div style={{ background: "#fff", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem", boxShadow: "0 1px 4px rgba(0,112,243,0.08)" }}>
+      <div style={{ background: "#fff", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr auto", gap: 12, alignItems: "flex-end" }}>
           <div>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
@@ -256,7 +256,7 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All Types</option>
               {Object.entries(TYPE_LABELS).map(([k, v]) => (
@@ -271,14 +271,14 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
               placeholder="Business name, phone, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem 0.75rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             />
           </div>
           <button
             onClick={() => { setFilterStatus(""); setFilterType(""); setSearch(""); }}
             style={{
-              padding: "0.55rem 1rem", background: "#f8fbff", color: "#0070f3",
-              border: "1px solid #0070f3", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
+              padding: "0.55rem 1rem", background: "#F6FAFF", color: "#003DB4",
+              border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
             }}
           >
             Clear
@@ -293,11 +293,11 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
       )}
 
       {/* Table */}
-      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,112,243,0.08)" }}>
+      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
             <thead>
-              <tr style={{ background: "#f8fbff", borderBottom: "2px solid #e0f3ff" }}>
+              <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 {["Business", "Type", "Phone", "Status", "Available", "Acceptance", "Avg Response", "Joined", "Actions"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
@@ -308,7 +308,7 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
             <tbody>
               {loading && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#0070f3" }}>
+                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>
                     Loading operators...
                   </td>
                 </tr>
@@ -369,8 +369,8 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
                           <button
                             onClick={() => setSelectedOp(op)}
                             style={{
-                              padding: "0.3rem 0.7rem", background: "#e0f3ff", color: "#0070f3",
-                              border: "1px solid #0070f3", borderRadius: 4, cursor: "pointer",
+                              padding: "0.3rem 0.7rem", background: "#dde8f8", color: "#003DB4",
+                              border: "1px solid #003DB4", borderRadius: 4, cursor: "pointer",
                               fontSize: "0.82rem", fontWeight: 600,
                             }}
                           >

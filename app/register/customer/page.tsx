@@ -71,8 +71,8 @@ export default function CustomerRegisterPage() {
   const inputStyle = (hasError = false) => ({
     width: "100%",
     fontSize: "1rem",
-    background: hasError ? "#fff5f5" : "#f8fbff",
-    border: `1.5px solid ${hasError ? "#ffcccc" : "#e0f3ff"}`,
+    background: hasError ? "#fff5f5" : "#F6FAFF",
+    border: `1.5px solid ${hasError ? "#ffcccc" : "#dde8f8"}`,
     borderRadius: 8,
     padding: "0.9rem 1rem",
     boxSizing: "border-box" as const,
@@ -86,7 +86,7 @@ export default function CustomerRegisterPage() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "radial-gradient(circle at 60% 40%, #e0f3ff 0%, #f8fbff 100%)",
+        background: "radial-gradient(circle at 60% 40%, #dde8f8 0%, #F6FAFF 100%)",
         padding: "2rem 1rem",
       }}
     >
@@ -97,14 +97,14 @@ export default function CustomerRegisterPage() {
           padding: "2.5rem",
           width: "100%",
           maxWidth: 480,
-          boxShadow: "0 8px 40px rgba(0,112,243,0.13)",
+          boxShadow: "0 8px 40px rgba(0,61,180,0.13)",
           animation: "fadeInUp .6s cubic-bezier(.23,1.01,.32,1)",
         }}
       >
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🚗</div>
-          <h1 style={{ margin: 0, fontSize: "1.9rem", fontWeight: 700, color: "#0070f3", letterSpacing: "-0.5px" }}>
+          <h1 style={{ margin: 0, fontSize: "1.9rem", fontWeight: 700, color: "#003DB4", letterSpacing: "-0.5px" }}>
             Create Your Account
           </h1>
           <p style={{ margin: "0.5rem 0 0 0", color: "#666", fontSize: "0.95rem" }}>
@@ -214,13 +214,13 @@ export default function CustomerRegisterPage() {
             style={{
               fontWeight: 700,
               fontSize: "1.05rem",
-              background: loading ? "#ccc" : "linear-gradient(90deg,#0070f3,#00c6ff)",
+              background: loading ? "#ccc" : "linear-gradient(90deg,#003DB4,#003DB4)",
               border: 0,
               borderRadius: 8,
               color: "#fff",
               padding: "0.9rem",
               cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: "0 2px 12px rgba(0,112,243,0.15)",
+              boxShadow: "0 2px 12px rgba(0,61,180,0.15)",
               transition: "all 0.2s",
               marginTop: "0.25rem",
             }}
@@ -231,14 +231,14 @@ export default function CustomerRegisterPage() {
 
         <div style={{ marginTop: "1.5rem", textAlign: "center", fontSize: "0.92rem", color: "#666" }}>
           Already have an account?{" "}
-          <a href="/login" style={{ color: "#0070f3", fontWeight: 700, textDecoration: "none" }}>
+          <a href="/login" style={{ color: "#003DB4", fontWeight: 700, textDecoration: "none" }}>
             Sign in
           </a>
         </div>
 
         <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: "0.88rem", color: "#aaa" }}>
           Want to offer towing services?{" "}
-          <a href="/register" style={{ color: "#0070f3", textDecoration: "none" }}>
+          <a href="/register" style={{ color: "#003DB4", textDecoration: "none" }}>
             Register as an operator
           </a>
         </div>
@@ -249,7 +249,7 @@ export default function CustomerRegisterPage() {
           from { opacity: 0; transform: translateY(30px); }
           to   { opacity: 1; transform: none; }
         }
-        input:focus { border-color: #0070f3 !important; box-shadow: 0 0 0 3px rgba(0,112,243,0.1); }
+        input:focus { border-color: #003DB4 !important; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
       `}</style>
     </div>
   );

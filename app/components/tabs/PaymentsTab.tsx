@@ -86,8 +86,8 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
         {[
           { label: "Total Collected",      value: summaryLoaded ? fmt(totalCollected)           : "…", color: "#155724", bg: "#d4edda" },
-          { label: "Deposits Collected",   value: summaryLoaded ? fmt(summaryDepositPaid)        : "…", color: "#0070f3", bg: "#e0f3ff" },
-          { label: "Balances Collected",   value: summaryLoaded ? fmt(summaryBalancePaid)        : "…", color: "#0070f3", bg: "#e0f3ff" },
+          { label: "Deposits Collected",   value: summaryLoaded ? fmt(summaryDepositPaid)        : "…", color: "#003DB4", bg: "#dde8f8" },
+          { label: "Balances Collected",   value: summaryLoaded ? fmt(summaryBalancePaid)        : "…", color: "#003DB4", bg: "#dde8f8" },
           { label: "Outstanding Balance",  value: summaryLoaded ? fmt(totalOutstanding)          : "…", color: "#856404", bg: "#fff3cd" },
         ].map(({ label, value, color, bg }) => (
           <div
@@ -104,14 +104,14 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       </div>
 
       {/* Filters */}
-      <div style={{ background: "#fff", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem", boxShadow: "0 1px 4px rgba(0,112,243,0.08)" }}>
+      <div style={{ background: "#fff", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
           <div>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Deposit Status</label>
             <select
               value={filterDeposit}
               onChange={(e) => setFilterDeposit(e.target.value as "" | "paid" | "unpaid")}
-              style={{ width: "100%", padding: "0.55rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All</option>
               <option value="paid">Paid</option>
@@ -123,7 +123,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <select
               value={filterBalance}
               onChange={(e) => setFilterBalance(e.target.value as "" | "paid" | "unpaid")}
-              style={{ width: "100%", padding: "0.55rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All</option>
               <option value="paid">Paid</option>
@@ -134,20 +134,20 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>From</label>
             <input
               type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>To</label>
             <input
               type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)}
-              style={{ width: "100%", padding: "0.55rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             />
           </div>
           <button
             onClick={applyFilters}
             style={{
-              padding: "0.55rem 1.2rem", background: "#0070f3", color: "#fff",
+              padding: "0.55rem 1.2rem", background: "#003DB4", color: "#fff",
               border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
             }}
           >
@@ -163,11 +163,11 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       )}
 
       {/* Table */}
-      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,112,243,0.08)" }}>
+      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
             <thead>
-              <tr style={{ background: "#f8fbff", borderBottom: "2px solid #e0f3ff" }}>
+              <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 {["Date", "Customer", "Issue", "Operator", "Deposit", "Balance", "Total", "Status"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
@@ -178,7 +178,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <tbody>
               {loading && requests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#0070f3" }}>Loading payments...</td>
+                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
                 </tr>
               ) : requests.length === 0 ? (
                 <tr>
@@ -253,7 +253,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             onClick={() => fetchList({ page: page - 1, limit })}
             style={{
               padding: "0.55rem 1.2rem", borderRadius: 6, border: "none",
-              background: page === 1 ? "#e0e0e0" : "#0070f3",
+              background: page === 1 ? "#e0e0e0" : "#003DB4",
               color: page === 1 ? "#999" : "#fff", cursor: page === 1 ? "not-allowed" : "pointer",
             }}
           >
@@ -264,7 +264,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             onClick={() => fetchList({ page: page + 1, limit })}
             style={{
               padding: "0.55rem 1.2rem", borderRadius: 6, border: "none",
-              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#0070f3",
+              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#003DB4",
               color: page >= Math.ceil(total / limit) ? "#999" : "#fff",
               cursor: page >= Math.ceil(total / limit) ? "not-allowed" : "pointer",
             }}

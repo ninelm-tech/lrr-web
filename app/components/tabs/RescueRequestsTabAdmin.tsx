@@ -123,7 +123,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
   if (loading && requests.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "2rem" }}>
-        <p style={{ color: "#0070f3" }}>Loading rescue requests...</p>
+        <p style={{ color: "#003DB4" }}>Loading rescue requests...</p>
       </div>
     );
   }
@@ -137,7 +137,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
           borderRadius: 12,
           padding: "1.5rem",
           marginBottom: "2rem",
-          boxShadow: "0 1px 4px rgba(0,112,243,0.08)",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
         }}
       >
         <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.05rem", fontWeight: 600, color: "#333" }}>
@@ -161,7 +161,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               style={{
                 width: "100%",
                 padding: "0.6rem",
-                border: "1px solid #e0f3ff",
+                border: "1px solid #dde8f8",
                 borderRadius: 6,
                 fontSize: "0.9rem",
               }}
@@ -187,7 +187,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               style={{
                 width: "100%",
                 padding: "0.6rem",
-                border: "1px solid #e0f3ff",
+                border: "1px solid #dde8f8",
                 borderRadius: 6,
                 fontSize: "0.9rem",
               }}
@@ -214,7 +214,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               style={{
                 width: "100%",
                 padding: "0.6rem",
-                border: "1px solid #e0f3ff",
+                border: "1px solid #dde8f8",
                 borderRadius: 6,
                 fontSize: "0.9rem",
               }}
@@ -225,7 +225,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
             onClick={applyFilters}
             style={{
               padding: "0.6rem 1.5rem",
-              background: "#0070f3",
+              background: "#003DB4",
               color: "#fff",
               border: "none",
               borderRadius: 6,
@@ -261,13 +261,13 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
           background: "#fff",
           borderRadius: 12,
           overflow: "hidden",
-          boxShadow: "0 1px 4px rgba(0,112,243,0.08)",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
         }}
       >
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "#f8fbff", borderBottom: "2px solid #e0f3ff" }}>
+              <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Time
                 </th>
@@ -304,7 +304,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               {requests.map((request: RescueRequestListItem) => {
                 const colors = STATUS_COLORS[request.status] || { bg: "#e2e3e5", text: "#383d41" };
                 return (
-                  <tr key={request.id} style={{ borderBottom: "1px solid #e0f3ff" }}>
+                  <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>{formatTime(request.createdAt)}</span>
                     </td>
@@ -359,7 +359,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                         onClick={() => openModal(request)}
                         style={{
                           padding: "0.4rem 0.8rem",
-                          background: "#0070f3",
+                          background: "#003DB4",
                           color: "#fff",
                           border: "none",
                           borderRadius: 4,
@@ -403,7 +403,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
             onClick={() => fetchList({ page: page - 1, limit })}
             style={{
               padding: "0.6rem 1.2rem",
-              background: page === 1 ? "#e0e0e0" : "#0070f3",
+              background: page === 1 ? "#e0e0e0" : "#003DB4",
               color: page === 1 ? "#999" : "#fff",
               border: "none",
               borderRadius: 6,
@@ -417,7 +417,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
             onClick={() => fetchList({ page: page + 1, limit })}
             style={{
               padding: "0.6rem 1.2rem",
-              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#0070f3",
+              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#003DB4",
               color: page >= Math.ceil(total / limit) ? "#999" : "#fff",
               border: "none",
               borderRadius: 6,
@@ -448,7 +448,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
                 <div>
-                  <h2 style={{ margin: "0 0 6px 0", color: "#0070f3", fontSize: "1.25rem" }}>Rescue Request</h2>
+                  <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>Rescue Request</h2>
                   <code style={{ fontSize: "0.78rem", color: "#999" }}>{selectedRequest.id}</code>
                 </div>
                 <span style={{ padding: "0.35rem 0.9rem", background: colors.bg, color: colors.text, borderRadius: 20, fontSize: "0.82rem", fontWeight: 700 }}>
@@ -457,7 +457,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
               </div>
 
               {/* Info grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#f8fbff", borderRadius: 10, border: "1px solid #e0f3ff" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
                 {[
                   ["Issue", selectedRequest.issueType ?? "—"],
                   ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
@@ -479,7 +479,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                   href={`https://maps.google.com/?q=${selectedRequest.latitude},${selectedRequest.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.7rem 1rem", background: "#e0f3ff", borderRadius: 8, fontSize: "0.9rem", fontWeight: 600, color: "#0070f3", textDecoration: "none", marginBottom: "1.5rem" }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.7rem 1rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.9rem", fontWeight: 600, color: "#003DB4", textDecoration: "none", marginBottom: "1.5rem" }}
                 >
                   📍 Open in Google Maps — {selectedRequest.latitude}, {selectedRequest.longitude}
                 </a>
@@ -500,7 +500,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                     <select
                       value={selectedOperatorId}
                       onChange={e => setSelectedOperatorId(e.target.value)}
-                      style={{ flex: 1, padding: "0.6rem", border: "1px solid #e0f3ff", borderRadius: 6, fontSize: "0.9rem" }}
+                      style={{ flex: 1, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
                     >
                       <option value="">— Select operator —</option>
                       {availableOperators.map(op => (
@@ -510,7 +510,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                     <button
                       onClick={handleAssign}
                       disabled={!selectedOperatorId || actionLoading}
-                      style={{ padding: "0.6rem 1.2rem", background: selectedOperatorId ? "#0070f3" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: selectedOperatorId ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
+                      style={{ padding: "0.6rem 1.2rem", background: selectedOperatorId ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: selectedOperatorId ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
                     >
                       {actionLoading ? "…" : "Assign"}
                     </button>
@@ -531,7 +531,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                     )}
                     {canMarkComplete && (
                       <button onClick={() => handleStatusUpdate("COMPLETED")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#0070f3", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
+                        style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
                         🏁 Mark Complete
                       </button>
                     )}
@@ -558,7 +558,7 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
 
               <button
                 onClick={() => setSelectedRequest(null)}
-                style={{ padding: "0.6rem 1.5rem", background: "#e0f3ff", color: "#0070f3", border: "1px solid #0070f3", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
+                style={{ padding: "0.6rem 1.5rem", background: "#dde8f8", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
               >
                 Close
               </button>

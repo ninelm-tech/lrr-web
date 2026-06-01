@@ -70,7 +70,7 @@ function PlansContent() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f0f8ff 0%, #f8fbff 100%)", padding: "0 1rem 4rem" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg, #f0f8ff 0%, #F6FAFF 100%)", padding: "0 1rem 4rem" }}>
       {/* Header */}
       <div style={{ maxWidth: 900, margin: "0 auto", paddingTop: "3rem", textAlign: "center" }}>
         {isWelcome && (
@@ -83,7 +83,7 @@ function PlansContent() {
           </div>
         )}
 
-        <h1 style={{ fontSize: "2.6rem", fontWeight: 800, color: "#0070f3", margin: "0 0 0.5rem 0", letterSpacing: "-1px" }}>
+        <h1 style={{ fontSize: "2.6rem", fontWeight: 800, color: "#003DB4", margin: "0 0 0.5rem 0", letterSpacing: "-1px" }}>
           Simple, Honest Pricing
         </h1>
         <p style={{ fontSize: "1.1rem", color: "#666", margin: "0 0 0.5rem 0", maxWidth: 520, marginInline: "auto" }}>
@@ -114,26 +114,26 @@ function PlansContent() {
                   background: "#fff",
                   borderRadius: 16,
                   padding: "2rem",
-                  border: isPopular ? "2.5px solid #0070f3" : "1.5px solid #e0f3ff",
-                  boxShadow: isPopular ? "0 8px 32px rgba(0,112,243,0.18)" : "0 2px 12px rgba(0,112,243,0.07)",
+                  border: isPopular ? "2.5px solid #003DB4" : "1.5px solid #dde8f8",
+                  boxShadow: isPopular ? "0 8px 32px rgba(0,61,180,0.18)" : "0 2px 12px rgba(0,61,180,0.07)",
                   position: "relative",
                   textAlign: "left",
                   transition: "transform 0.2s, box-shadow 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,112,243,0.18)";
+                  e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,61,180,0.18)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow = isPopular ? "0 8px 32px rgba(0,112,243,0.18)" : "0 2px 12px rgba(0,112,243,0.07)";
+                  e.currentTarget.style.boxShadow = isPopular ? "0 8px 32px rgba(0,61,180,0.18)" : "0 2px 12px rgba(0,61,180,0.07)";
                 }}
               >
                 {/* Popular / savings badge */}
                 {isPopular && (
                   <div style={{
                     position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)",
-                    background: "linear-gradient(90deg,#0070f3,#00c6ff)",
+                    background: "linear-gradient(90deg,#003DB4,#003DB4)",
                     color: "#fff", borderRadius: 20, padding: "0.3rem 1rem",
                     fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap",
                   }}>
@@ -158,7 +158,7 @@ function PlansContent() {
                 </h2>
 
                 <div style={{ margin: "1rem 0 1.5rem 0" }}>
-                  <span style={{ fontSize: "2.4rem", fontWeight: 800, color: "#0070f3" }}>
+                  <span style={{ fontSize: "2.4rem", fontWeight: 800, color: "#003DB4" }}>
                     {fmt(plan.amountKobo)}
                   </span>
                   <span style={{ fontSize: "1rem", color: "#999", marginLeft: 4 }}>
@@ -174,7 +174,7 @@ function PlansContent() {
                 <ul style={{ margin: "0 0 1.5rem 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                   {highlights.map((h) => (
                     <li key={h} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#444" }}>
-                      <span style={{ color: "#0070f3", fontWeight: 700, fontSize: "1rem" }}>✓</span>
+                      <span style={{ color: "#003DB4", fontWeight: 700, fontSize: "1rem" }}>✓</span>
                       {h}
                     </li>
                   ))}
@@ -187,10 +187,10 @@ function PlansContent() {
                     width: "100%",
                     padding: "0.85rem",
                     background: subscribing === plan.key ? "#ccc"
-                      : isPopular ? "linear-gradient(90deg,#0070f3,#00c6ff)"
+                      : isPopular ? "linear-gradient(90deg,#003DB4,#003DB4)"
                       : "#f0f8ff",
-                    color: isPopular ? "#fff" : "#0070f3",
-                    border: isPopular ? "none" : "2px solid #0070f3",
+                    color: isPopular ? "#fff" : "#003DB4",
+                    border: isPopular ? "none" : "2px solid #003DB4",
                     borderRadius: 8,
                     fontWeight: 700,
                     fontSize: "1rem",
@@ -208,8 +208,8 @@ function PlansContent() {
         {/* No-subscription note */}
         <div style={{
           background: "#fff", borderRadius: 12, padding: "1.5rem 2rem",
-          border: "1px solid #e0f3ff", maxWidth: 600, marginInline: "auto",
-          textAlign: "left", boxShadow: "0 2px 8px rgba(0,112,243,0.06)",
+          border: "1px solid #dde8f8", maxWidth: 600, marginInline: "auto",
+          textAlign: "left", boxShadow: "0 2px 8px rgba(0,61,180,0.06)",
         }}>
           <h3 style={{ margin: "0 0 0.5rem 0", color: "#333", fontSize: "1.05rem" }}>Pay per rescue</h3>
           <p style={{ margin: 0, color: "#666", fontSize: "0.92rem", lineHeight: 1.6 }}>
@@ -224,7 +224,7 @@ function PlansContent() {
           {!isLoggedIn && (
             <p>
               Already subscribed?{" "}
-              <a href="/login" style={{ color: "#0070f3", fontWeight: 600, textDecoration: "none" }}>Sign in</a>{" "}
+              <a href="/login" style={{ color: "#003DB4", fontWeight: 600, textDecoration: "none" }}>Sign in</a>{" "}
               to view your plan.
             </p>
           )}
@@ -236,7 +236,7 @@ function PlansContent() {
 
 export default function PlansPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: "center", padding: "4rem", color: "#0070f3" }}>Loading plans…</div>}>
+    <Suspense fallback={<div style={{ textAlign: "center", padding: "4rem", color: "#003DB4" }}>Loading plans…</div>}>
       <PlansContent />
     </Suspense>
   );
