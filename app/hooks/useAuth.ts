@@ -18,10 +18,10 @@ export function useAuth() {
     // API returns { accessToken, user: { id, email, name, role } }
     if (data.accessToken && data.user) {
       localStorage.setItem("accessToken", data.accessToken);
-      // Only store role for UI routing (not security-critical)
       localStorage.setItem("userRole", data.user.role);
-      // Only store name for display in header
       localStorage.setItem("userName", data.user.name);
+      // Set a session presence cookie so middleware can gate protected routes
+      document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
       setUser(data.user);
     }
     
@@ -45,6 +45,7 @@ export function useAuth() {
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("userRole", res.user.role);
       localStorage.setItem("userName", res.user.name || res.user.phoneNumber || "Customer");
+      document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
       setUser(res.user);
     }
     return res;
@@ -64,6 +65,8 @@ export function useAuth() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
+    // Clear session cookie so middleware redirects immediately
+    document.cookie = "lrr_session=; path=/; max-age=0; SameSite=Lax";
     setUser(null);
   }
 

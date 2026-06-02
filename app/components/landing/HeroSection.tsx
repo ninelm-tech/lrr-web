@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
 
 // Lekki-Ikoyi Link Bridge, Lagos — photo by Opeyemi Adisa on Unsplash (free)
 const heroImageSrc =
@@ -48,6 +50,8 @@ const steps = [
 ];
 
 export default function HeroSection() {
+  const [registerOpen, setRegisterOpen] = useState(false);
+
   return (
     <section className="relative overflow-hidden text-white">
       {/* Full-bleed background image */}
@@ -97,17 +101,60 @@ export default function HeroSection() {
             >
               Login
             </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:opacity-90"
-              style={{ background: "#003DB4", color: "#fff" }}
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z" />
-              </svg>
-              Request Help
-            </Link>
+            {/* Register dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setRegisterOpen(o => !o)}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:opacity-90"
+                style={{ background: "#003DB4", color: "#fff" }}
+              >
+                Register
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5" style={{ transition: "transform .2s", transform: registerOpen ? "rotate(180deg)" : "none" }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {registerOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setRegisterOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-20 rounded-xl overflow-hidden shadow-xl" style={{ background: "#fff", border: "1px solid #e2e8f0", minWidth: 200 }}>
+                    <Link
+                      href="/register/customer"
+                      onClick={() => setRegisterOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition hover:bg-blue-50"
+                      style={{ color: "#0b1736", borderBottom: "1px solid #f0f2f5" }}
+                    >
+                      <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#eef5ff" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#003DB4" strokeWidth={2} className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </span>
+                      <div>
+                        <p className="font-semibold" style={{ color: "#0b1736" }}>As a Customer</p>
+                        <p className="text-xs" style={{ color: "#6c7890" }}>Get roadside coverage</p>
+                      </div>
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setRegisterOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition hover:bg-blue-50"
+                      style={{ color: "#0b1736" }}
+                    >
+                      <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#07152f" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={2} className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 1h8z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 8h4l3 4v4h-7V8z" />
+                        </svg>
+                      </span>
+                      <div>
+                        <p className="font-semibold" style={{ color: "#0b1736" }}>As an Operator</p>
+                        <p className="text-xs" style={{ color: "#6c7890" }}>Join the dispatch network</p>
+                      </div>
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </nav>
       </header>
@@ -168,15 +215,11 @@ export default function HeroSection() {
                 </svg>
               </Link>
               <Link
-                href="/login"
+                href="/register"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm transition hover:bg-white/10"
                 style={{ border: "1px solid rgba(255,255,255,0.3)", color: "#fff" }}
               >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" style={{ color: "#25D366" }}>
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z" />
-                </svg>
-                Request Help
+                Register as Operator
               </Link>
             </div>
 

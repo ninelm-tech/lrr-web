@@ -11,6 +11,12 @@ function CallbackContent() {
   useEffect(() => {
     const reference = params.get("reference") || params.get("trxref");
 
+    // Guard: middleware handles server-side; this catches edge cases (e.g. token expired mid-session)
+    if (!localStorage.getItem("accessToken")) {
+      router.replace("/login");
+      return;
+    }
+
     if (!reference) {
       setStatus("failed");
       return;

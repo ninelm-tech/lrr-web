@@ -96,7 +96,6 @@ export default function CustomerDashboardPage() {
         .cust-request-row { display: flex; justify-content: space-between; align-items: center; }
         .cust-table-wrap { overflow-x: auto; }
         .cust-header-title { font-size: 1.75rem; }
-        .cust-req-btn { display: inline-flex; }
         @media (max-width: 767px) {
           .cust-sidebar { transform: translateX(-240px); }
           .cust-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.3); }
@@ -211,13 +210,6 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
-            <button className="cust-req-btn" style={{
-              padding: "0.65rem 1.25rem", background: blue, color: "#fff",
-              border: "none", borderRadius: 10, fontFamily: dm, fontWeight: 600,
-              fontSize: "0.9rem", cursor: "pointer",
-            }}>
-              Request assistance
-            </button>
             <div style={{
               width: 36, height: 36, borderRadius: "50%",
               background: "#dde8f8", display: "flex", alignItems: "center", justifyContent: "center",
@@ -373,21 +365,30 @@ export default function CustomerDashboardPage() {
           {/* RIGHT column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-            {/* Quick action */}
-            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
-              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Quick action</p>
-              <h3 style={{ margin: "0 0 0.5rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Need help now?</h3>
-              <p style={{ margin: "0 0 1.25rem 0", color: "#6c7890", fontSize: "0.85rem", lineHeight: 1.5 }}>
-                Start a request and we&apos;ll connect you to the nearest available operator.
+            {/* WhatsApp CTA */}
+            <div style={{ background: "#07152f", borderRadius: 18, padding: "1.5rem", border: "1px solid #1a2f5e" }}>
+              <p style={{ margin: "0 0 2px 0", color: "rgba(219,232,255,0.5)", fontSize: "0.78rem", fontWeight: 500 }}>Need help now?</p>
+              <h3 style={{ margin: "0 0 0.5rem 0", fontWeight: 700, fontSize: "1.05rem", color: "#fff" }}>Request via WhatsApp</h3>
+              <p style={{ margin: "0 0 1.25rem 0", color: "rgba(219,232,255,0.6)", fontSize: "0.85rem", lineHeight: 1.5 }}>
+                Send us a message on WhatsApp and we&apos;ll dispatch the nearest operator to you.
               </p>
-              <button style={{
-                width: "100%", padding: "0.85rem", borderRadius: 10,
-                border: "1px solid #e2e8f0", background: "#fff",
-                color: navy, fontFamily: dm, fontWeight: 600,
-                fontSize: "0.9rem", cursor: "pointer",
-              }}>
-                Start request
-              </button>
+              <a
+                href="https://wa.me/2348000000000"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  width: "100%", padding: "0.85rem", borderRadius: 10,
+                  background: "#25D366", color: "#fff", fontFamily: dm, fontWeight: 600,
+                  fontSize: "0.9rem", textDecoration: "none",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width={18} height={18}>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z"/>
+                </svg>
+                Message us on WhatsApp
+              </a>
             </div>
 
             {/* Payments */}
