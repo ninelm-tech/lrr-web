@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import LoginModal from "../LoginModal";
 
 // Lekki-Ikoyi Link Bridge, Lagos — photo by Opeyemi Adisa on Unsplash (free)
 const heroImageSrc =
@@ -49,8 +50,14 @@ const steps = [
   },
 ];
 
-export default function HeroSection() {
+interface HeroProps {
+  autoLogin?: boolean;
+  next?: string;
+}
+
+export default function HeroSection({ autoLogin = false, next = "" }: HeroProps) {
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [loginOpen, setLoginOpen]       = useState(autoLogin);
 
   return (
     <section className="relative overflow-hidden text-white">
@@ -94,13 +101,13 @@ export default function HeroSection() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex text-sm font-medium transition hover:text-white"
-              style={{ color: "rgba(255,255,255,0.85)" }}
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="inline-flex text-sm font-medium transition hover:text-white"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-dm-sans), sans-serif" }}
             >
               Login
-            </Link>
+            </button>
             {/* Register dropdown */}
             <div className="relative">
               <button
@@ -199,6 +206,42 @@ export default function HeroSection() {
               Get fast, verified roadside assistance from a trusted
               network of operators — dispatched in minutes, tracked in real time.
             </p>
+
+            {/* WhatsApp SOS strip */}
+            <a
+              href="https://wa.me/2348000000000?text=SOS"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-8 inline-flex items-center gap-3 rounded-2xl px-5 py-3.5 transition hover:opacity-90"
+              style={{
+                background: "rgba(37,211,102,0.12)",
+                border: "1px solid rgba(37,211,102,0.3)",
+                textDecoration: "none",
+                animation: "fadeUp .7s .18s ease both",
+                display: "inline-flex",
+              }}
+            >
+              <span
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "#25D366" }}
+              >
+                <svg viewBox="0 0 24 24" fill="white" width={18} height={18}>
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z"/>
+                </svg>
+              </span>
+              <div>
+                <p className="font-bold text-sm" style={{ color: "#fff", margin: 0, lineHeight: 1.2 }}>
+                  Stranded? Send <span style={{ color: "#4eff91", fontFamily: "monospace", fontSize: "1rem" }}>"SOS"</span> on WhatsApp
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(219,232,255,0.65)", margin: 0 }}>
+                  +234 800 000 0000 · No app download needed
+                </p>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2} width={16} height={16} className="ml-1 shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </a>
 
             <div
               className="mt-10 flex flex-col sm:flex-row gap-3"
@@ -364,6 +407,34 @@ export default function HeroSection() {
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} next={next || undefined} />
+
+      {/* Floating WhatsApp SOS button — visible throughout the page */}
+      <a
+        href="https://wa.me/2348000000000?text=SOS"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Send SOS on WhatsApp"
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 50,
+          display: "flex", alignItems: "center", gap: 10,
+          background: "#25D366", color: "#fff",
+          borderRadius: 50, padding: "0.75rem 1.2rem",
+          textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
+          boxShadow: "0 4px 20px rgba(37,211,102,0.45)",
+          fontFamily: "var(--font-dm-sans), sans-serif",
+          transition: "transform .15s, box-shadow .15s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.05)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; }}
+      >
+        <svg viewBox="0 0 24 24" fill="white" width={20} height={20}>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z"/>
+        </svg>
+        <span>SOS — Send Help</span>
+      </a>
     </section>
   );
 }
