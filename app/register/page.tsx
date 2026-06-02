@@ -160,7 +160,7 @@ export default function RegisterPage() {
             <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
               Business Information
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="lrr-reg-grid">
               <div>
                 <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
                   Business Name *
@@ -502,6 +502,12 @@ export default function RegisterPage() {
           @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(40px); }
             to { opacity: 1; transform: none; }
+          }
+          input:focus, select:focus { border-color: #003DB4 !important; outline: none; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
+          .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          @media (max-width: 600px) {
+            .lrr-reg-grid { grid-template-columns: 1fr !important; }
+            .lrr-reg-card { padding: 1.5rem 1rem !important; }
           }
         `}</style>
       </div>

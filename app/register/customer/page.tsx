@@ -9,7 +9,6 @@ export default function CustomerRegisterPage() {
   const { registerCustomer } = useAuth();
 
   const [form, setForm] = useState({
-    name: "",
     phoneNumber: "",
     email: "",
     password: "",
@@ -55,7 +54,6 @@ export default function CustomerRegisterPage() {
     try {
       await registerCustomer({
         phoneNumber: form.phoneNumber,
-        name: form.name || undefined,
         email: form.email,
         password: form.password,
       });
@@ -91,6 +89,7 @@ export default function CustomerRegisterPage() {
       }}
     >
       <div
+        className="lrr-cust-card"
         style={{
           background: "#fff",
           borderRadius: 18,
@@ -113,21 +112,6 @@ export default function CustomerRegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Name */}
-          <div>
-            <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>
-              Full Name <span style={{ color: "#aaa", fontWeight: 400 }}>(optional)</span>
-            </label>
-            <input
-              name="name"
-              type="text"
-              placeholder="Adaeze Johnson"
-              value={form.name}
-              onChange={handleChange}
-              style={inputStyle()}
-            />
-          </div>
-
           {/* Phone */}
           <div>
             <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>
@@ -249,7 +233,10 @@ export default function CustomerRegisterPage() {
           from { opacity: 0; transform: translateY(30px); }
           to   { opacity: 1; transform: none; }
         }
-        input:focus { border-color: #003DB4 !important; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
+        input:focus { border-color: #003DB4 !important; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); outline: none; }
+        @media (max-width: 500px) {
+          .lrr-cust-card { padding: 1.5rem 1rem !important; border-radius: 12px !important; }
+        }
       `}</style>
     </div>
   );
