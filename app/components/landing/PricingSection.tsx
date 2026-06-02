@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 
 const perks = ["Unlimited dispatch access", "Priority support response", "Member-only roadside rates"];
@@ -9,6 +10,11 @@ const included = [
 ];
 
 export default function PricingSection() {
+  const membershipHref =
+    typeof window !== "undefined" && localStorage.getItem("accessToken")
+      ? "/customer"
+      : "/register/customer";
+
   return (
     <section id="pricing" className="py-20 sm:py-28" style={{ background: "#f6f9fc" }}>
       <div className="max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-10 items-center">
@@ -90,7 +96,7 @@ export default function PricingSection() {
           </div>
 
           <Link
-            href="/register/customer"
+            href={membershipHref}
             className="block w-full mt-8 text-white py-4 rounded-xl font-semibold text-center transition hover:opacity-90"
             style={{ background: "#003DB4" }}
           >

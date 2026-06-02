@@ -59,6 +59,12 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
   const [registerOpen, setRegisterOpen] = useState(false);
   const [loginOpen, setLoginOpen]       = useState(autoLogin);
 
+  // If already logged in, "Join Membership" goes to dashboard, not registration
+  const membershipHref =
+    typeof window !== "undefined" && localStorage.getItem("accessToken")
+      ? "/customer"
+      : "/register/customer";
+
   return (
     <section className="relative overflow-hidden text-white">
       {/* Full-bleed background image */}
@@ -248,7 +254,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
               style={{ animation: "fadeUp .7s .2s ease both" }}
             >
               <Link
-                href="/register/customer"
+                href={membershipHref}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm transition hover:opacity-90"
                 style={{ background: "#003DB4", color: "#fff" }}
               >

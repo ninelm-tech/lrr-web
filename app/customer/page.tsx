@@ -35,7 +35,8 @@ const navItems = [
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
-  const { activeSubscription, loading, fetchMySubscriptions, cancelSubscription } = useSubscription();
+  const { activeSubscription, loading, fetchMySubscriptions, cancelSubscription, subscribe } = useSubscription();
+  const [subscribing, setSubscribing] = useState(false);
   const [userName, setUserName]         = useState("");
   const [activeTab, setActiveTab]       = useState("Overview");
   const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -69,6 +70,22 @@ export default function CustomerDashboardPage() {
       showToast("Failed to cancel — please try again", false);
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleSubscribe() {
+    setSubscribing(true);
+    try {
+      const url = await subscribe("annual");
+      if (url) {
+        window.location.href = url;
+      } else {
+        showToast("Could not start checkout — please try again", false);
+      }
+    } catch {
+      showToast("Could not start checkout — please try again", false);
+    } finally {
+      setSubscribing(false);
     }
   }
 
@@ -276,14 +293,16 @@ export default function CustomerDashboardPage() {
                     Subscribe to get unlimited dispatch access and skip the ₦5,000 deposit.
                   </p>
                   <button
-                    onClick={() => router.push("/register/customer")}
+                    onClick={handleSubscribe}
+                    disabled={subscribing}
                     style={{
                       padding: "0.75rem 1.5rem", background: "#fff", color: navy,
                       border: "none", borderRadius: 10, fontWeight: 700,
-                      fontSize: "0.9rem", cursor: "pointer",
+                      fontSize: "0.9rem", cursor: subscribing ? "not-allowed" : "pointer",
+                      opacity: subscribing ? 0.7 : 1,
                     }}
                   >
-                    Get membership →
+                    {subscribing ? "Starting checkout…" : "Get membership →"}
                   </button>
                 </>
               )}

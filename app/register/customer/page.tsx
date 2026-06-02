@@ -57,8 +57,8 @@ export default function CustomerRegisterPage() {
         email: form.email,
         password: form.password,
       });
-      // Registered + auto-logged-in → go pick a plan
-      router.push("/plans?welcome=1");
+      // Registered + auto-logged-in → go to customer dashboard to activate membership
+      router.push("/customer?welcome=1");
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {
