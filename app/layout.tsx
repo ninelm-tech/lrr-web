@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import "./auth.css";
 import "./landing.css";
@@ -9,6 +9,20 @@ const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -23,10 +37,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${dmSans.variable} ${fraunces.variable}`}>
       <body
         className="min-h-full flex flex-col"
-        style={{ background: "#F6FAFF", fontFamily: "var(--font-inter), Inter, Arial, sans-serif" }}
+        style={{ background: "#F6FAFF", fontFamily: "var(--font-inter), Arial, sans-serif" }}
       >
         <AppHeaderWrapper />
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</div>

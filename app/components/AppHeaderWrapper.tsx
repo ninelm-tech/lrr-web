@@ -4,7 +4,13 @@ import { usePathname } from "next/navigation";
 export default function AppHeaderWrapper() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/customer")) {
+  if (
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/customer")
+  ) {
     return null;
   }
 

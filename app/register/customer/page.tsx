@@ -78,13 +78,17 @@ export default function CustomerRegisterPage() {
   });
 
   return (
+    <div style={{ minHeight: "100vh", background: "radial-gradient(circle at 60% 40%, #dde8f8 0%, #F6FAFF 100%)", fontFamily: "var(--font-dm-sans), sans-serif" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem" }}>
+        <a href="/"><img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 44, width: "auto", objectFit: "contain" }} /></a>
+        <a href="/" style={{ color: "#6c7890", fontSize: "0.9rem", fontWeight: 500, textDecoration: "none" }}>Back to website</a>
+      </header>
     <div
       style={{
         minHeight: "calc(100vh - 120px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "radial-gradient(circle at 60% 40%, #dde8f8 0%, #F6FAFF 100%)",
         padding: "2rem 1rem",
       }}
     >
@@ -238,6 +242,7 @@ export default function CustomerRegisterPage() {
           .lrr-cust-card { padding: 1.5rem 1rem !important; border-radius: 12px !important; }
         }
       `}</style>
+    </div>
     </div>
   );
 }

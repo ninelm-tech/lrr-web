@@ -93,29 +93,29 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     <div style={{ display: "flex", minHeight: "100vh", background: "#F6FAFF" }}>
       <style>{`
         .lrr-sidebar {
-          width: 280px; background: #fff;
-          border-right: 1px solid #dde8f8;
+          width: 240px; background: #07152f;
           display: flex; flex-direction: column;
           position: fixed; left: 0; top: 0; bottom: 0; height: 100vh;
           z-index: 40; transition: transform 0.25s ease;
-          box-shadow: 2px 0 8px rgba(0,61,180,0.05);
         }
-        .lrr-main { flex: 1; display: flex; flex-direction: column; margin-left: 280px; min-height: 100vh; }
+        .lrr-main { flex: 1; display: flex; flex-direction: column; margin-left: 240px; min-height: 100vh; background: #f4f6f9; }
         .lrr-hamburger { display: none; }
         .lrr-username  { display: inline; }
         @media (max-width: 767px) {
-          .lrr-sidebar { transform: translateX(-280px); }
-          .lrr-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
+          .lrr-sidebar { transform: translateX(-240px); }
+          .lrr-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.3); }
           .lrr-main { margin-left: 0; }
           .lrr-hamburger { display: flex !important; }
           .lrr-username { display: none; }
         }
         .lrr-nav-btn {
           width: 100%; padding: 0.75rem 1.5rem; border: none; background: transparent;
-          text-align: left; cursor: pointer; color: #666; font-size: 0.95rem; font-weight: 500;
+          text-align: left; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.9rem; font-weight: 400;
           display: flex; align-items: center; gap: 12px; transition: background 0.15s, color 0.15s;
+          font-family: var(--font-dm-sans), sans-serif;
         }
-        .lrr-nav-btn:hover { background: #f0f7ff; color: #003DB4; }
+        .lrr-nav-btn:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+        .lrr-nav-btn.active { background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; }
         .lrr-dd-btn {
           width: 100%; padding: 0.7rem 1rem; border: none; background: transparent;
           text-align: left; cursor: pointer; font-size: 0.9rem; color: #333; transition: background 0.15s;
@@ -132,22 +132,14 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
 
       {/* Sidebar */}
       <aside className={`lrr-sidebar${sidebarOpen ? " open" : ""}`}>
-        <div style={{
-          padding: "1rem 1.25rem", borderBottom: "1px solid #dde8f8",
-          background: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 44, width: "auto", objectFit: "contain" }} />
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#003DB4", backgroundColor: "#F6FAFF", border: "1px solid #dde8f8", borderRadius: 4, padding: "2px 8px" }}>
-              {getRoleDisplayName(userRole)}
-            </span>
-            <button
-              className="lrr-hamburger"
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Close menu"
-              style={{ background: "none", border: "none", color: "#003DB4", padding: "0.2rem 0.3rem", cursor: "pointer", fontSize: "1rem" }}
-            >✕</button>
-          </div>
+        <div style={{ padding: "1.5rem 1.5rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <img src="/lrr-logo-white.png" alt="Lagos Roadside Rescue" style={{ height: 40, width: "auto", objectFit: "contain" }} />
+          <button
+            className="lrr-hamburger"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", padding: "0.2rem 0.3rem", cursor: "pointer", fontSize: "1rem" }}
+          >✕</button>
         </div>
 
         <nav style={{ flex: 1, padding: "1rem 0", overflowY: "auto" }}>
@@ -157,8 +149,8 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                 {section}
               </p>
               {items.map((item) => (
-                <button key={item.label} className="lrr-nav-btn" onClick={() => navigate(item.href)}>
-                  <span style={{ fontSize: "1.1rem" }}>{item.icon}</span>
+                <button key={item.label} className={`lrr-nav-btn${tab === item.label.toLowerCase() || (tab === "overview" && item.href === "/dashboard") ? " active" : ""}`} onClick={() => navigate(item.href)}>
+                  <span style={{ fontSize: "1rem", opacity: 0.7 }}>{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -166,12 +158,12 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           ))}
         </nav>
 
-        <div style={{ padding: "1.25rem", borderTop: "1px solid #dde8f8", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <button
             onClick={handleLogout}
-            style={{ width: "100%", padding: "0.65rem 1rem", border: "1px solid #ffcccc", background: "#fff5f5", borderRadius: 6, cursor: "pointer", color: "#d63031", fontWeight: 600, fontSize: "0.9rem" }}
+            style={{ width: "100%", padding: "0.65rem 1rem", border: "1px solid rgba(255,255,255,0.15)", background: "transparent", borderRadius: 8, cursor: "pointer", color: "rgba(255,255,255,0.5)", fontWeight: 500, fontSize: "0.88rem" }}
           >
-            🚪 Logout
+            Log out
           </button>
         </div>
       </aside>
@@ -179,8 +171,8 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       {/* Main */}
       <main className="lrr-main">
         <header style={{
-          background: "#fff", borderBottom: "1px solid #dde8f8",
-          padding: "0 1.25rem", display: "flex", justifyContent: "space-between",
+          background: "#f4f6f9", borderBottom: "1px solid #e8edf5",
+          padding: "0 1.5rem", display: "flex", justifyContent: "space-between",
           alignItems: "center", height: 64, position: "sticky", top: 0, zIndex: 20, flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -222,7 +214,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           </div>
         </header>
 
-        <div style={{ flex: 1, padding: "1.25rem", overflowY: "auto", background: "#F6FAFF" }}>
+        <div style={{ flex: 1, padding: "1.5rem 2rem", overflowY: "auto", background: "#f4f6f9" }}>
           {children}
         </div>
       </main>

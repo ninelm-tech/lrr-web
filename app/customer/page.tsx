@@ -1,55 +1,47 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSubscription } from "../hooks/useSubscription";
-import type { Subscription } from "../types";
 
-const PLAN_NAMES: Record<string, string> = {
-  INDIVIDUAL_MONTHLY: "Individual Monthly",
-  INDIVIDUAL_ANNUAL:  "Individual Annual",
-  COMMERCIAL_MONTHLY: "Commercial Monthly",
-};
-
-const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  ACTIVE:    { bg: "#d4edda", color: "#155724", label: "Active" },
-  PENDING:   { bg: "#fff3cd", color: "#856404", label: "Pending payment" },
-  EXPIRED:   { bg: "#f8d7da", color: "#721c24", label: "Expired" },
-  CANCELLED: { bg: "#e2e3e5", color: "#383d41", label: "Cancelled" },
-};
+const dm = "var(--font-dm-sans), sans-serif";
+const fraunces = "var(--font-fraunces), serif";
+const navy = "#07152f";
+const blue = "#003DB4";
 
 function fmtDate(d?: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(d).toLocaleDateString("en-NG", { month: "short", year: "numeric" });
 }
 
-function TowsBar({ used, total }: { used: number; total: number }) {
-  const left = Math.max(0, total - used);
-  const pct  = total > 0 ? (left / total) * 100 : 0;
-  const color = pct === 0 ? "#d63031" : pct < 50 ? "#e67e22" : "#27ae60";
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: "0.88rem", color: "#666" }}>Tows remaining this month</span>
-        <span style={{ fontSize: "0.88rem", fontWeight: 700, color }}>
-          {left} / {total}
-        </span>
-      </div>
-      <div style={{ height: 10, background: "#dde8f8", borderRadius: 999, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 999, transition: "width 0.4s" }} />
-      </div>
-    </div>
-  );
+function fmtDateFull(d?: string) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
 }
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+const navItems = [
+  { label: "Overview", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={18} height={18}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> },
+  { label: "Requests",  icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={18} height={18}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> },
+  { label: "Payments",  icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={18} height={18}><rect x="2" y="5" width="20" height="14" rx="2"/><path strokeLinecap="round" d="M2 10h20"/></svg> },
+  { label: "Settings",  icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width={18} height={18}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg> },
+];
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
-  const { mySubscriptions, activeSubscription, towsLeft, loading, error, fetchMySubscriptions, subscribe, cancelSubscription } = useSubscription();
-  const [userName, setUserName] = useState("");
+  const { activeSubscription, loading, fetchMySubscriptions, cancelSubscription } = useSubscription();
+  const [userName, setUserName]         = useState("");
+  const [activeTab, setActiveTab]       = useState("Overview");
   const [cancelConfirm, setCancelConfirm] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [cancelling, setCancelling]     = useState(false);
+  const [toast, setToast]               = useState<{ msg: string; ok: boolean } | null>(null);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -66,25 +58,13 @@ export default function CustomerDashboardPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  async function handleSubscribe(planKey: string) {
-    setSubscribing(true);
-    try {
-      const url = await subscribe(planKey);
-      if (url) window.location.href = url;
-    } catch {
-      showToast("Failed to start checkout", false);
-    } finally {
-      setSubscribing(false);
-    }
-  }
-
   async function handleCancel() {
     if (!activeSubscription) return;
     setCancelling(true);
     try {
       await cancelSubscription(activeSubscription.id);
       setCancelConfirm(false);
-      showToast("Subscription cancelled. You'll keep access until the end of the billing period.");
+      showToast("Subscription cancelled.");
     } catch {
       showToast("Failed to cancel — please try again", false);
     } finally {
@@ -97,253 +77,369 @@ export default function CustomerDashboardPage() {
     router.replace("/");
   }
 
+  const firstName = userName.split(" ")[0] || "there";
+  const isActive  = activeSubscription?.status === "ACTIVE";
+
   return (
-    <div style={{ minHeight: "100vh", background: "#F6FAFF" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f4f6f9", fontFamily: dm }}>
+      <style>{`
+        .cust-sidebar {
+          width: 240px; background: ${navy};
+          display: flex; flex-direction: column;
+          position: fixed; left: 0; top: 0; bottom: 0; height: 100vh;
+          z-index: 40; transition: transform 0.25s ease;
+        }
+        .cust-main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+        .cust-hamburger { display: none !important; }
+        .cust-main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.25rem; align-items: start; }
+        .cust-member-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .cust-request-row { display: flex; justify-content: space-between; align-items: center; }
+        .cust-table-wrap { overflow-x: auto; }
+        .cust-header-title { font-size: 1.75rem; }
+        .cust-req-btn { display: inline-flex; }
+        @media (max-width: 767px) {
+          .cust-sidebar { transform: translateX(-240px); }
+          .cust-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.3); }
+          .cust-main { margin-left: 0; }
+          .cust-hamburger { display: flex !important; }
+          .cust-main-grid { grid-template-columns: 1fr !important; }
+          .cust-member-grid { grid-template-columns: 1fr 1fr !important; }
+          .cust-request-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+          .cust-header-title { font-size: 1.35rem !important; }
+          .cust-req-btn { font-size: 0.82rem !important; padding: 0.55rem 0.9rem !important; }
+        }
+        @media (max-width: 480px) {
+          .cust-member-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       {/* Toast */}
       {toast && (
         <div style={{
           position: "fixed", top: 20, right: 20, zIndex: 999,
           background: toast.ok ? "#d4edda" : "#f8d7da",
           color: toast.ok ? "#155724" : "#721c24",
-          border: `1px solid ${toast.ok ? "#c3e6cb" : "#f5c6cb"}`,
-          borderRadius: 8, padding: "0.75rem 1.25rem",
-          fontWeight: 600, boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
-          maxWidth: 380,
+          borderRadius: 10, padding: "0.75rem 1.25rem",
+          fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
         }}>
           {toast.msg}
         </div>
       )}
 
-      {/* Header */}
-      <header style={{
-        background: "#fff", borderBottom: "1px solid #dde8f8",
-        padding: "0 2rem", height: 64,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#003DB4" }}>LRR</span>
-          <span style={{ color: "#ccc" }}>|</span>
-          <span style={{ color: "#666", fontSize: "0.95rem" }}>My Account</span>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 30 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside className={`cust-sidebar${sidebarOpen ? " open" : ""}`}>
+        {/* Logo + close */}
+        <div style={{ padding: "1.5rem 1.5rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/lrr-logo-white.png" alt="LRR" style={{ height: 40, objectFit: "contain" }} />
+          <button
+            className="cust-hamburger"
+            onClick={() => setSidebarOpen(false)}
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: "1rem", padding: "0.2rem 0.3rem" }}
+          >✕</button>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <span style={{ color: "#666", fontSize: "0.9rem" }}>{userName}</span>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "0.5rem 0" }}>
+          {navItems.map(({ label, icon }) => {
+            const active = activeTab === label;
+            return (
+              <button
+                key={label}
+                onClick={() => { setActiveTab(label); setSidebarOpen(false); }}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 12,
+                  padding: "0.75rem 1.5rem", border: "none", cursor: "pointer",
+                  background: active ? "rgba(255,255,255,0.1)" : "transparent",
+                  color: active ? "#fff" : "rgba(255,255,255,0.5)",
+                  fontFamily: dm, fontSize: "0.9rem", fontWeight: active ? 600 : 400,
+                  transition: "all 0.15s",
+                }}
+              >
+                {icon}
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div style={{ padding: "1.25rem 1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <button
             onClick={handleLogout}
             style={{
-              padding: "0.4rem 0.9rem", background: "#fff5f5",
-              color: "#d63031", border: "1px solid #ffcccc",
-              borderRadius: 6, cursor: "pointer", fontSize: "0.85rem", fontWeight: 600,
+              width: "100%", padding: "0.6rem", borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.15)", background: "transparent",
+              color: "rgba(255,255,255,0.5)", fontFamily: dm, fontSize: "0.85rem",
+              cursor: "pointer",
             }}
           >
-            Logout
+            Log out
           </button>
         </div>
-      </header>
+      </aside>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "2.5rem 1rem" }}>
-        <h1 style={{ margin: "0 0 0.25rem 0", fontSize: "1.8rem", fontWeight: 700, color: "#003DB4" }}>
-          {userName ? `Welcome, ${userName.split(" ")[0]}!` : "My Dashboard"}
-        </h1>
-        <p style={{ margin: "0 0 2rem 0", color: "#999", fontSize: "0.95rem" }}>
-          Manage your LRR subscription and tow coverage
-        </p>
+      {/* ── Main ── */}
+      <div className="cust-main">
 
-        {loading && mySubscriptions.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#003DB4" }}>Loading your account…</div>
-        )}
-
-        {error && (
-          <div style={{ background: "#f8d7da", color: "#721c24", padding: "1rem", borderRadius: 8, marginBottom: "1.5rem", border: "1px solid #f5c6cb" }}>
-            {error}
+        {/* Top bar */}
+        <header style={{
+          background: "#f4f6f9", padding: "1.25rem 1.5rem 0",
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              className="cust-hamburger"
+              onClick={() => setSidebarOpen(true)}
+              style={{ background: "#fff", border: "1px solid #dde8f8", borderRadius: 8, padding: "0.45rem 0.6rem", cursor: "pointer", fontSize: "1.1rem", lineHeight: 1 }}
+            >☰</button>
+            <div>
+              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.82rem" }}>
+                {getGreeting()}, {firstName}
+              </p>
+              <h1 className="cust-header-title" style={{ margin: 0, fontFamily: fraunces, fontWeight: 700, color: navy }}>
+                Member overview
+              </h1>
+            </div>
           </div>
-        )}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+            <button className="cust-req-btn" style={{
+              padding: "0.65rem 1.25rem", background: blue, color: "#fff",
+              border: "none", borderRadius: 10, fontFamily: dm, fontWeight: 600,
+              fontSize: "0.9rem", cursor: "pointer",
+            }}>
+              Request assistance
+            </button>
+            <div style={{
+              width: 36, height: 36, borderRadius: "50%",
+              background: "#dde8f8", display: "flex", alignItems: "center", justifyContent: "center",
+              color: navy, fontWeight: 700, fontSize: "0.85rem", flexShrink: 0,
+            }}>
+              {firstName[0]?.toUpperCase()}
+            </div>
+          </div>
+        </header>
 
-        {/* Active subscription card */}
-        {activeSubscription ? (
-          <div style={{
-            background: "#fff", borderRadius: 16, padding: "2rem",
-            border: "2px solid #003DB4", boxShadow: "0 4px 20px rgba(0,61,180,0.12)",
-            marginBottom: "1.5rem",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
-              <div>
-                <h2 style={{ margin: "0 0 4px 0", fontSize: "1.3rem", fontWeight: 700, color: "#333" }}>
-                  {PLAN_NAMES[activeSubscription.plan] ?? activeSubscription.plan}
-                </h2>
+        <main className="cust-main-grid" style={{ flex: 1, padding: "1.25rem 1.5rem 2rem" }}>
+
+          {/* LEFT column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+            {/* Membership status card */}
+            <div style={{
+              background: navy, borderRadius: 18, padding: "1.75rem 2rem",
+              color: "#fff", position: "relative", overflow: "hidden",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                <p style={{ margin: 0, color: "rgba(219,232,255,0.55)", fontSize: "0.82rem", fontWeight: 500 }}>
+                  Membership status
+                </p>
                 <span style={{
-                  display: "inline-block",
-                  padding: "0.3rem 0.8rem",
-                  background: STATUS_STYLE[activeSubscription.status]?.bg ?? "#e2e3e5",
-                  color: STATUS_STYLE[activeSubscription.status]?.color ?? "#333",
-                  borderRadius: 20, fontSize: "0.82rem", fontWeight: 700,
+                  padding: "0.3rem 0.85rem", borderRadius: 20,
+                  background: isActive ? "rgba(25,165,107,0.2)" : "rgba(255,200,0,0.15)",
+                  color: isActive ? "#4ade80" : "#fbbf24",
+                  fontSize: "0.78rem", fontWeight: 600,
                 }}>
-                  {STATUS_STYLE[activeSubscription.status]?.label ?? activeSubscription.status}
+                  {isActive ? "Active" : activeSubscription ? activeSubscription.status : "No plan"}
                 </span>
               </div>
-              <span style={{ fontSize: "2.5rem" }}>⭐</span>
+
+              {loading ? (
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "1rem" }}>Loading…</p>
+              ) : activeSubscription ? (
+                <>
+                  <h2 style={{ fontFamily: fraunces, fontWeight: 700, fontSize: "2rem", margin: "0 0 0.5rem 0" }}>
+                    You&apos;re covered.
+                  </h2>
+                  <p style={{ color: "rgba(219,232,255,0.6)", fontSize: "0.9rem", margin: "0 0 1.75rem 0" }}>
+                    Your annual LRR membership is active and ready whenever you need roadside support.
+                  </p>
+                  <div className="cust-member-grid">
+                    {[
+                      { label: "Plan",         value: "Annual" },
+                      { label: "Member since", value: fmtDate(activeSubscription.currentPeriodStart) },
+                      { label: "Next renewal", value: fmtDate(activeSubscription.currentPeriodEnd) },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p style={{ margin: "0 0 2px 0", color: "rgba(219,232,255,0.45)", fontSize: "0.75rem" }}>{label}</p>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem" }}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ fontFamily: fraunces, fontWeight: 700, fontSize: "1.8rem", margin: "0 0 0.5rem 0" }}>
+                    No active plan.
+                  </h2>
+                  <p style={{ color: "rgba(219,232,255,0.6)", fontSize: "0.9rem", margin: "0 0 1.5rem 0" }}>
+                    Subscribe to get unlimited dispatch access and skip the ₦5,000 deposit.
+                  </p>
+                  <button
+                    onClick={() => router.push("/register/customer")}
+                    style={{
+                      padding: "0.75rem 1.5rem", background: "#fff", color: navy,
+                      border: "none", borderRadius: 10, fontWeight: 700,
+                      fontSize: "0.9rem", cursor: "pointer",
+                    }}
+                  >
+                    Get membership →
+                  </button>
+                </>
+              )}
             </div>
 
-            <TowsBar used={activeSubscription.towsUsedThisMonth} total={activeSubscription.towsIncludedPerMonth} />
-
+            {/* Active request card */}
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr",
-              gap: "1rem", margin: "1.5rem 0",
-              padding: "1.25rem", background: "#F6FAFF", borderRadius: 10,
-              border: "1px solid #dde8f8",
+              background: "#fff", borderRadius: 18, padding: "1.5rem 1.75rem",
+              border: "1px solid #e8edf5",
             }}>
-              {[
-                { label: "Tows included / month", value: activeSubscription.towsIncludedPerMonth },
-                { label: "Used this month",        value: activeSubscription.towsUsedThisMonth },
-                { label: "Period start",           value: fmtDate(activeSubscription.currentPeriodStart) },
-                { label: "Renews / expires",       value: fmtDate(activeSubscription.currentPeriodEnd) },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>{label}</p>
-                  <p style={{ margin: 0, fontWeight: 700, color: "#333" }}>{value}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+                <div>
+                  <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Active request</p>
+                  <h3 style={{ margin: 0, fontWeight: 700, fontSize: "1.1rem", color: navy }}>Current assistance</h3>
                 </div>
-              ))}
+                <span style={{
+                  padding: "0.3rem 0.85rem", borderRadius: 20,
+                  background: "#fff8e6", color: "#d97706",
+                  fontSize: "0.78rem", fontWeight: 600,
+                }}>
+                  In progress
+                </span>
+              </div>
+              <div className="cust-request-row" style={{ paddingTop: "0.75rem", borderTop: "1px solid #f0f2f5" }}>
+                <div>
+                  <p style={{ margin: "0 0 2px 0", fontWeight: 600, color: navy, fontSize: "0.95rem" }}>Battery assistance</p>
+                  <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>Lekki Phase 1 · Today, 14:18</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ margin: "0 0 2px 0", fontWeight: 700, color: "#19a56b", fontSize: "0.95rem" }}>12 min ETA</p>
+                  <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>Operator assigned</p>
+                </div>
+              </div>
             </div>
 
+            {/* Request history */}
             <div style={{
-              background: "#e8f5e9", borderRadius: 8, padding: "0.9rem 1rem",
-              border: "1px solid #c8e6c9", marginBottom: "1.5rem",
+              background: "#fff", borderRadius: 18, padding: "1.5rem 1.75rem",
+              border: "1px solid #e8edf5",
             }}>
-              <p style={{ margin: 0, color: "#2e7d32", fontSize: "0.92rem", fontWeight: 600 }}>
-                ✅ Subscriber benefit: Just send <strong>SOS</strong> on WhatsApp to{" "}
-                <strong>0805-577-XXXX</strong> — no deposit required.
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.25rem" }}>
+                <div>
+                  <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Request history</p>
+                  <h3 style={{ margin: 0, fontWeight: 700, fontSize: "1.1rem", color: navy }}>Recent activity</h3>
+                </div>
+                <button style={{ background: "none", border: "none", color: blue, fontWeight: 600, fontSize: "0.88rem", cursor: "pointer", fontFamily: dm }}>
+                  View all
+                </button>
+              </div>
+              <div className="cust-table-wrap"><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #f0f2f5" }}>
+                    {["Service", "Location", "Date", "Status"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "0 0 0.75rem", color: "#6c7890", fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { service: "Flat tyre",  location: "Victoria Island", date: "May 18, 2026", status: "Completed" },
+                    { service: "Towing",     location: "Ikeja",           date: "Apr 02, 2026", status: "Completed" },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #f7f9fc" }}>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: navy, fontWeight: 500 }}>{row.service}</td>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>{row.location}</td>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>{row.date}</td>
+                      <td style={{ padding: "0.9rem 0" }}>
+                        <span style={{ color: "#19a56b", fontWeight: 600, fontSize: "0.88rem" }}>{row.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </div>
+          </div>
+
+          {/* RIGHT column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+            {/* Quick action */}
+            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
+              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Quick action</p>
+              <h3 style={{ margin: "0 0 0.5rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Need help now?</h3>
+              <p style={{ margin: "0 0 1.25rem 0", color: "#6c7890", fontSize: "0.85rem", lineHeight: 1.5 }}>
+                Start a request and we&apos;ll connect you to the nearest available operator.
               </p>
+              <button style={{
+                width: "100%", padding: "0.85rem", borderRadius: 10,
+                border: "1px solid #e2e8f0", background: "#fff",
+                color: navy, fontFamily: dm, fontWeight: 600,
+                fontSize: "0.9rem", cursor: "pointer",
+              }}>
+                Start request
+              </button>
             </div>
 
-            {/* Cancel */}
-            {!cancelConfirm ? (
-              <button
-                onClick={() => setCancelConfirm(true)}
-                style={{
-                  background: "transparent", color: "#999",
-                  border: "1px solid #e0e0e0", borderRadius: 6,
-                  padding: "0.5rem 1rem", cursor: "pointer", fontSize: "0.88rem",
-                }}
-              >
-                Cancel subscription
+            {/* Payments */}
+            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
+              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Payments</p>
+              <h3 style={{ margin: "0 0 1rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Membership billing</h3>
+              <p style={{ margin: "0 0 2px 0", fontFamily: fraunces, fontWeight: 700, fontSize: "1.75rem", color: navy }}>
+                ₦48,000
+              </p>
+              <p style={{ margin: "0 0 1rem 0", color: "#6c7890", fontSize: "0.82rem" }}>Annual membership</p>
+              <button style={{ background: "none", border: "none", color: blue, fontWeight: 600, fontSize: "0.88rem", cursor: "pointer", fontFamily: dm, padding: 0 }}>
+                View billing
               </button>
-            ) : (
-              <div style={{ background: "#fff5f5", border: "1px solid #ffcccc", borderRadius: 8, padding: "1rem" }}>
-                <p style={{ margin: "0 0 0.75rem 0", color: "#d63031", fontWeight: 600, fontSize: "0.95rem" }}>
-                  Are you sure? You'll lose your tow coverage at the end of the billing period.
-                </p>
-                <div style={{ display: "flex", gap: 10 }}>
+            </div>
+
+            {/* Cancel subscription */}
+            {activeSubscription && isActive && (
+              <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
+                {!cancelConfirm ? (
                   <button
-                    onClick={handleCancel}
-                    disabled={cancelling}
-                    style={{
-                      padding: "0.5rem 1.2rem", background: "#d63031", color: "#fff",
-                      border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700,
-                    }}
+                    onClick={() => setCancelConfirm(true)}
+                    style={{ background: "none", border: "none", color: "#9ca3af", fontFamily: dm, fontSize: "0.85rem", cursor: "pointer", padding: 0 }}
                   >
-                    {cancelling ? "Cancelling…" : "Yes, cancel"}
+                    Cancel subscription
                   </button>
-                  <button
-                    onClick={() => setCancelConfirm(false)}
-                    style={{
-                      padding: "0.5rem 1.2rem", background: "#dde8f8", color: "#003DB4",
-                      border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600,
-                    }}
-                  >
-                    Keep my plan
-                  </button>
-                </div>
+                ) : (
+                  <div>
+                    <p style={{ margin: "0 0 1rem 0", color: "#e53e3e", fontWeight: 600, fontSize: "0.88rem" }}>
+                      Cancel your membership?
+                    </p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={handleCancel}
+                        disabled={cancelling}
+                        style={{ padding: "0.5rem 1rem", background: "#e53e3e", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}
+                      >
+                        {cancelling ? "…" : "Yes, cancel"}
+                      </button>
+                      <button
+                        onClick={() => setCancelConfirm(false)}
+                        style={{ padding: "0.5rem 1rem", background: "#f4f6f9", color: navy, border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                      >
+                        Keep plan
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        ) : !loading ? (
-          /* No subscription — prompt to subscribe */
-          <div style={{
-            background: "#fff", borderRadius: 16, padding: "2.5rem",
-            border: "2px dashed #b3d9ff", textAlign: "center",
-            marginBottom: "1.5rem",
-          }}>
-            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🚗</div>
-            <h2 style={{ margin: "0 0 0.5rem 0", color: "#333", fontSize: "1.3rem", fontWeight: 700 }}>
-              No active subscription
-            </h2>
-            <p style={{ margin: "0 0 1.5rem 0", color: "#666", fontSize: "0.95rem" }}>
-              Subscribe to skip the ₦5,000 deposit and get tows included in your plan.
-            </p>
-            <button
-              onClick={() => router.push("/plans")}
-              style={{
-                padding: "0.85rem 2rem",
-                background: "linear-gradient(90deg,#003DB4,#003DB4)",
-                color: "#fff", border: "none", borderRadius: 8,
-                fontWeight: 700, fontSize: "1rem", cursor: "pointer",
-                boxShadow: "0 2px 12px rgba(0,61,180,0.2)",
-              }}
-            >
-              View Plans →
-            </button>
-          </div>
-        ) : null}
-
-        {/* Subscription history */}
-        {mySubscriptions.filter((s) => s.status !== "ACTIVE").length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #dde8f8" }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "#333", fontSize: "1.05rem", fontWeight: 600 }}>
-              Subscription History
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {mySubscriptions.filter((s) => s.status !== "ACTIVE").map((sub) => {
-                const st = STATUS_STYLE[sub.status] ?? { bg: "#e2e3e5", color: "#383d41", label: sub.status };
-                return (
-                  <div
-                    key={sub.id}
-                    style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                      padding: "0.75rem 1rem", background: "#F6FAFF", borderRadius: 8, border: "1px solid #dde8f8",
-                    }}
-                  >
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 600, color: "#333", fontSize: "0.92rem" }}>
-                        {PLAN_NAMES[sub.plan] ?? sub.plan}
-                      </p>
-                      <p style={{ margin: "2px 0 0 0", fontSize: "0.82rem", color: "#999" }}>
-                        {fmtDate(sub.currentPeriodStart)} — {fmtDate(sub.currentPeriodEnd)}
-                      </p>
-                    </div>
-                    <span style={{
-                      padding: "0.25rem 0.7rem", background: st.bg, color: st.color,
-                      borderRadius: 20, fontSize: "0.78rem", fontWeight: 700,
-                    }}>
-                      {st.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* How it works */}
-        <div style={{ marginTop: "2rem", background: "#fff", borderRadius: 12, padding: "1.5rem", border: "1px solid #dde8f8" }}>
-          <h3 style={{ margin: "0 0 1rem 0", color: "#333", fontSize: "1.05rem", fontWeight: 600 }}>How to use your coverage</h3>
-          {[
-            { step: "1", text: "Save our WhatsApp number in your phone: 0805-577-XXXX" },
-            { step: "2", text: "When you need help, send SOS, HELP, or just \"rescue\" on WhatsApp" },
-            { step: "3", text: "Share your location pin when prompted" },
-            { step: "4", text: "As a subscriber, you're dispatched immediately — no deposit needed" },
-          ].map(({ step, text }) => (
-            <div key={step} style={{ display: "flex", gap: 12, marginBottom: "0.75rem", alignItems: "flex-start" }}>
-              <div style={{
-                minWidth: 28, height: 28, background: "#dde8f8", borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#003DB4", fontWeight: 700, fontSize: "0.85rem",
-              }}>
-                {step}
-              </div>
-              <p style={{ margin: 0, color: "#555", fontSize: "0.92rem", paddingTop: 4 }}>{text}</p>
-            </div>
-          ))}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
