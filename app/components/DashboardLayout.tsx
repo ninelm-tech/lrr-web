@@ -1,6 +1,6 @@
 "use client";
 import { ReactNode, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole } from "../types";
 
@@ -18,6 +18,8 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab") || "overview";
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
