@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useRescueRequests } from "../../hooks/useRescueRequests";
-import { apiFetch } from "../../hooks/api";
+import { useRescueRequestApi, useOperatorApi } from "../../hooks";
 import type { UserRole, RescueRequestListItem, RescueRequestStatus, IssueType } from "../../types";
 
 interface RescueRequestsTabProps {
@@ -21,7 +20,12 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 interface AvailableOperator { id: string; businessName: string; phoneNumber: string; }
 
 export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
-  const { requests, loading, error, fetchList, assignOperator, updateStatus, cancel, total, page, limit } = useRescueRequests();
+  const {
+    requests, loading, error, total, page, limit,
+    fetchList, assignOperator, updateStatus, cancelRequest: cancel,
+  } = useRescueRequestApi();
+  const { fetchAll: fetchAllOperators } = useOperatorApi();
+
   const [filters, setFilters] = useState({ status: "", issueType: "", search: "" });
   const [selectedRequest, setSelectedRequest] = useState<RescueRequestListItem | null>(null);
   const [availableOperators, setAvailableOperators] = useState<AvailableOperator[]>([]);
@@ -31,12 +35,14 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
 
   const loadAvailableOperators = useCallback(async () => {
     try {
-      const res = await apiFetch("/operators?status=ACTIVE") as any;
-      setAvailableOperators((res.data ?? []).map((o: any) => ({
-        id: o.id, businessName: o.businessName, phoneNumber: o.phoneNumber,
-      })));
+      const ops = await fetchAllOperators();
+      setAvailableOperators(
+        ops.filter(o => o.status === "ACTIVE").map(o => ({
+          id: o.id, businessName: o.businessName, phoneNumber: o.phoneNumber,
+        }))
+      );
     } catch { /* silently ignore */ }
-  }, []);
+  }, [fetchAllOperators]);
 
   const openModal = useCallback((req: RescueRequestListItem) => {
     setSelectedRequest(req);

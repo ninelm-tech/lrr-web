@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRescueRequests } from "../../hooks/useRescueRequests";
-import { apiFetch } from "../../hooks/api";
+import { usePaymentApi } from "../../hooks";
 import type { UserRole, RescueRequestListItem } from "../../types";
 
 interface PaymentsTabProps {
@@ -20,11 +19,13 @@ function fmtDate(d: string) {
 }
 
 export default function PaymentsTab({ role }: PaymentsTabProps) {
-  const { requests, loading, error, total, page, limit, fetchList } = useRescueRequests();
+  const {
+    records: requests, loading, error, total, page, limit,
+    fetchPaymentList: fetchList, fetchSummary,
+  } = usePaymentApi();
 
-  // Running totals accumulated from all pages of data we've fetched
-  const [summaryDepositPaid,   setSummaryDepositPaid]   = useState(0);
-  const [summaryBalancePaid,   setSummaryBalancePaid]   = useState(0);
+  const [summaryDepositPaid,    setSummaryDepositPaid]    = useState(0);
+  const [summaryBalancePaid,    setSummaryBalancePaid]    = useState(0);
   const [summaryDepositPending, setSummaryDepositPending] = useState(0);
   const [summaryBalancePending, setSummaryBalancePending] = useState(0);
   const [summaryLoaded, setSummaryLoaded] = useState(false);
@@ -35,35 +36,15 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo,   setFilterTo]   = useState("");
 
-  // Load first page on mount + compute summary from ALL requests (limit 200)
   useEffect(() => {
     fetchList({ page: 1, limit: 20 });
-
-    // Compute running summary by fetching a broader set
-    (async () => {
-      try {
-        const res = await apiFetch("/rescue-requests?limit=500&page=1");
-        const all: RescueRequestListItem[] = res?.data ?? [];
-        let dp = 0, bp = 0, dn = 0, bn = 0;
-        for (const r of all) {
-          // @ts-ignore — depositAmount / balanceAmount may come through on list items
-          dp += r.depositPaid  ? (r.depositAmount  ?? 500000) : 0;
-          // @ts-ignore
-          bp += r.balancePaid  ? (r.balanceAmount  ?? 4500000) : 0;
-          // @ts-ignore
-          dn += !r.depositPaid ? (r.depositAmount  ?? 500000) : 0;
-          // @ts-ignore
-          bn += !r.balancePaid && r.depositPaid ? (r.balanceAmount ?? 4500000) : 0;
-        }
-        setSummaryDepositPaid(dp);
-        setSummaryBalancePaid(bp);
-        setSummaryDepositPending(dn);
-        setSummaryBalancePending(bn);
-        setSummaryLoaded(true);
-      } catch {
-        setSummaryLoaded(true);
-      }
-    })();
+    fetchSummary().then((s) => {
+      setSummaryDepositPaid(s.depositCollected);
+      setSummaryBalancePaid(s.balanceCollected);
+      setSummaryDepositPending(s.depositPending);
+      setSummaryBalancePending(s.balancePending);
+      setSummaryLoaded(true);
+    });
   }, []);
 
   const applyFilters = () => {

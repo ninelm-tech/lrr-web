@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthApi } from "../hooks";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
@@ -9,7 +9,7 @@ import { OperatorType, OPERATOR_TYPES } from "../types";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { registerOperator } = useAuth();
+  const { registerOperator } = useAuthApi();
   const { address, setAddress, suggestions, selectSuggestion, latLng } = useGooglePlacesAutocomplete();
 
   const [formData, setFormData] = useState({

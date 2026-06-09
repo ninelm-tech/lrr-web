@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useOperators, type Operator, type OperatorStats } from "../../hooks/useOperators";
+import { useOperatorApi } from "../../hooks";
+import type { Operator, OperatorStats } from "../../hooks";
 import type { UserRole } from "../../types";
 
 interface OperatorsTabProps {
@@ -129,7 +130,7 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
 }
 
 export default function OperatorsTab({ role }: OperatorsTabProps) {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability } = useOperators();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability } = useOperatorApi();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [filterStatus, setFilterStatus] = useState("");
   const [filterType, setFilterType] = useState("");

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useState } from "react";
 import LoginModal from "../LoginModal";
 
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+
 // Lekki-Ikoyi Link Bridge, Lagos — photo by Opeyemi Adisa on Unsplash (free)
 const heroImageSrc =
   "https://images.unsplash.com/photo-1648023200201-8fcede127835?fm=jpg&q=80&w=1800&auto=format&fit=crop";
@@ -215,7 +217,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
 
             {/* WhatsApp SOS strip */}
             <a
-              href="https://wa.me/2348000000000?text=SOS"
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=SOS`}
               target="_blank"
               rel="noreferrer"
               className="mt-8 inline-flex items-center gap-3 rounded-2xl px-5 py-3.5 transition hover:opacity-90"
@@ -418,7 +420,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
 
       {/* Floating WhatsApp SOS button — visible throughout the page */}
       <a
-        href="https://wa.me/2348000000000?text=SOS"
+        href={`https://wa.me/${WHATSAPP_NUMBER}?text=SOS`}
         target="_blank"
         rel="noreferrer"
         aria-label="Send SOS on WhatsApp"

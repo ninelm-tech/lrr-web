@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuthApi } from "../../hooks";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage } from "../../utils/phoneValidation";
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
-  const { registerCustomer } = useAuth();
+  const { registerCustomer } = useAuthApi();
 
   const [form, setForm] = useState({
     phoneNumber: "",

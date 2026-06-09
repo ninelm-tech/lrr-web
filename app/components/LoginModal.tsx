@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthApi } from "../hooks";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const fraunces = "var(--font-fraunces), serif";
@@ -15,7 +15,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose, next }: LoginModalProps) {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login } = useAuthApi();
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");

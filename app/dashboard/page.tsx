@@ -2,13 +2,42 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "../components/DashboardLayout";
-import RescueRequestsTabAdmin from "../components/tabs/RescueRequestsTabAdmin";
+import RescueRequestsTabAdmin    from "../components/tabs/RescueRequestsTabAdmin";
 import RescueRequestsTabOperator from "../components/tabs/RescueRequestsTabOperator";
-import OperatorsTab from "../components/tabs/OperatorsTab";
-import PaymentsTab from "../components/tabs/PaymentsTab";
-import { apiFetch } from "../hooks/api";
+import OperatorsTab              from "../components/tabs/OperatorsTab";
+import PaymentsTab               from "../components/tabs/PaymentsTab";
+import OverviewTabAdmin          from "../components/tabs/OverviewTabAdmin";
+import OverviewTabOperator       from "../components/tabs/OverviewTabOperator";
+import OperatorMembersTab        from "../components/tabs/OperatorMembersTab";
+import ManageUsersTab            from "../components/tabs/ManageUsersTab";
 import type { UserRole } from "../types";
 
+// ─────────────────────────────────────────────────────────────
+//  Small helpers
+// ─────────────────────────────────────────────────────────────
+function PlaceholderCard({ text }: { text: string }) {
+  return (
+    <div style={{
+      background: "#fff", padding: "2rem", borderRadius: 12,
+      boxShadow: "0 2px 8px rgba(0,61,180,0.1)", border: "1px solid #dde8f8",
+      textAlign: "center", color: "#999",
+    }}>
+      <p style={{ margin: 0 }}>{text}</p>
+    </div>
+  );
+}
+
+function PageTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", fontWeight: 800, color: "#07152f" }}>
+      {children}
+    </h1>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Main dashboard content — role-gated routing
+// ─────────────────────────────────────────────────────────────
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,7 +48,7 @@ function DashboardContent() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken");
-      const role = localStorage.getItem("userRole") as UserRole;
+      const role  = localStorage.getItem("userRole") as UserRole;
       if (!token) { router.replace("/login"); return; }
       setUserRole(role);
       setIsLoading(false);
@@ -29,41 +58,114 @@ function DashboardContent() {
   if (isLoading) {
     return (
       <div style={{ textAlign: "center", padding: "2rem" }}>
-        <p style={{ color: "#003DB4" }}>Loading...</p>
+        <p style={{ color: "#003DB4" }}>Loading…</p>
       </div>
     );
   }
 
+  const isAdmin = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
+  const isOp    = userRole === "OPERATOR";
+
   const renderContent = () => {
     switch (tab) {
+
+      // ── Overview ──────────────────────────────────────────
+      case "overview":
+        if (isAdmin) return <OverviewTabAdmin role={userRole} />;
+        if (isOp)    return <OverviewTabOperator />;
+        return <PlaceholderCard text="Overview not available for this role." />;
+
+      // ── Rescue Requests ───────────────────────────────────
       case "requests":
-        return <RescueRequestsTab role={userRole} />;
-      case "operators":
         return (
           <div>
-            <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>🚗 Operators</h1>
-            <OperatorsTab role={userRole} />
+            <PageTitle>🆘 Rescue Requests</PageTitle>
+            {isAdmin ? (
+              <RescueRequestsTabAdmin role={userRole} />
+            ) : isOp ? (
+              <RescueRequestsTabOperator role={userRole} />
+            ) : (
+              <PlaceholderCard text="Access denied." />
+            )}
           </div>
         );
-      case "admins":
-        return userRole === "SUPER_ADMIN" ? <AdminsTab /> : null;
+
+      // ── Operators ─────────────────────────────────────────
+      case "operators":
+        return isAdmin ? (
+          <div>
+            <PageTitle>🚗 Operators</PageTitle>
+            <OperatorsTab role={userRole} />
+          </div>
+        ) : (
+          <PlaceholderCard text="Access denied." />
+        );
+
+      // ── Manage Users (Super Admin) ────────────────────────
+      case "users":
+        return (userRole === "SUPER_ADMIN" || userRole === "ADMIN")
+          ? <ManageUsersTab />
+          : <PlaceholderCard text="Access denied." />;
+
+      // ── Payments ──────────────────────────────────────────
       case "payments":
         return (
           <div>
-            <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>💳 Payments</h1>
+            <PageTitle>💳 Payments</PageTitle>
             <PaymentsTab role={userRole} />
           </div>
         );
-      case "reports":
-        return userRole === "SUPER_ADMIN" ? <ReportsTab /> : null;
+
+      // ── Operator jobs (full request list for operators) ───
       case "jobs":
-        return userRole === "OPERATOR" ? <JobsTab /> : null;
+        return isOp ? (
+          <div>
+            <PageTitle>📋 My Jobs</PageTitle>
+            <RescueRequestsTabOperator role={userRole} />
+          </div>
+        ) : (
+          <PlaceholderCard text="Access denied." />
+        );
+
+      // ── Team / Members (Operators) ────────────────────────
+      case "members":
+        return isOp
+          ? <OperatorMembersTab />
+          : <PlaceholderCard text="Access denied." />;
+
+      // ── Reports ───────────────────────────────────────────
+      case "reports":
+        return isAdmin ? (
+          <div>
+            <PageTitle>📈 Reports</PageTitle>
+            <PlaceholderCard text="Detailed reports coming soon." />
+          </div>
+        ) : (
+          <PlaceholderCard text="Access denied." />
+        );
+
+      // ── Profile ───────────────────────────────────────────
       case "profile":
-        return <ProfileTab />;
+        return (
+          <div>
+            <PageTitle>👤 My Profile</PageTitle>
+            <PlaceholderCard text="Profile management coming soon." />
+          </div>
+        );
+
+      // ── Settings ──────────────────────────────────────────
       case "settings":
-        return userRole === "SUPER_ADMIN" ? <SettingsTab /> : null;
+        return userRole === "SUPER_ADMIN" ? (
+          <div>
+            <PageTitle>⚙️ Settings</PageTitle>
+            <PlaceholderCard text="Platform settings coming soon." />
+          </div>
+        ) : (
+          <PlaceholderCard text="Access denied." />
+        );
+
       default:
-        return <OverviewTab role={userRole} />;
+        return <PlaceholderCard text="Page not found." />;
     }
   };
 
@@ -75,240 +177,6 @@ function DashboardContent() {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Overview Tab — live stats from API
-// ─────────────────────────────────────────────────────────────
-interface StatCard {
-  label: string;
-  value: string | number;
-  trend: string;
-  color?: string;
-}
-
-function StatCardEl({ label, value, trend, color = "#003DB4" }: StatCard) {
-  return (
-    <div
-      style={{
-        background: "#fff", padding: "1.5rem", borderRadius: 12,
-        boxShadow: "0 2px 8px rgba(0,61,180,0.1)", border: "1px solid #dde8f8",
-      }}
-    >
-      <p style={{ margin: "0 0 0.5rem 0", color: "#999", fontSize: "0.9rem" }}>{label}</p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-        <span style={{ fontSize: "2rem", fontWeight: 700, color }}>{value}</span>
-        <span style={{ fontSize: "0.85rem", color: "#003DB4", fontWeight: 600 }}>{trend}</span>
-      </div>
-    </div>
-  );
-}
-
-function OverviewTab({ role }: { role: UserRole | null }) {
-  const [stats, setStats] = useState<StatCard[]>([]);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [recentRequests, setRecentRequests] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!role) return;
-
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    const fromStr = todayStart.toISOString();
-    const toStr   = todayEnd.toISOString();
-
-    if (role === "SUPER_ADMIN" || role === "ADMIN") {
-      Promise.all([
-        apiFetch("/rescue-requests?limit=1"),
-        apiFetch("/rescue-requests?limit=1&status=DISPATCHING"),
-        apiFetch("/rescue-requests?limit=1&status=OPERATOR_ASSIGNED"),
-        apiFetch(`/rescue-requests?limit=1&status=COMPLETED&from=${fromStr}&to=${toStr}`),
-        apiFetch("/operators"),
-        apiFetch("/rescue-requests?limit=5"),
-      ])
-        .then(([allRes, dispatchingRes, assignedRes, completedTodayRes, opsRes, recentRes]) => {
-          const totalRequests    = allRes?.meta?.total ?? 0;
-          const activeRequests   = (dispatchingRes?.meta?.total ?? 0) + (assignedRes?.meta?.total ?? 0);
-          const completedToday   = completedTodayRes?.meta?.total ?? 0;
-          const availableOps     = (opsRes?.data ?? []).filter((o: any) => o.isAvailable && o.status === "ACTIVE").length;
-          const pendingApproval  = (opsRes?.data ?? []).filter((o: any) => o.status === "PENDING").length;
-
-          setStats([
-            { label: "Total Requests",      value: totalRequests,   trend: "All time"   },
-            { label: "Active Now",           value: activeRequests,  trend: "Live",       color: activeRequests > 0 ? "#e67e22" : "#003DB4" },
-            { label: "Completed Today",      value: completedToday,  trend: "Today"      },
-            { label: "Available Operators",  value: availableOps,    trend: `${pendingApproval} pending approval` },
-          ]);
-          setRecentRequests(recentRes?.data ?? []);
-        })
-        .catch(() => setStats([]))
-        .finally(() => setStatsLoading(false));
-    } else if (role === "OPERATOR") {
-      Promise.all([
-        apiFetch("/rescue-requests?limit=1&status=DISPATCHING"),
-        apiFetch("/rescue-requests?limit=1&status=OPERATOR_ASSIGNED"),
-        apiFetch(`/rescue-requests?limit=1&status=COMPLETED&from=${fromStr}&to=${toStr}`),
-        apiFetch("/rescue-requests?limit=5"),
-      ])
-        .then(([dispatchingRes, assignedRes, completedTodayRes, recentRes]) => {
-          setStats([
-            { label: "Jobs Offered",     value: dispatchingRes?.meta?.total ?? 0,  trend: "Pending response" },
-            { label: "Active Jobs",      value: assignedRes?.meta?.total ?? 0,     trend: "In progress", color: "#e67e22" },
-            { label: "Completed Today",  value: completedTodayRes?.meta?.total ?? 0, trend: "Today" },
-          ]);
-          setRecentRequests(recentRes?.data ?? []);
-        })
-        .catch(() => setStats([]))
-        .finally(() => setStatsLoading(false));
-    } else {
-      setStatsLoading(false);
-    }
-  }, [role]);
-
-  const statusColor: Record<string, string> = {
-    DISPATCHING: "#383d41", OPERATOR_ASSIGNED: "#0c5460", IN_PROGRESS: "#004085",
-    COMPLETED: "#155724", CANCELLED: "#721c24", PENDING: "#856404",
-  };
-
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>
-        Welcome back! 👋
-      </h1>
-
-      {/* Stats grid */}
-      {statsLoading ? (
-        <div style={{ color: "#003DB4", marginBottom: "2rem" }}>Loading stats...</div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
-          {stats.map((s, i) => <StatCardEl key={i} {...s} />)}
-        </div>
-      )}
-
-      {/* Recent requests */}
-      {recentRequests.length > 0 && (
-        <div style={{ background: "#fff", borderRadius: 12, padding: "1.5rem", boxShadow: "0 2px 8px rgba(0,61,180,0.1)", border: "1px solid #dde8f8" }}>
-          <h2 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem", color: "#333" }}>Recent Requests</h2>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #dde8f8" }}>
-                {["Time", "Customer", "Issue", "Status", "Operator"].map((h) => (
-                  <th key={h} style={{ padding: "0.6rem 0.8rem", textAlign: "left", fontSize: "0.82rem", fontWeight: 600, color: "#999" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentRequests.map((r: any) => (
-                <tr key={r.id} style={{ borderBottom: "1px solid #F6FAFF" }}>
-                  <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.88rem", color: "#666" }}>
-                    {new Date(r.createdAt).toLocaleString("en-NG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </td>
-                  <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.9rem", color: "#333" }}>
-                    {r.customer?.phoneNumber?.replace("whatsapp:", "") ?? "—"}
-                  </td>
-                  <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.9rem", color: "#333" }}>
-                    {r.issueType ?? "—"}
-                  </td>
-                  <td style={{ padding: "0.7rem 0.8rem" }}>
-                    <span style={{
-                      display: "inline-block", padding: "0.25rem 0.6rem",
-                      background: "#f0f8ff", color: statusColor[r.status] ?? "#333",
-                      borderRadius: 4, fontSize: "0.8rem", fontWeight: 600,
-                    }}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.9rem", color: "#333" }}>
-                    {r.assignedOperator?.businessName ?? <span style={{ color: "#aaa" }}>Unassigned</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Rescue Requests Tab
-// ─────────────────────────────────────────────────────────────
-function RescueRequestsTab({ role }: { role: UserRole | null }) {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>🆘 Rescue Requests</h1>
-      {(role === "SUPER_ADMIN" || role === "ADMIN") ? (
-        <RescueRequestsTabAdmin role={role} />
-      ) : role === "OPERATOR" ? (
-        <RescueRequestsTabOperator role={role} />
-      ) : (
-        <PlaceholderCard text="Access denied" />
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Stub tabs
-// ─────────────────────────────────────────────────────────────
-function PlaceholderCard({ text }: { text: string }) {
-  return (
-    <div style={{
-      background: "#fff", padding: "2rem", borderRadius: 12,
-      boxShadow: "0 2px 8px rgba(0,61,180,0.1)", border: "1px solid #dde8f8",
-      textAlign: "center", color: "#999",
-    }}>
-      <p>{text}</p>
-    </div>
-  );
-}
-
-function AdminsTab() {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>👥 Admin Management</h1>
-      <PlaceholderCard text="Admin management coming soon..." />
-    </div>
-  );
-}
-
-function ReportsTab() {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>📈 Reports</h1>
-      <PlaceholderCard text="Reports coming soon..." />
-    </div>
-  );
-}
-
-function JobsTab() {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>📋 My Jobs</h1>
-      <PlaceholderCard text="Jobs interface coming soon..." />
-    </div>
-  );
-}
-
-function ProfileTab() {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>👤 My Profile</h1>
-      <PlaceholderCard text="Profile management coming soon..." />
-    </div>
-  );
-}
-
-function SettingsTab() {
-  return (
-    <div>
-      <h1 style={{ margin: "0 0 1.5rem 0", fontSize: "2rem", color: "#003DB4" }}>⚙️ Settings</h1>
-      <PlaceholderCard text="Platform settings coming soon..." />
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 //  Root export
 // ─────────────────────────────────────────────────────────────
 export default function DashboardPage() {
@@ -316,7 +184,7 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <div style={{ textAlign: "center", padding: "2rem" }}>
-          <p style={{ color: "#003DB4" }}>Loading dashboard...</p>
+          <p style={{ color: "#003DB4" }}>Loading dashboard…</p>
         </div>
       }
     >

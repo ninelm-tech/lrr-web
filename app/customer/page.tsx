@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSubscription } from "../hooks/useSubscription";
+import { useSubscriptionApi, useRescueRequestApi } from "../hooks";
+
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const fraunces = "var(--font-fraunces), serif";
@@ -35,14 +37,18 @@ const navItems = [
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
-  const { activeSubscription, loading, fetchMySubscriptions, cancelSubscription, subscribe } = useSubscription();
-  const [subscribing, setSubscribing] = useState(false);
+  const { activeSubscription, loading, fetchMySubscriptions, cancelSubscription, subscribe } = useSubscriptionApi();
+  const { fetchMyRequests } = useRescueRequestApi();
+  const [subscribing, setSubscribing]   = useState(false);
   const [userName, setUserName]         = useState("");
   const [activeTab, setActiveTab]       = useState("Overview");
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [cancelling, setCancelling]     = useState(false);
   const [toast, setToast]               = useState<{ msg: string; ok: boolean } | null>(null);
   const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [requestHistory, setRequestHistory] = useState<any[]>([]);
+  const [activeRequest, setActiveRequest]   = useState<any>(null);
+  const [reqLoading, setReqLoading]         = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,6 +58,22 @@ export default function CustomerDashboardPage() {
     if (role && role !== "CUSTOMER") { router.replace("/dashboard"); return; }
     setUserName(localStorage.getItem("userName") || "");
     fetchMySubscriptions();
+
+    // Load real request data
+    fetchMyRequests({ limit: 10 })
+      .then((res) => {
+        const all: any[] = res?.data ?? [];
+        const active = all.find((r: any) =>
+          !["COMPLETED", "CANCELLED"].includes(r.status)
+        );
+        setActiveRequest(active ?? null);
+        // Show both completed AND cancelled in history
+        setRequestHistory(
+          all.filter((r: any) => ["COMPLETED", "CANCELLED"].includes(r.status)).slice(0, 10)
+        );
+      })
+      .catch(() => {})
+      .finally(() => setReqLoading(false));
   }, [router]);
 
   const showToast = (msg: string, ok = true) => {
@@ -309,33 +331,42 @@ export default function CustomerDashboardPage() {
             </div>
 
             {/* Active request card */}
-            <div style={{
-              background: "#fff", borderRadius: 18, padding: "1.5rem 1.75rem",
-              border: "1px solid #e8edf5",
-            }}>
+            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem 1.75rem", border: "1px solid #e8edf5" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
                 <div>
                   <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Active request</p>
                   <h3 style={{ margin: 0, fontWeight: 700, fontSize: "1.1rem", color: navy }}>Current assistance</h3>
                 </div>
-                <span style={{
-                  padding: "0.3rem 0.85rem", borderRadius: 20,
-                  background: "#fff8e6", color: "#d97706",
-                  fontSize: "0.78rem", fontWeight: 600,
-                }}>
-                  In progress
-                </span>
               </div>
-              <div className="cust-request-row" style={{ paddingTop: "0.75rem", borderTop: "1px solid #f0f2f5" }}>
-                <div>
-                  <p style={{ margin: "0 0 2px 0", fontWeight: 600, color: navy, fontSize: "0.95rem" }}>Battery assistance</p>
-                  <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>Lekki Phase 1 · Today, 14:18</p>
+              {reqLoading ? (
+                <p style={{ margin: 0, color: "#9ca3af", fontSize: "0.88rem" }}>Loading…</p>
+              ) : activeRequest ? (
+                <div className="cust-request-row" style={{ paddingTop: "0.75rem", borderTop: "1px solid #f0f2f5" }}>
+                  <div>
+                    <p style={{ margin: "0 0 2px 0", fontWeight: 600, color: navy, fontSize: "0.95rem" }}>
+                      {activeRequest.issueType?.replace(/_/g, " ") ?? "Assistance"}
+                    </p>
+                    <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>
+                      {new Date(activeRequest.createdAt).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{
+                      display: "inline-block", padding: "0.25rem 0.75rem", borderRadius: 20,
+                      background: "#fff8e6", color: "#d97706", fontSize: "0.78rem", fontWeight: 600,
+                    }}>
+                      {activeRequest.status.replace(/_/g, " ")}
+                    </span>
+                    {activeRequest.assignedOperator && (
+                      <p style={{ margin: "4px 0 0", color: "#19a56b", fontSize: "0.82rem", fontWeight: 600 }}>
+                        {activeRequest.assignedOperator.businessName}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: "0 0 2px 0", fontWeight: 700, color: "#19a56b", fontSize: "0.95rem" }}>12 min ETA</p>
-                  <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>Operator assigned</p>
-                </div>
-              </div>
+              ) : (
+                <p style={{ margin: 0, color: "#9ca3af", fontSize: "0.88rem" }}>No active request right now.</p>
+              )}
             </div>
 
             {/* Request history */}
@@ -355,7 +386,7 @@ export default function CustomerDashboardPage() {
               <div className="cust-table-wrap"><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f2f5" }}>
-                    {["Service", "Location", "Date", "Status"].map(h => (
+                    {["Service", "Operator", "Date", "Status"].map(h => (
                       <th key={h} style={{ textAlign: "left", padding: "0 0 0.75rem", color: "#6c7890", fontSize: "0.78rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         {h}
                       </th>
@@ -363,16 +394,28 @@ export default function CustomerDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { service: "Flat tyre",  location: "Victoria Island", date: "May 18, 2026", status: "Completed" },
-                    { service: "Towing",     location: "Ikeja",           date: "Apr 02, 2026", status: "Completed" },
-                  ].map((row, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #f7f9fc" }}>
-                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: navy, fontWeight: 500 }}>{row.service}</td>
-                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>{row.location}</td>
-                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>{row.date}</td>
+                  {reqLoading ? (
+                    <tr><td colSpan={4} style={{ padding: "1rem 0", color: "#9ca3af", fontSize: "0.88rem" }}>Loading…</td></tr>
+                  ) : requestHistory.length === 0 ? (
+                    <tr><td colSpan={4} style={{ padding: "1rem 0", color: "#9ca3af", fontSize: "0.88rem" }}>No past requests yet.</td></tr>
+                  ) : requestHistory.map((r: any) => (
+                    <tr key={r.id} style={{ borderBottom: "1px solid #f7f9fc" }}>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: navy, fontWeight: 500 }}>
+                        {r.issueType?.replace(/_/g, " ") ?? "Assistance"}
+                      </td>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>
+                        {r.assignedOperator?.businessName ?? "—"}
+                      </td>
+                      <td style={{ padding: "0.9rem 0", fontSize: "0.92rem", color: "#6c7890" }}>
+                        {new Date(r.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
                       <td style={{ padding: "0.9rem 0" }}>
-                        <span style={{ color: "#19a56b", fontWeight: 600, fontSize: "0.88rem" }}>{row.status}</span>
+                        <span style={{
+                          fontWeight: 600, fontSize: "0.88rem",
+                          color: r.status === "COMPLETED" ? "#19a56b" : r.status === "CANCELLED" ? "#dc2626" : "#6c7890",
+                        }}>
+                          {r.status === "COMPLETED" ? "Completed" : r.status === "CANCELLED" ? "Cancelled" : r.status.replace(/_/g, " ")}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -392,7 +435,7 @@ export default function CustomerDashboardPage() {
                 Send us a message on WhatsApp and we&apos;ll dispatch the nearest operator to you.
               </p>
               <a
-                href="https://wa.me/2348000000000"
+                href={`https://wa.me/${WHATSAPP_NUMBER}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -411,17 +454,18 @@ export default function CustomerDashboardPage() {
             </div>
 
             {/* Payments */}
-            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
-              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Payments</p>
-              <h3 style={{ margin: "0 0 1rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Membership billing</h3>
-              <p style={{ margin: "0 0 2px 0", fontFamily: fraunces, fontWeight: 700, fontSize: "1.75rem", color: navy }}>
-                ₦48,000
-              </p>
-              <p style={{ margin: "0 0 1rem 0", color: "#6c7890", fontSize: "0.82rem" }}>Annual membership</p>
-              <button style={{ background: "none", border: "none", color: blue, fontWeight: 600, fontSize: "0.88rem", cursor: "pointer", fontFamily: dm, padding: 0 }}>
-                View billing
-              </button>
-            </div>
+            {activeSubscription && (
+              <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5" }}>
+                <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Payments</p>
+                <h3 style={{ margin: "0 0 1rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Membership billing</h3>
+                <p style={{ margin: "0 0 2px 0", fontFamily: fraunces, fontWeight: 700, fontSize: "1.75rem", color: navy }}>
+                  ₦{((activeSubscription as any).monthlyAmountKobo / 100).toLocaleString("en-NG")}
+                </p>
+                <p style={{ margin: "0 0 0", color: "#6c7890", fontSize: "0.82rem" }}>
+                  {(activeSubscription as any).plan === "INDIVIDUAL" ? "Individual plan" : "Commercial plan"}
+                </p>
+              </div>
+            )}
 
             {/* Cancel subscription */}
             {activeSubscription && isActive && (

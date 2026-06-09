@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRescueRequests } from "../../hooks/useRescueRequests";
+import { useRescueRequestApi } from "../../hooks";
 import type { UserRole, RescueRequestListItem, RescueRequestStatus } from "../../types";
 
 interface RescueRequestsTabProps {
@@ -18,7 +18,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 export default function RescueRequestsTabOperator({ role }: RescueRequestsTabProps) {
-  const { requests, loading, error, fetchList, total, page, limit } = useRescueRequests();
+  const { requests, loading, error, fetchList, total, page, limit } = useRescueRequestApi();
   const [filters, setFilters] = useState({
     status: "",
   });

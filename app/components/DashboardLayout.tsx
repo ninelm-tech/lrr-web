@@ -1,7 +1,7 @@
 "use client";
 import { ReactNode, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthApi } from "../hooks";
 import type { UserRole } from "../types";
 
 interface MenuItem {
@@ -20,7 +20,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") || "overview";
-  const { logout } = useAuth();
+  const { logout } = useAuthApi();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userName, setUserName] = useState("");
@@ -38,13 +38,13 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
 
   const menusByRole: Record<string, MenuItem[]> = {
     SUPER_ADMIN: [
-      { label: "Dashboard",       href: "/dashboard",               icon: "📊", section: "Main" },
-      { label: "Rescue Requests", href: "/dashboard?tab=requests",  icon: "🆘", section: "Main" },
-      { label: "Operators",       href: "/dashboard?tab=operators", icon: "🚗", section: "Management" },
-      { label: "Admins",          href: "/dashboard?tab=admins",    icon: "👥", section: "Management" },
-      { label: "Payments",        href: "/dashboard?tab=payments",  icon: "💳", section: "Financial" },
-      { label: "Reports",         href: "/dashboard?tab=reports",   icon: "📈", section: "Financial" },
-      { label: "Settings",        href: "/dashboard?tab=settings",  icon: "⚙️", section: "System" },
+      { label: "Dashboard",       href: "/dashboard",                   icon: "📊", section: "Main" },
+      { label: "Rescue Requests", href: "/dashboard?tab=requests",      icon: "🆘", section: "Main" },
+      { label: "Operators",       href: "/dashboard?tab=operators",     icon: "🚗", section: "Management" },
+      { label: "Manage Users",    href: "/dashboard?tab=users",         icon: "👥", section: "Management" },
+      { label: "Payments",        href: "/dashboard?tab=payments",      icon: "💳", section: "Financial" },
+      { label: "Reports",         href: "/dashboard?tab=reports",       icon: "📈", section: "Financial" },
+      { label: "Settings",        href: "/dashboard?tab=settings",      icon: "⚙️", section: "System" },
     ],
     ADMIN: [
       { label: "Dashboard",       href: "/dashboard",               icon: "📊", section: "Main" },
@@ -53,9 +53,10 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       { label: "Payments",        href: "/dashboard?tab=payments",  icon: "💳", section: "Financial" },
     ],
     OPERATOR: [
-      { label: "Dashboard", href: "/dashboard",             icon: "📊", section: "Main" },
-      { label: "Jobs",      href: "/dashboard?tab=jobs",    icon: "📋", section: "Main" },
-      { label: "Profile",   href: "/dashboard?tab=profile", icon: "👤", section: "Account" },
+      { label: "Dashboard", href: "/dashboard",               icon: "📊", section: "Main" },
+      { label: "Jobs",      href: "/dashboard?tab=jobs",      icon: "📋", section: "Main" },
+      { label: "Team",      href: "/dashboard?tab=members",   icon: "👥", section: "Management" },
+      { label: "Profile",   href: "/dashboard?tab=profile",   icon: "👤", section: "Account" },
     ],
   };
 
