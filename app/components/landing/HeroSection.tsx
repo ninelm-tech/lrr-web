@@ -243,8 +243,8 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
                   Stranded? Send <span style={{ color: "#4eff91", fontFamily: "monospace", fontSize: "1rem" }}>"SOS"</span> on WhatsApp
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "rgba(219,232,255,0.65)", margin: 0 }}>
-                  +234 800 000 0000 · No app download needed
-                </p>
+                  {process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : "WhatsApp")} · No app download needed
+                  </p>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2} width={16} height={16} className="ml-1 shrink-0">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />

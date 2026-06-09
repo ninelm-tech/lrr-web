@@ -8,7 +8,7 @@ const steps = [
       </svg>
     ),
     title: 'Send "SOS" on WhatsApp',
-    copy: 'WhatsApp "SOS" to +234 800 000 0000. Share your location and we handle everything from there — no app needed.',
+    copy: `WhatsApp "SOS" to ${process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "our number"}. Share your location and we handle everything from there — no app needed.`,
   },
   {
     num: "02",
