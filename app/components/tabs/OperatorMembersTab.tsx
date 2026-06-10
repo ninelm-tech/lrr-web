@@ -100,11 +100,7 @@ export default function OperatorMembersTab() {
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: navy }}>Team Members</h1>
-          <p style={{ margin: "4px 0 0", color: "#6c7890", fontSize: "0.88rem" }}>{operator.businessName}</p>
-        </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           onClick={() => setShowInvite(!showInvite)}
           style={{

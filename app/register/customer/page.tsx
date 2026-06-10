@@ -9,6 +9,7 @@ export default function CustomerRegisterPage() {
   const { registerCustomer } = useAuthApi();
 
   const [form, setForm] = useState({
+    name: "",
     phoneNumber: "",
     email: "",
     password: "",
@@ -21,7 +22,7 @@ export default function CustomerRegisterPage() {
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
       const role = localStorage.getItem("userRole");
-      router.replace(role === "CUSTOMER" ? "/customer" : "/dashboard");
+      router.replace("/dashboard");
     }
   }, [router]);
 
@@ -53,12 +54,13 @@ export default function CustomerRegisterPage() {
     setLoading(true);
     try {
       await registerCustomer({
+        name: form.name.trim(),
         phoneNumber: form.phoneNumber,
         email: form.email,
         password: form.password,
       });
       // Registered + auto-logged-in → go to customer dashboard to activate membership
-      router.push("/customer?welcome=1");
+      router.push("/dashboard?welcome=1");
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {
@@ -116,6 +118,23 @@ export default function CustomerRegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Name */}
+          <div>
+            <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>
+              Full Name *
+            </label>
+            <input
+              name="name"
+              type="text"
+              placeholder="Your full name"
+              value={form.name}
+              onChange={handleChange}
+              required
+              autoComplete="name"
+              style={inputStyle()}
+            />
+          </div>
+
           {/* Phone */}
           <div>
             <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>

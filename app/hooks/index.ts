@@ -11,6 +11,7 @@
  */
 
 export { useAuthApi }         from "./useAuthApi";
+export { useAuthState, dashboardPath } from "./useAuthState";
 export { useRescueRequestApi } from "./useRescueRequestApi";
 export { useOperatorApi }     from "./useOperatorApi";
 export { useSubscriptionApi } from "./useSubscriptionApi";
@@ -18,8 +19,9 @@ export { usePaymentApi }      from "./usePaymentApi";
 
 // Re-export types that components commonly need
 export type { UserListItem, UserListResult, ListUsersOptions }    from "./useAuthApi";
-export type { AdminOverviewStats }                                 from "./useRescueRequestApi";
+export type { AdminOverviewStats, PendingOffer }                   from "./useRescueRequestApi";
 export type { Operator, OperatorMember, OperatorStats,
               OperatorStatus, OperatorMemberRole,
               OperatorLeaderboardEntry }                           from "./useOperatorApi";
 export type { PaymentRecord, PaymentSummary, PaymentListOptions } from "./usePaymentApi";
+export type { SubscriptionPlanKey }                                from "./useSubscriptionApi";

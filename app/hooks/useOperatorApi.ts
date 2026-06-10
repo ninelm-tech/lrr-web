@@ -139,6 +139,32 @@ export function useOperatorApi() {
     }
   }, []);
 
+  // ── Profile ──────────────────────────────────────────────────────────────
+
+  /** Update an operator's business profile (owner/manager or admin). */
+  const updateOperator = useCallback(async (id: string, data: Partial<Pick<Operator,
+    "businessName" | "contactName" | "email" | "phoneNumber" | "address" | "latitude" | "longitude" | "type" | "serviceRadius"
+  >>): Promise<Operator> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/operators/${id}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(data),
+      });
+      const updated = res.data as Operator;
+      setOperators((prev) => prev.map((op) => (op.id === id ? { ...op, ...updated } : op)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update operator profile";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ── Status / Availability ────────────────────────────────────────────────
 
   const updateStatus = useCallback(async (id: string, status: OperatorStatus): Promise<Operator> => {
@@ -242,6 +268,7 @@ export function useOperatorApi() {
     fetchStats,
     fetchAllStats,
     // Write
+    updateOperator,
     updateStatus,
     setAvailability,
     // Members

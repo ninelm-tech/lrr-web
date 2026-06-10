@@ -51,9 +51,8 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
     setLoading(true);
     setError("");
     try {
-      const data = await login(email, password);
-      const role = data?.user?.role ?? localStorage.getItem("userRole");
-      const destination = next || (role === "CUSTOMER" ? "/customer" : "/dashboard");
+      await login(email, password);
+      const destination = next || "/dashboard";
       onClose();
       router.push(destination);
     } catch (err: unknown) {

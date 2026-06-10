@@ -21,6 +21,19 @@ import type {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface PendingOffer {
+  id: string;
+  offeredAt: string;
+  expiresAt: string;
+  request: {
+    id: string;
+    issueType: string;
+    latitude: string;
+    longitude: string;
+    createdAt: string;
+  };
+}
+
 export interface AdminOverviewStats {
   totalRequests:    number;
   dispatching:      number;
@@ -185,6 +198,28 @@ export function useRescueRequestApi() {
     };
   }, []);
 
+  // ── Dispatch offers (operator dashboard) ──────────────────────────────────
+
+  /** Pending dispatch offers for the logged-in operator's business(es). */
+  const fetchMyOffers = useCallback(async (): Promise<PendingOffer[]> => {
+    try {
+      const res = await apiFetch("/rescue-requests/offers/mine");
+      return (res?.data ?? []) as PendingOffer[];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Accept or decline a dispatch offer. Returns the outcome message. */
+  const respondToOffer = useCallback(async (offerId: string, accept: boolean): Promise<{ accepted: boolean; message: string }> => {
+    const res = await apiFetch(`/rescue-requests/offers/${encodeURIComponent(offerId)}/respond`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ accept }),
+    });
+    return (res?.data ?? { accepted: false, message: "Unknown response" }) as { accepted: boolean; message: string };
+  }, []);
+
   /** Thin wrapper — fetch customer's own requests without touching shared state. */
   const fetchMyRequests = useCallback(async (opts: FetchListOptions = {}): Promise<RescueRequestListResponse> => {
     const params = new URLSearchParams();
@@ -208,6 +243,9 @@ export function useRescueRequestApi() {
     fetchDetail,
     fetchMyRequests,
     fetchAdminOverviewStats,
+    // Offers (operator)
+    fetchMyOffers,
+    respondToOffer,
     // Write
     assignOperator,
     updateStatus,

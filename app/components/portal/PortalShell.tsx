@@ -1,34 +1,53 @@
 "use client";
-import { ReactNode, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuthApi } from "../hooks";
-import type { UserRole } from "../types";
+/**
+ * PortalShell
+ * -----------
+ * THE shared chrome for the whole portal — every role gets the same sidebar
+ * and header. Menu items are filtered by role (see nav.ts); page content is
+ * permission-gated per route (see RequireRole.tsx).
+ */
+import { ReactNode, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Car,
+  ChevronDown,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  Siren,
+  User,
+  UserCog,
+  Users,
+  X,
+} from "lucide-react";
+import { useAuthApi, useAuthState } from "../../hooks";
+import { navForRole, PortalIconName, PortalNavItem } from "./nav";
 
-interface MenuItem {
-  label: string;
-  href: string;
-  icon: string;
-  section?: string;
-}
+const NAV_ICONS: Record<PortalIconName, React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>> = {
+  "layout-dashboard": LayoutDashboard,
+  "sirens": Siren,
+  "car": Car,
+  "users": Users,
+  "user-cog": UserCog,
+  "credit-card": CreditCard,
+  "settings": Settings,
+};
 
-interface DashboardLayoutProps {
-  children: ReactNode;
-  userRole?: UserRole | null;
-}
-
-export default function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
+export default function PortalShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") || "overview";
+  const pathname = usePathname();
   const { logout } = useAuthApi();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [userName, setUserName] = useState("");
+  const { ready, isLoggedIn, role, userName } = useAuthState();
 
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Token guard — the portal is for logged-in users only.
   useEffect(() => {
-    const name = localStorage.getItem("userName");
-    if (name) setUserName(name);
-  }, []);
+    if (ready && !isLoggedIn) router.replace("/login");
+  }, [ready, isLoggedIn, router]);
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setSidebarOpen(false); };
@@ -36,37 +55,21 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const menusByRole: Record<string, MenuItem[]> = {
-    SUPER_ADMIN: [
-      { label: "Dashboard",       href: "/dashboard",                   icon: "📊", section: "Main" },
-      { label: "Rescue Requests", href: "/dashboard?tab=requests",      icon: "🆘", section: "Main" },
-      { label: "Operators",       href: "/dashboard?tab=operators",     icon: "🚗", section: "Management" },
-      { label: "Manage Users",    href: "/dashboard?tab=users",         icon: "👥", section: "Management" },
-      { label: "Payments",        href: "/dashboard?tab=payments",      icon: "💳", section: "Financial" },
-      { label: "Reports",         href: "/dashboard?tab=reports",       icon: "📈", section: "Financial" },
-      { label: "Settings",        href: "/dashboard?tab=settings",      icon: "⚙️", section: "System" },
-    ],
-    ADMIN: [
-      { label: "Dashboard",       href: "/dashboard",               icon: "📊", section: "Main" },
-      { label: "Rescue Requests", href: "/dashboard?tab=requests",  icon: "🆘", section: "Main" },
-      { label: "Operators",       href: "/dashboard?tab=operators", icon: "🚗", section: "Management" },
-      { label: "Payments",        href: "/dashboard?tab=payments",  icon: "💳", section: "Financial" },
-    ],
-    OPERATOR: [
-      { label: "Dashboard", href: "/dashboard",               icon: "📊", section: "Main" },
-      { label: "Jobs",      href: "/dashboard?tab=jobs",      icon: "📋", section: "Main" },
-      { label: "Team",      href: "/dashboard?tab=members",   icon: "👥", section: "Management" },
-      { label: "Profile",   href: "/dashboard?tab=profile",   icon: "👤", section: "Account" },
-    ],
-  };
+  const menuItems = navForRole(role);
+  const currentPageTitle =
+    menuItems.find((item) => item.href === pathname)?.label ||
+    pathname
+      .split("/")
+      .filter(Boolean)
+      .pop()
+      ?.replace(/-/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase()) ||
+    "Overview";
 
-  const currentMenuItems = userRole ? menusByRole[userRole] || [] : [];
-  const groupedMenuItems = currentMenuItems.reduce((acc, item) => {
-    const section = item.section || "Other";
-    if (!acc[section]) acc[section] = [];
-    acc[section].push(item);
+  const groupedMenuItems = menuItems.reduce((acc, item) => {
+    (acc[item.section] ??= []).push(item);
     return acc;
-  }, {} as Record<string, MenuItem[]>);
+  }, {} as Record<string, PortalNavItem[]>);
 
   function handleLogout() {
     if (typeof window !== "undefined" && confirm("Are you sure you want to logout?")) {
@@ -75,21 +78,30 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     }
   }
 
-  function getRoleDisplayName(role: UserRole | undefined | null) {
+  function getRoleDisplayName() {
     switch (role) {
       case "SUPER_ADMIN": return "Super Admin";
       case "ADMIN":       return "Operations";
       case "OPERATOR":    return "Operator";
+      case "CUSTOMER":    return "Member";
       default:            return "User";
     }
   }
 
   const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "U";
 
   function navigate(href: string) {
     setSidebarOpen(false);
     router.push(href);
+  }
+
+  if (!ready || !isLoggedIn) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f4f6f9" }}>
+        <p style={{ color: "#003DB4", fontFamily: "var(--font-dm-sans), sans-serif" }}>Loading…</p>
+      </div>
+    );
   }
 
   return (
@@ -104,12 +116,22 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         .lrr-main { flex: 1; display: flex; flex-direction: column; margin-left: 240px; min-height: 100vh; background: #f4f6f9; }
         .lrr-hamburger { display: none; }
         .lrr-username  { display: inline; }
+        .cust-main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.25rem; align-items: start; }
+        .cust-member-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .cust-request-row { display: flex; justify-content: space-between; align-items: center; }
+        .cust-table-wrap { overflow-x: auto; }
         @media (max-width: 767px) {
           .lrr-sidebar { transform: translateX(-240px); }
           .lrr-sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.3); }
           .lrr-main { margin-left: 0; }
           .lrr-hamburger { display: flex !important; }
           .lrr-username { display: none; }
+          .cust-main-grid { grid-template-columns: 1fr !important; }
+          .cust-member-grid { grid-template-columns: 1fr 1fr !important; }
+          .cust-request-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+        }
+        @media (max-width: 480px) {
+          .cust-member-grid { grid-template-columns: 1fr !important; }
         }
         .lrr-nav-btn {
           width: 100%; padding: 0.75rem 1.5rem; border: none; background: transparent;
@@ -133,16 +155,17 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — identical for every role; items filtered by permission */}
       <aside className={`lrr-sidebar${sidebarOpen ? " open" : ""}`}>
         <div style={{ padding: "1.5rem 1.5rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/lrr-logo-white.png" alt="Lagos Roadside Rescue" style={{ height: 40, width: "auto", objectFit: "contain" }} />
           <button
             className="lrr-hamburger"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close menu"
             style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", padding: "0.2rem 0.3rem", cursor: "pointer", fontSize: "1rem" }}
-          >✕</button>
+          ><X size={16} strokeWidth={2.25} /></button>
         </div>
 
         <nav style={{ flex: 1, padding: "1rem 0", overflowY: "auto" }}>
@@ -152,8 +175,17 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                 {section}
               </p>
               {items.map((item) => (
-                <button key={item.label} className={`lrr-nav-btn${tab === item.label.toLowerCase() || (tab === "overview" && item.href === "/dashboard") ? " active" : ""}`} onClick={() => navigate(item.href)}>
-                  <span style={{ fontSize: "1rem", opacity: 0.7 }}>{item.icon}</span>
+                <button
+                  key={item.href}
+                  className={`lrr-nav-btn${pathname === item.href ? " active" : ""}`}
+                  onClick={() => navigate(item.href)}
+                >
+                  <span style={{ display: "inline-flex", alignItems: "center", opacity: 0.8 }}>
+                    {(() => {
+                      const Icon = NAV_ICONS[item.icon];
+                      return <Icon size={16} strokeWidth={2.15} />;
+                    })()}
+                  </span>
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -178,14 +210,16 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           padding: "0 1.5rem", display: "flex", justifyContent: "space-between",
           alignItems: "center", height: 64, position: "sticky", top: 0, zIndex: 20, flexShrink: 0,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
             <button
               className="lrr-hamburger"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open menu"
               style={{ background: "#F6FAFF", border: "1px solid #dde8f8", borderRadius: 8, padding: "0.45rem 0.6rem", cursor: "pointer", fontSize: "1.1rem", lineHeight: 1 }}
-            >☰</button>
-            <img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 32, width: "auto", objectFit: "contain" }} />
+            ><Menu size={16} strokeWidth={2.25} /></button>
+            <span style={{ marginLeft: 10, fontFamily: "var(--font-fraunces), serif", fontWeight: 700, color: "#003DB4", fontSize: "1.75rem", lineHeight: 1.1 }}>
+              {currentPageTitle}
+            </span>
           </div>
 
           <div style={{ position: "relative" }}>
@@ -197,20 +231,20 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                 {getInitials(userName)}
               </div>
               <span className="lrr-username">{userName || "User"}</span>
-              <span style={{ fontSize: "0.65rem", opacity: 0.7 }}>▼</span>
+              <span style={{ display: "inline-flex", alignItems: "center", opacity: 0.7 }}><ChevronDown size={13} strokeWidth={2.4} /></span>
             </button>
 
             {dropdownOpen && (
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 210, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,61,180,0.15)", border: "1px solid #dde8f8", zIndex: 50, overflow: "hidden" }}>
                 <div style={{ padding: "0.875rem 1rem", borderBottom: "1px solid #dde8f8", background: "#F6FAFF" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#333" }}>{userName}</p>
-                  <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#aaa" }}>{getRoleDisplayName(userRole)}</p>
+                  <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#333" }}>{userName || "User"}</p>
+                  <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#aaa" }}>{getRoleDisplayName()}</p>
                 </div>
                 <div style={{ padding: "0.4rem 0" }}>
-                  <button className="lrr-dd-btn" onClick={() => { setDropdownOpen(false); navigate("/dashboard?tab=profile"); }}>👤 My Profile</button>
+                  <button className="lrr-dd-btn" onClick={() => { setDropdownOpen(false); navigate("/settings"); }} style={{ display: "flex", alignItems: "center", gap: 8 }}><User size={14} /> My Profile</button>
                 </div>
                 <div style={{ borderTop: "1px solid #dde8f8", padding: "0.4rem 0" }}>
-                  <button className="lrr-dd-btn" onClick={handleLogout} style={{ color: "#d63031", fontWeight: 600 }}>🚪 Logout</button>
+                  <button className="lrr-dd-btn" onClick={handleLogout} style={{ color: "#d63031", fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}><LogOut size={14} /> Logout</button>
                 </div>
               </div>
             )}

@@ -24,7 +24,6 @@ export default function ManageUsersTab() {
   const { listUsers } = useAuthApi();
 
   const [users, setUsers]       = useState<any[]>([]);
-  const [total, setTotal]       = useState(0);
   const [pages, setPages]       = useState(1);
   const [page, setPage]         = useState(1);
   const [loading, setLoading]   = useState(true);
@@ -37,7 +36,6 @@ export default function ManageUsersTab() {
     try {
       const res = await listUsers({ page: p, limit: 25, search: q || undefined, role: r || undefined });
       setUsers(res?.data ?? []);
-      setTotal(res?.meta?.total ?? 0);
       setPages(res?.meta?.pages ?? 1);
       setPage(p);
     } catch {
@@ -62,15 +60,6 @@ export default function ManageUsersTab() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: navy }}>Manage Users</h1>
-          <p style={{ margin: "4px 0 0", color: "#6c7890", fontSize: "0.88rem" }}>
-            {total.toLocaleString()} user{total !== 1 ? "s" : ""} total
-          </p>
-        </div>
-      </div>
-
       {/* Filter bar */}
       <div style={{ background: "#fff", borderRadius: 14, padding: "1rem 1.25rem", border: "1px solid #e8edf5", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         {/* Search */}

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useOperatorApi, useRescueRequestApi } from "../../hooks";
+import PendingOffers from "../PendingOffers";
 
 const navy = "#07152f";
 const blue = "#003DB4";
@@ -66,10 +67,10 @@ export default function OverviewTabOperator() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: navy }}>
-          {operator?.businessName ?? "Operator Dashboard"}
-        </h1>
+      {/* Live dispatch offers — accept/decline without leaving the dashboard */}
+      <PendingOffers />
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         {/* Availability toggle */}
         <button
           onClick={toggleAvailability}

@@ -15,8 +15,7 @@ function LoginRedirect() {
   useEffect(() => {
     // Already logged in? Go home.
     if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
-      const role = localStorage.getItem("userRole");
-      router.replace(role === "CUSTOMER" ? "/customer" : "/dashboard");
+      router.replace("/dashboard");
       return;
     }
     const next = params.get("next") || "";

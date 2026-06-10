@@ -1,12 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useOperatorApi } from "../../hooks";
 import type { Operator, OperatorStats } from "../../hooks";
-import type { UserRole } from "../../types";
-
-interface OperatorsTabProps {
-  role: UserRole | null;
-}
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   PENDING:   { bg: "#fff3cd", text: "#856404", label: "Pending" },
@@ -73,7 +69,18 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
             { label: "Address",        value: operator.address },
             { label: "Service Radius", value: `${operator.serviceRadius} km` },
             { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
-            { label: "Available Now",  value: operator.isAvailable ? "✅ Yes" : "❌ No" },
+            {
+              label: "Available Now",
+              value: operator.isAvailable ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#16a34a", fontWeight: 600 }}>
+                  <CheckCircle2 size={15} /> Yes
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#dc2626", fontWeight: 600 }}>
+                  <XCircle size={15} /> No
+                </span>
+              ),
+            },
             { label: "Joined",         value: fmtDate(operator.createdAt) },
             { label: "Verified",       value: operator.verifiedAt ? fmtDate(operator.verifiedAt) : "Not yet" },
           ].map(({ label, value }) => (
@@ -129,7 +136,7 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
   );
 }
 
-export default function OperatorsTab({ role }: OperatorsTabProps) {
+export default function OperatorsTab() {
   const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability } = useOperatorApi();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [filterStatus, setFilterStatus] = useState("");
@@ -146,7 +153,7 @@ export default function OperatorsTab({ role }: OperatorsTabProps) {
       rows.forEach((r) => { m[r.operatorId] = r.stats; });
       setStatsMap(m);
     });
-  }, []);
+  }, [fetchAll, fetchAllStats]);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });

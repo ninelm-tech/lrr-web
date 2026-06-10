@@ -1,14 +1,23 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useSubscriptionApi } from "../../hooks";
+
+const MAX_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 2000;
 
 function CallbackContent() {
   const router = useRouter();
   const params = useSearchParams();
+  const { verifySubscription } = useSubscriptionApi();
   const [status, setStatus] = useState<"verifying" | "success" | "failed">("verifying");
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return; // guard against double-run in React strict mode
+    started.current = true;
+
     const reference = params.get("reference") || params.get("trxref");
 
     // Guard: middleware handles server-side; this catches edge cases (e.g. token expired mid-session)
@@ -22,13 +31,29 @@ function CallbackContent() {
       return;
     }
 
-    // The webhook already handles the actual activation — we just need to
-    // show success and redirect. Give the webhook a moment to process.
-    setTimeout(() => {
-      setStatus("success");
-      setTimeout(() => router.replace("/customer"), 2500);
-    }, 1500);
-  }, [params, router]);
+    // Verify the transaction with the backend (which checks Paystack directly
+    // and activates the subscription). Poll a few times — Paystack can take a
+    // moment to settle the transaction after redirecting.
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        if (cancelled) return;
+        const active = await verifySubscription(reference);
+        if (cancelled) return;
+        if (active) {
+          setStatus("success");
+          setTimeout(() => router.replace("/dashboard"), 2500);
+          return;
+        }
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+      }
+      setStatus("failed");
+    })();
+
+    return () => { cancelled = true; };
+  }, [params, router, verifySubscription]);
 
   return (
     <div style={{
@@ -74,17 +99,17 @@ function CallbackContent() {
             <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>❌</div>
             <h2 style={{ color: "#d63031", fontWeight: 700, margin: "0 0 0.5rem" }}>Something went wrong</h2>
             <p style={{ color: "#555", margin: "0 0 1.5rem" }}>
-              We couldn&apos;t verify your payment. If you were charged, contact us at <a href="mailto:info@ninelm.com" style={{ color: "#003DB4" }}>info@ninelm.com</a>.
+              We couldn&apos;t confirm your payment yet. If you were charged, it may still be processing — check your dashboard in a few minutes, or contact us at <a href="mailto:info@ninelm.com" style={{ color: "#003DB4" }}>info@ninelm.com</a>.
             </p>
             <button
-              onClick={() => router.replace("/plans")}
+              onClick={() => router.replace("/dashboard")}
               style={{
                 background: "#003DB4", color: "#fff", border: "none",
                 borderRadius: 8, padding: "0.75rem 1.5rem", fontWeight: 600,
                 cursor: "pointer", fontSize: "0.95rem",
               }}
             >
-              Back to Plans
+              Go to Dashboard
             </button>
           </>
         )}

@@ -71,8 +71,6 @@ export default function OverviewTabAdmin({ role }: { role: UserRole | null }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: navy }}>Platform Overview</h1>
-
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "1rem" }}>
         <StatCard label="Total Requests"      value={stats.totalRequests}   sub="All time" />

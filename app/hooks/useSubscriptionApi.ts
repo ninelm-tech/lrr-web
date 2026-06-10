@@ -14,6 +14,12 @@ import { useState, useCallback } from "react";
 import { apiFetch } from "./api";
 import type { SubscriptionPlan, Subscription } from "../types";
 
+/** Must match PLAN_DEFINITIONS keys in lrr-service subscription.service.ts */
+export type SubscriptionPlanKey =
+  | "INDIVIDUAL_MONTHLY"
+  | "INDIVIDUAL_ANNUAL"
+  | "COMMERCIAL_MONTHLY";
+
 export function useSubscriptionApi() {
   const [plans,          setPlans]   = useState<SubscriptionPlan[]>([]);
   const [mySubscriptions, setMySubs] = useState<Subscription[]>([]);
@@ -60,17 +66,21 @@ export function useSubscriptionApi() {
 
   // ── Subscribe ─────────────────────────────────────────────────────────────
 
-  /** Initiates Paystack checkout. Returns the redirect URL on success. */
-  const subscribe = useCallback(async (planKey: string): Promise<string | null> => {
+  /**
+   * Initiates Paystack checkout. Returns the redirect URL on success.
+   * Backend responds with { message, data: { url, reference } }.
+   * vehicleRef is required for COMMERCIAL_MONTHLY.
+   */
+  const subscribe = useCallback(async (planKey: SubscriptionPlanKey, vehicleRef?: string): Promise<string | null> => {
     setLoading(true);
     setError(null);
     try {
       const res = await apiFetch("/subscriptions", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ planKey }),
+        body:    JSON.stringify({ planKey, ...(vehicleRef ? { vehicleRef } : {}) }),
       });
-      return res.url ?? res.data?.url ?? null;
+      return res?.data?.url ?? res?.url ?? null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to start checkout";
       setError(msg);
@@ -80,7 +90,24 @@ export function useSubscriptionApi() {
     }
   }, []);
 
-  // ── Cancel ────────────────────────────────────────────────────────────────
+  // ── Verify (payment callback) ─────────────────────────────────────────────
+
+  /**
+   * Verifies a Paystack transaction by reference and activates the subscription.
+   * Returns true once the subscription is active. Idempotent — safe to poll.
+   */
+  const verifySubscription = useCallback(async (reference: string): Promise<boolean> => {
+    try {
+      const res = await apiFetch(`/subscriptions/verify/${encodeURIComponent(reference)}`);
+      return Boolean(res?.active);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // ── Cancel (ADMIN ONLY) ───────────────────────────────────────────────────
+  // Self-service cancellation removed by product decision (2026-06-09).
+  // The backend rejects non-admin callers; support handles cancellations.
 
   const cancelSubscription = useCallback(async (id: string): Promise<void> => {
     setLoading(true);
@@ -116,6 +143,7 @@ export function useSubscriptionApi() {
     fetchPlans,
     fetchMySubscriptions,
     subscribe,
+    verifySubscription,
     cancelSubscription,
   };
 }

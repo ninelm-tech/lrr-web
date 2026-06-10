@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import LoginModal from "../LoginModal";
+import { useAuthState, dashboardPath } from "../../hooks";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
 
@@ -60,12 +61,10 @@ interface HeroProps {
 export default function HeroSection({ autoLogin = false, next = "" }: HeroProps) {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [loginOpen, setLoginOpen]       = useState(autoLogin);
+  const { isLoggedIn, role } = useAuthState();
 
-  // If already logged in, "Join Membership" goes to dashboard, not registration
-  const membershipHref =
-    typeof window !== "undefined" && localStorage.getItem("accessToken")
-      ? "/customer"
-      : "/register/customer";
+  // If already logged in, "Join Membership" goes to the dashboard, not registration
+  const membershipHref = isLoggedIn ? dashboardPath(role) : "/register/customer";
 
   return (
     <section className="relative overflow-hidden text-white">
@@ -109,6 +108,19 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
           </div>
 
           <div className="flex items-center gap-3">
+            {isLoggedIn ? (
+            <Link
+              href={dashboardPath(role)}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:opacity-90"
+              style={{ background: "#003DB4", color: "#fff" }}
+            >
+              Go to Dashboard
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+            ) : (
+            <>
             <button
               onClick={() => setLoginOpen(true)}
               className="inline-flex text-sm font-medium transition hover:text-white"
@@ -170,6 +182,8 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
                 </>
               )}
             </div>
+            </>
+            )}
           </div>
         </nav>
       </header>
@@ -260,11 +274,12 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm transition hover:opacity-90"
                 style={{ background: "#003DB4", color: "#fff" }}
               >
-                Join Membership
+                {isLoggedIn ? "Go to Dashboard" : "Join Membership"}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
+              {!isLoggedIn && (
               <Link
                 href="/register"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm transition hover:bg-white/10"
@@ -272,6 +287,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
               >
                 Register as Operator
               </Link>
+              )}
             </div>
 
             {/* Trust badges */}

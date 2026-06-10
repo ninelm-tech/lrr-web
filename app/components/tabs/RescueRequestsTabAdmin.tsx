@@ -1,10 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
+import { CheckCircle2, Flag, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi } from "../../hooks";
-import type { UserRole, RescueRequestListItem, RescueRequestStatus, IssueType } from "../../types";
-
-interface RescueRequestsTabProps {
-  role: UserRole | null;
-}
+import type { RescueRequestListItem, RescueRequestStatus } from "../../types";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   PENDING: { bg: "#fff3cd", text: "#856404" },
@@ -19,7 +16,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 interface AvailableOperator { id: string; businessName: string; phoneNumber: string; }
 
-export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
+export default function RescueRequestsTab() {
   const {
     requests, loading, error, total, page, limit,
     fetchList, assignOperator, updateStatus, cancelRequest: cancel,
@@ -59,9 +56,9 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
     try {
       await assignOperator(selectedRequest.id, selectedOperatorId);
       setActionMsg({ text: "Operator assigned and customer notified ✓", ok: true });
-      setSelectedRequest(prev => prev ? { ...prev, status: "OPERATOR_ASSIGNED" as any } : null);
-    } catch (e: any) {
-      setActionMsg({ text: e.message ?? "Failed to assign", ok: false });
+      setSelectedRequest(prev => prev ? { ...prev, status: "OPERATOR_ASSIGNED" as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to assign", ok: false });
     } finally { setActionLoading(false); }
   };
 
@@ -71,9 +68,9 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
     try {
       await updateStatus(selectedRequest.id, status);
       setActionMsg({ text: `Status updated to ${status} ✓`, ok: true });
-      setSelectedRequest(prev => prev ? { ...prev, status: status as any } : null);
-    } catch (e: any) {
-      setActionMsg({ text: e.message ?? "Failed to update status", ok: false });
+      setSelectedRequest(prev => prev ? { ...prev, status: status as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to update status", ok: false });
     } finally { setActionLoading(false); }
   };
 
@@ -83,15 +80,15 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
     try {
       await cancel(selectedRequest.id, "Cancelled by admin");
       setActionMsg({ text: "Request cancelled and customer notified ✓", ok: true });
-      setSelectedRequest(prev => prev ? { ...prev, status: "CANCELLED" as any } : null);
-    } catch (e: any) {
-      setActionMsg({ text: e.message ?? "Failed to cancel", ok: false });
+      setSelectedRequest(prev => prev ? { ...prev, status: "CANCELLED" as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to cancel", ok: false });
     } finally { setActionLoading(false); }
   };
 
   useEffect(() => {
     fetchList({ page: 1, limit: 20 });
-  }, []);
+  }, [fetchList]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -531,25 +528,25 @@ export default function RescueRequestsTab({ role }: RescueRequestsTabProps) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {canMarkArrived && (
                       <button onClick={() => handleStatusUpdate("ARRIVED")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
-                        ✅ Mark Arrived
+                        style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> Mark Arrived
                       </button>
                     )}
                     {canMarkComplete && (
                       <button onClick={() => handleStatusUpdate("COMPLETED")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
-                        🏁 Mark Complete
+                        style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Flag size={14} /> Mark Complete
                       </button>
                     )}
                     {selectedRequest.status === "DISPATCHING" && (
                       <button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#6f42c1", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
-                        🔄 Force In-Progress
+                        style={{ padding: "0.55rem 1.1rem", background: "#6f42c1", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <RefreshCcw size={14} /> Force In-Progress
                       </button>
                     )}
                     <button onClick={handleCancel} disabled={actionLoading}
-                      style={{ padding: "0.55rem 1.1rem", background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem" }}>
-                      ✕ Cancel Request
+                      style={{ padding: "0.55rem 1.1rem", background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <XCircle size={14} /> Cancel Request
                     </button>
                   </div>
                 </div>

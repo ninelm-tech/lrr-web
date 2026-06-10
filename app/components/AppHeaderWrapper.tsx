@@ -4,12 +4,13 @@ import { usePathname } from "next/navigation";
 export default function AppHeaderWrapper() {
   const pathname = usePathname();
 
+  // Portal routes render their own shell (PortalShell) — no public header there.
+  const PORTAL_PATHS = ["/dashboard", "/requests", "/operators", "/users", "/team", "/payments", "/settings", "/customer"];
   if (
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/customer")
+    PORTAL_PATHS.some((p) => pathname.startsWith(p))
   ) {
     return null;
   }

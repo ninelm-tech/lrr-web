@@ -1,6 +1,10 @@
+"use client";
 import Link from "next/link";
+import { useAuthState, dashboardPath } from "../../hooks";
 
 export default function FooterCta() {
+  const { isLoggedIn, role } = useAuthState();
+
   return (
     <>
       {/* CTA band */}
@@ -22,20 +26,32 @@ export default function FooterCta() {
             </p>
           </div>
           <div className="flex gap-3 shrink-0">
-            <Link
-              href="/register/customer"
-              className="px-5 py-3 rounded-xl font-semibold transition hover:bg-blue-50"
-              style={{ background: "#fff", color: "#07152f", fontFamily: "var(--font-dm-sans), sans-serif" }}
-            >
-              Join Membership
-            </Link>
-            <Link
-              href="/login"
-              className="border border-white/20 px-5 py-3 rounded-xl font-semibold transition hover:bg-white/10"
-              style={{ color: "#fff", fontFamily: "var(--font-dm-sans), sans-serif" }}
-            >
-              Login
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href={dashboardPath(role)}
+                className="px-5 py-3 rounded-xl font-semibold transition hover:bg-blue-50"
+                style={{ background: "#fff", color: "#07152f", fontFamily: "var(--font-dm-sans), sans-serif" }}
+              >
+                Go to Dashboard →
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/register/customer"
+                  className="px-5 py-3 rounded-xl font-semibold transition hover:bg-blue-50"
+                  style={{ background: "#fff", color: "#07152f", fontFamily: "var(--font-dm-sans), sans-serif" }}
+                >
+                  Join Membership
+                </Link>
+                <Link
+                  href="/login"
+                  className="border border-white/20 px-5 py-3 rounded-xl font-semibold transition hover:bg-white/10"
+                  style={{ color: "#fff", fontFamily: "var(--font-dm-sans), sans-serif" }}
+                >
+                  Login
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

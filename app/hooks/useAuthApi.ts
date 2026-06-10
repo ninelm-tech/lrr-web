@@ -12,7 +12,15 @@
 
 import { useState, useCallback } from "react";
 import { apiFetch } from "./api";
+import { AUTH_CHANGED_EVENT } from "./useAuthState";
 import type { User, UserRole, RegisterOperatorRequest } from "../types";
+
+/** Notify same-tab listeners (landing nav, etc.) that auth state changed. */
+function emitAuthChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +46,21 @@ export interface ListUsersOptions {
   limit?: number;
 }
 
+export interface MyProfile {
+  id: string;
+  email: string | null;
+  phoneNumber: string | null;
+  name: string | null;
+  role: UserRole;
+  createdAt: string;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useAuthApi() {
@@ -60,6 +83,7 @@ export function useAuthApi() {
         localStorage.setItem("userRole",    data.user.role);
         localStorage.setItem("userName",    data.user.name ?? "");
         document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
+        emitAuthChanged();
       }
       return data as { accessToken: string; user: User };
     } catch (err) {
@@ -73,9 +97,11 @@ export function useAuthApi() {
 
   const logout = useCallback(() => {
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
     document.cookie = "lrr_session=; path=/; max-age=0; SameSite=Lax";
+    emitAuthChanged();
   }, []);
 
   const isAuthenticated = useCallback((): boolean => {
@@ -94,6 +120,58 @@ export function useAuthApi() {
     const role = localStorage.getItem("userRole") as UserRole | null;
     if (!name || !role) return null;
     return { id: "", email: "", name, role };
+  }, []);
+
+  // ── Profile ──────────────────────────────────────────────────────────────
+
+  /** Fetch the current user's profile from the server. */
+  const fetchMe = useCallback(async (): Promise<MyProfile> => {
+    return apiFetch("/auth/me");
+  }, []);
+
+  /** Update the current user's profile (name, email, phone). */
+  const updateMe = useCallback(async (data: UpdateProfileRequest): Promise<MyProfile> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/auth/me", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(data),
+      });
+      const user = (res?.data ?? res) as MyProfile;
+      // Keep the cached display name in sync so headers update immediately
+      if (user?.name !== undefined) {
+        localStorage.setItem("userName", user.name ?? "");
+        emitAuthChanged();
+      }
+      return user;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Change (or set) the current user's password. */
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiFetch("/auth/change-password", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ currentPassword: currentPassword || undefined, newPassword }),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to change password";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   // ── Registration ─────────────────────────────────────────────────────────
@@ -118,6 +196,7 @@ export function useAuthApi() {
         localStorage.setItem("userRole",    res.user.role);
         localStorage.setItem("userName",    res.user.name ?? res.user.phoneNumber ?? "Customer");
         document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
+        emitAuthChanged();
       }
       return res as { accessToken: string; user: User };
     } catch (err) {
@@ -179,6 +258,10 @@ export function useAuthApi() {
     isAuthenticated,
     getStoredRole,
     getStoredUser,
+    // Profile
+    fetchMe,
+    updateMe,
+    changePassword,
     // Registration
     registerCustomer,
     registerOperator,

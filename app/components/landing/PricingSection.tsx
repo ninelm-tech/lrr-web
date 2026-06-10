@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useAuthState, dashboardPath } from "../../hooks";
 
 const perks = ["Unlimited dispatch access", "Priority support response", "Member-only roadside rates"];
 
@@ -10,10 +11,8 @@ const included = [
 ];
 
 export default function PricingSection() {
-  const membershipHref =
-    typeof window !== "undefined" && localStorage.getItem("accessToken")
-      ? "/customer"
-      : "/register/customer";
+  const { isLoggedIn, role } = useAuthState();
+  const membershipHref = isLoggedIn ? dashboardPath(role) : "/register/customer";
 
   return (
     <section id="pricing" className="py-20 sm:py-28" style={{ background: "#f6f9fc" }}>
@@ -71,7 +70,7 @@ export default function PricingSection() {
                     lineHeight: 1,
                   }}
                 >
-                  ₦48,000
+                  ₦50,000
                 </span>
                 <span className="pb-1" style={{ color: "#6c7890" }}>/ year</span>
               </div>
