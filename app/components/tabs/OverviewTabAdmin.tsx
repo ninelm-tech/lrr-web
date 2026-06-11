@@ -102,7 +102,7 @@ export default function OverviewTabAdmin({ role }: { role: UserRole | null }) {
                       {new Date(r.createdAt).toLocaleString("en-NG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: navy, fontWeight: 500 }}>
-                      {r.customer?.name || r.customer?.phoneNumber?.replace("whatsapp:", "") || "—"}
+                      {r.customer?.name || r.customer?.phoneNumber || "—"}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: "#6c7890" }}>
                       {r.issueType?.replace(/_/g, " ") ?? "—"}

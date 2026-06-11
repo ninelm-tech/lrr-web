@@ -97,7 +97,7 @@ export type IssueType =
 
 export interface Customer {
   id: string;
-  phoneNumber: string; // whatsapp:+234... format
+  phoneNumber: string;
   name?: string;
 }
 

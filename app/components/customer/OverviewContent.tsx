@@ -9,6 +9,9 @@ import { useSubscriptionApi, useRescueRequestApi } from "../../hooks";
 import type { RescueRequestListItem } from "../../types";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+const IS_STAGING_ENV = process.env.NODE_ENV !== "production";
+const TWILIO_SANDBOX_JOIN_CODE = "environment-apart";
+const CUSTOMER_SOS_TEXT = IS_STAGING_ENV ? `join ${TWILIO_SANDBOX_JOIN_CODE}\nSOS` : "SOS";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const fraunces = "var(--font-fraunces), serif";
@@ -258,8 +261,13 @@ export default function CustomerOverviewContent() {
             <p style={{ margin: "0 0 1.25rem 0", color: "rgba(219,232,255,0.6)", fontSize: "0.85rem", lineHeight: 1.5 }}>
               Send us a message on WhatsApp and we&apos;ll dispatch the nearest operator to you.
             </p>
+            {IS_STAGING_ENV && (
+              <p style={{ margin: "0 0 1.25rem 0", color: "rgba(219,232,255,0.78)", fontSize: "0.8rem", lineHeight: 1.45 }}>
+                First time on Twilio sandbox? Send <span style={{ fontFamily: "monospace", color: "#4eff91" }}>join {TWILIO_SANDBOX_JOIN_CODE}</span> once, then SOS.
+              </p>
+            )}
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(CUSTOMER_SOS_TEXT)}`}
               target="_blank"
               rel="noreferrer"
               style={{

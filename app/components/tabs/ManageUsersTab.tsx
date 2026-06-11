@@ -129,7 +129,7 @@ export default function ManageUsersTab() {
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#6c7890" }}>{u.email || "—"}</td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#6c7890" }}>
-                      {u.phoneNumber ? u.phoneNumber.replace("whatsapp:", "") : "—"}
+                      {u.phoneNumber || "—"}
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <span style={{

@@ -38,11 +38,13 @@ const NAV_ICONS: Record<PortalIconName, React.ComponentType<{ size?: number; str
 export default function PortalShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout } = useAuthApi();
+  const { logout, fetchMe } = useAuthApi();
   const { ready, isLoggedIn, role, userName } = useAuthState();
 
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const displayName = userName.trim() || "";
 
   // Token guard — the portal is for logged-in users only.
   useEffect(() => {
@@ -54,6 +56,13 @@ export default function PortalShell({ children }: { children: ReactNode }) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (!ready || !isLoggedIn || displayName) return;
+    fetchMe().catch(() => {
+      // ignore; UI falls back to role label below
+    });
+  }, [ready, isLoggedIn, displayName, fetchMe]);
 
   const menuItems = navForRole(role);
   const currentPageTitle =
@@ -228,16 +237,16 @@ export default function PortalShell({ children }: { children: ReactNode }) {
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.45rem 0.75rem", border: "1px solid #dde8f8", background: "#F6FAFF", borderRadius: 8, cursor: "pointer", color: "#003DB4", fontWeight: 600, fontSize: "0.9rem" }}
             >
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#003DB4", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>
-                {getInitials(userName)}
+                {getInitials(displayName || getRoleDisplayName())}
               </div>
-              <span className="lrr-username">{userName || "User"}</span>
+              <span className="lrr-username">{displayName || getRoleDisplayName()}</span>
               <span style={{ display: "inline-flex", alignItems: "center", opacity: 0.7 }}><ChevronDown size={13} strokeWidth={2.4} /></span>
             </button>
 
             {dropdownOpen && (
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, width: 210, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,61,180,0.15)", border: "1px solid #dde8f8", zIndex: 50, overflow: "hidden" }}>
                 <div style={{ padding: "0.875rem 1rem", borderBottom: "1px solid #dde8f8", background: "#F6FAFF" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#333" }}>{userName || "User"}</p>
+                  <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#333" }}>{displayName || getRoleDisplayName()}</p>
                   <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.78rem", color: "#aaa" }}>{getRoleDisplayName()}</p>
                 </div>
                 <div style={{ padding: "0.4rem 0" }}>

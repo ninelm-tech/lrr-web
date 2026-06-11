@@ -134,7 +134,7 @@ export default function OverviewTabOperator() {
                       {new Date(r.createdAt).toLocaleString("en-NG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: navy, fontWeight: 500 }}>
-                      {r.customer?.name || r.customer?.phoneNumber?.replace("whatsapp:", "") || "—"}
+                      {r.customer?.name || r.customer?.phoneNumber || "—"}
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: "#6c7890" }}>{r.issueType?.replace(/_/g, " ") ?? "—"}</td>
                     <td style={{ padding: "0.75rem 1rem" }}>{statusBadge(r.status)}</td>
@@ -172,7 +172,7 @@ export default function OverviewTabOperator() {
                         {new Date(r.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
                       </td>
                       <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: navy, fontWeight: 500 }}>
-                        {r.customer?.name || r.customer?.phoneNumber?.replace("whatsapp:", "") || "—"}
+                        {r.customer?.name || r.customer?.phoneNumber || "—"}
                       </td>
                       <td style={{ padding: "0.75rem 1rem", fontSize: "0.88rem", color: "#6c7890" }}>{r.issueType?.replace(/_/g, " ") ?? "—"}</td>
                       <td style={{ padding: "0.75rem 1rem", fontSize: "0.9rem", fontWeight: 700, color: total > 0 ? green : "#9ca3af" }}>

@@ -5,6 +5,9 @@ import LoginModal from "../LoginModal";
 import { useAuthState, dashboardPath } from "../../hooks";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
+const IS_STAGING_ENV = process.env.NODE_ENV !== "production";
+const TWILIO_SANDBOX_JOIN_CODE = "environment-apart";
+const SOS_TEXT = IS_STAGING_ENV ? `join ${TWILIO_SANDBOX_JOIN_CODE}\nSOS` : "SOS";
 
 // Lekki-Ikoyi Link Bridge, Lagos — photo by Opeyemi Adisa on Unsplash (free)
 const heroImageSrc =
@@ -231,7 +234,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
 
             {/* WhatsApp SOS strip */}
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}?text=SOS`}
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(SOS_TEXT)}`}
               target="_blank"
               rel="noreferrer"
               className="mt-8 inline-flex items-center gap-3 rounded-2xl px-5 py-3.5 transition hover:opacity-90"
@@ -254,11 +257,16 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
               </span>
               <div>
                 <p className="font-bold text-sm" style={{ color: "#fff", margin: 0, lineHeight: 1.2 }}>
-                  Stranded? Send <span style={{ color: "#4eff91", fontFamily: "monospace", fontSize: "1rem" }}>"SOS"</span> on WhatsApp
+                    Stranded? Send <span style={{ color: "#4eff91", fontFamily: "monospace", fontSize: "1rem" }}>&quot;SOS&quot;</span> on WhatsApp
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "rgba(219,232,255,0.65)", margin: 0 }}>
                   {process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ? `+${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}` : "WhatsApp")} · No app download needed
                   </p>
+                {IS_STAGING_ENV && (
+                  <p className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.78)", margin: 0 }}>
+                    First time on sandbox? Send <span style={{ fontFamily: "monospace", color: "#4eff91" }}>join {TWILIO_SANDBOX_JOIN_CODE}</span> once, then SOS.
+                  </p>
+                )}
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2} width={16} height={16} className="ml-1 shrink-0">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -436,7 +444,7 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
 
       {/* Floating WhatsApp SOS button — visible throughout the page */}
       <a
-        href={`https://wa.me/${WHATSAPP_NUMBER}?text=SOS`}
+        href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(SOS_TEXT)}`}
         target="_blank"
         rel="noreferrer"
         aria-label="Send SOS on WhatsApp"

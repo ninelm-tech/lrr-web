@@ -22,6 +22,10 @@ function emitAuthChanged() {
   }
 }
 
+function resolveDisplayName(user: { name?: string | null; phoneNumber?: string | null; email?: string | null }, fallback = "User") {
+  return user.name?.trim() || user.phoneNumber?.trim() || user.email?.trim() || fallback;
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface UserListItem {
@@ -81,7 +85,7 @@ export function useAuthApi() {
       if (data.accessToken && data.user) {
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("userRole",    data.user.role);
-        localStorage.setItem("userName",    data.user.name ?? "");
+        localStorage.setItem("userName",    resolveDisplayName(data.user, data.user.role === "CUSTOMER" ? "Customer" : "User"));
         document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
         emitAuthChanged();
       }
@@ -126,7 +130,11 @@ export function useAuthApi() {
 
   /** Fetch the current user's profile from the server. */
   const fetchMe = useCallback(async (): Promise<MyProfile> => {
-    return apiFetch("/auth/me");
+    const me = await apiFetch("/auth/me");
+    const displayName = resolveDisplayName(me, me?.role === "CUSTOMER" ? "Customer" : "User");
+    localStorage.setItem("userName", displayName);
+    emitAuthChanged();
+    return me;
   }, []);
 
   /** Update the current user's profile (name, email, phone). */

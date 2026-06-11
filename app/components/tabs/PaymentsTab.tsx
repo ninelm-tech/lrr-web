@@ -177,7 +177,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                         {fmtDate(r.createdAt)}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {r.customer.phoneNumber.replace("whatsapp:", "")}
+                        {r.customer.phoneNumber}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {r.issueType ?? "—"}

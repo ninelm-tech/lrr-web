@@ -55,8 +55,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
   };
 
   const formatPhoneNumber = (phone: string) => {
-    // Remove whatsapp: prefix if present
-    return phone.replace("whatsapp:", "");
+    return phone;
   };
 
   if (loading && requests.length === 0) {
