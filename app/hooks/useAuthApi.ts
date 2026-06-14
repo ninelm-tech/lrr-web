@@ -13,6 +13,7 @@
 import { useState, useCallback } from "react";
 import { apiFetch } from "./api";
 import { AUTH_CHANGED_EVENT } from "./useAuthState";
+import { toNigerianApiPhoneNumber, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { User, UserRole, RegisterOperatorRequest } from "../types";
 
 /** Notify same-tab listeners (landing nav, etc.) that auth state changed. */
@@ -131,10 +132,14 @@ export function useAuthApi() {
   /** Fetch the current user's profile from the server. */
   const fetchMe = useCallback(async (): Promise<MyProfile> => {
     const me = await apiFetch("/auth/me");
-    const displayName = resolveDisplayName(me, me?.role === "CUSTOMER" ? "Customer" : "User");
+    const normalizedMe: MyProfile = {
+      ...me,
+      phoneNumber: me?.phoneNumber ? toNigerianDisplayPhoneNumber(me.phoneNumber) : me?.phoneNumber ?? null,
+    };
+    const displayName = resolveDisplayName(normalizedMe, normalizedMe?.role === "CUSTOMER" ? "Customer" : "User");
     localStorage.setItem("userName", displayName);
     emitAuthChanged();
-    return me;
+    return normalizedMe;
   }, []);
 
   /** Update the current user's profile (name, email, phone). */
@@ -142,12 +147,21 @@ export function useAuthApi() {
     setLoading(true);
     setError(null);
     try {
+      const payload: UpdateProfileRequest = {
+        ...data,
+        phoneNumber: data.phoneNumber ? toNigerianApiPhoneNumber(data.phoneNumber) : data.phoneNumber,
+      };
       const res = await apiFetch("/auth/me", {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(data),
+        body:    JSON.stringify(payload),
       });
-      const user = (res?.data ?? res) as MyProfile;
+      const user = {
+        ...(res?.data ?? res),
+        phoneNumber: (res?.data ?? res)?.phoneNumber
+          ? toNigerianDisplayPhoneNumber((res?.data ?? res).phoneNumber)
+          : (res?.data ?? res)?.phoneNumber ?? null,
+      } as MyProfile;
       // Keep the cached display name in sync so headers update immediately
       if (user?.name !== undefined) {
         localStorage.setItem("userName", user.name ?? "");
@@ -194,10 +208,14 @@ export function useAuthApi() {
     setLoading(true);
     setError(null);
     try {
+      const payload = {
+        ...data,
+        phoneNumber: toNigerianApiPhoneNumber(data.phoneNumber),
+      };
       const res = await apiFetch("/auth/register/customer", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(data),
+        body:    JSON.stringify(payload),
       });
       if (res.accessToken && res.user) {
         localStorage.setItem("accessToken", res.accessToken);
@@ -221,10 +239,14 @@ export function useAuthApi() {
     setLoading(true);
     setError(null);
     try {
+      const payload: RegisterOperatorRequest = {
+        ...data,
+        phoneNumber: toNigerianApiPhoneNumber(data.phoneNumber),
+      };
       return await apiFetch("/operators", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(data),
+        body:    JSON.stringify(payload),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Registration failed";

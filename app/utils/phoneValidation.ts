@@ -43,6 +43,37 @@ export function formatNigerianPhoneNumber(phoneNumber: string): string {
 }
 
 /**
+ * Convert supported Nigerian number input to local display format: 0XXXXXXXXXX.
+ * Supports: 0XXXXXXXXXX, +234XXXXXXXXXX, 234XXXXXXXXXX.
+ */
+export function toNigerianDisplayPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return "";
+
+  const cleaned = phoneNumber.replace(/\s/g, "").trim();
+  if (!cleaned) return "";
+
+  if (/^\+234\d{10}$/.test(cleaned)) return `0${cleaned.slice(4)}`;
+  if (/^234\d{10}$/.test(cleaned)) return `0${cleaned.slice(3)}`;
+  if (/^0\d{10}$/.test(cleaned)) return cleaned;
+
+  return cleaned;
+}
+
+/**
+ * Convert supported Nigerian number input to API format: +234XXXXXXXXXX.
+ */
+export function toNigerianApiPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return "";
+
+  const localDisplay = toNigerianDisplayPhoneNumber(phoneNumber);
+  if (!/^0\d{10}$/.test(localDisplay)) {
+    return phoneNumber.replace(/\s/g, "").trim();
+  }
+
+  return `+234${localDisplay.slice(1)}`;
+}
+
+/**
  * Get user-friendly error message for phone number validation
  * @param phoneNumber - The invalid phone number
  * @returns Error message

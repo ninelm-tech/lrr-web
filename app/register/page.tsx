@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../hooks";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
-import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage } from "../utils/phoneValidation";
+import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
 import { OperatorType, OPERATOR_TYPES } from "../types";
 
@@ -40,6 +40,19 @@ export default function RegisterPage() {
     
     if (name === "operatorType") {
       setFormData((prev) => ({ ...prev, [name]: value as OperatorType }));
+    } else if (name === "phoneNumber") {
+      const normalized = toNigerianDisplayPhoneNumber(value);
+      setFormData((prev) => ({ ...prev, [name]: normalized }));
+      if (normalized) {
+        if (!isValidNigerianPhoneNumber(normalized)) {
+          setPhoneError(getPhoneNumberErrorMessage(normalized));
+        } else {
+          setPhoneError("");
+        }
+      } else {
+        setPhoneError("");
+      }
+      return;
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }

@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { useAuthApi } from "../hooks";
 import type { MyProfile } from "../hooks/useAuthApi";
+import { toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const navy = "#07152f";
@@ -191,7 +192,13 @@ export default function ProfileSettings() {
           </div>
           <div>
             <label htmlFor="ps-phone" style={labelStyle}>Phone (WhatsApp)</label>
-            <input id="ps-phone" style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08012345678" />
+            <input
+              id="ps-phone"
+              style={inputStyle}
+              value={phone}
+              onChange={(e) => setPhone(toNigerianDisplayPhoneNumber(e.target.value))}
+              placeholder="08012345678"
+            />
           </div>
         </div>
 

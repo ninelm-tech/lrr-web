@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../../hooks";
-import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage } from "../../utils/phoneValidation";
+import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../../utils/phoneValidation";
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
@@ -28,10 +28,15 @@ export default function CustomerRegisterPage() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
     if (name === "phoneNumber") {
-      setPhoneError(value && !isValidNigerianPhoneNumber(value) ? getPhoneNumberErrorMessage(value) : "");
+      const normalized = toNigerianDisplayPhoneNumber(value);
+      setForm((prev) => ({ ...prev, [name]: normalized }));
+      setPhoneError(normalized && !isValidNigerianPhoneNumber(normalized) ? getPhoneNumberErrorMessage(normalized) : "");
+      return;
     }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
