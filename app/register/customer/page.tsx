@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../../hooks";
+import { getToken } from "../../lib/session";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../../utils/phoneValidation";
 
 export default function CustomerRegisterPage() {
@@ -20,8 +21,7 @@ export default function CustomerRegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
-      const role = localStorage.getItem("userRole");
+    if (getToken()) {
       router.replace("/dashboard");
     }
   }, [router]);

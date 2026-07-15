@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE } from "./app/lib/session.constants";
 
 // Routes that require an active session
 const PROTECTED = ["/dashboard", "/customer", "/payment"];
@@ -9,7 +10,7 @@ export function middleware(request: NextRequest) {
   const isProtected = PROTECTED.some((path) => pathname.startsWith(path));
   if (!isProtected) return NextResponse.next();
 
-  const session = request.cookies.get("lrr_session");
+  const session = request.cookies.get(SESSION_COOKIE);
   if (!session?.value) {
     const loginUrl = new URL("/login", request.url);
     // Preserve the intended destination so we can redirect back after login

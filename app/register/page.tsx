@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../hooks";
+import { getToken } from "../lib/session";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
@@ -29,7 +30,7 @@ export default function RegisterPage() {
   const [phoneError, setPhoneError] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("accessToken")) {
+    if (getToken()) {
       setIsRedirecting(true);
       router.replace("/dashboard");
     }

@@ -5,19 +5,20 @@
  * a user is logged in (landing nav, pricing CTAs, etc.).
  *
  * - Renders logged-out on the server and first client paint, then syncs
- *   from localStorage in an effect (no hydration mismatch).
- * - Listens for the "lrr-auth-changed" event (fired by useAuthApi on
- *   login/logout) and the cross-tab "storage" event, so the UI updates
- *   without a reload.
+ *   from the stored session in an effect (no hydration mismatch).
+ * - Listens for the AUTH_CHANGED_EVENT (fired by the session module on
+ *   login/logout/expiry) and the cross-tab "storage" event, so the UI
+ *   updates without a reload.
+ *
+ * All session reads go through ../lib/session — the single source of truth.
  */
 
 import { useEffect, useState } from "react";
+import { AUTH_CHANGED_EVENT, getRole, getToken, getUserName } from "../lib/session";
 import type { UserRole } from "../types";
 
-export const AUTH_CHANGED_EVENT = "lrr-auth-changed";
-
 export interface AuthState {
-  /** False until the first client-side read of localStorage completes. */
+  /** False until the first client-side read of the session completes. */
   ready: boolean;
   isLoggedIn: boolean;
   role: UserRole | null;
@@ -42,12 +43,11 @@ export function useAuthState(): AuthState {
 
   useEffect(() => {
     function sync() {
-      const token = localStorage.getItem("accessToken");
       setState({
         ready: true,
-        isLoggedIn: Boolean(token),
-        role: (localStorage.getItem("userRole") as UserRole) || null,
-        userName: localStorage.getItem("userName") || "",
+        isLoggedIn: Boolean(getToken()),
+        role: getRole(),
+        userName: getUserName(),
       });
     }
     sync();

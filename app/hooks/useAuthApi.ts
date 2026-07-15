@@ -12,16 +12,9 @@
 
 import { useState, useCallback } from "react";
 import { apiFetch } from "./api";
-import { AUTH_CHANGED_EVENT } from "./useAuthState";
+import { clearSession, getRole, getToken, getUserName, setUserName, writeSession } from "../lib/session";
 import { toNigerianApiPhoneNumber, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { User, UserRole, RegisterOperatorRequest } from "../types";
-
-/** Notify same-tab listeners (landing nav, etc.) that auth state changed. */
-function emitAuthChanged() {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
-  }
-}
 
 function resolveDisplayName(user: { name?: string | null; phoneNumber?: string | null; email?: string | null }, fallback = "User") {
   return user.name?.trim() || user.phoneNumber?.trim() || user.email?.trim() || fallback;
@@ -84,11 +77,11 @@ export function useAuthApi() {
         body:    JSON.stringify({ email, password }),
       });
       if (data.accessToken && data.user) {
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("userRole",    data.user.role);
-        localStorage.setItem("userName",    resolveDisplayName(data.user, data.user.role === "CUSTOMER" ? "Customer" : "User"));
-        document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
-        emitAuthChanged();
+        writeSession(
+          data.accessToken,
+          data.user.role,
+          resolveDisplayName(data.user, data.user.role === "CUSTOMER" ? "Customer" : "User"),
+        );
       }
       return data as { accessToken: string; user: User };
     } catch (err) {
@@ -101,28 +94,16 @@ export function useAuthApi() {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    document.cookie = "lrr_session=; path=/; max-age=0; SameSite=Lax";
-    emitAuthChanged();
+    clearSession();
   }, []);
 
-  const isAuthenticated = useCallback((): boolean => {
-    if (typeof window === "undefined") return false;
-    return Boolean(localStorage.getItem("accessToken"));
-  }, []);
+  const isAuthenticated = useCallback((): boolean => Boolean(getToken()), []);
 
-  const getStoredRole = useCallback((): UserRole | null => {
-    if (typeof window === "undefined") return null;
-    return (localStorage.getItem("userRole") as UserRole) ?? null;
-  }, []);
+  const getStoredRole = useCallback((): UserRole | null => getRole(), []);
 
   const getStoredUser = useCallback((): Omit<User, "id" | "email"> & { id: ""; email: "" } | null => {
-    if (typeof window === "undefined") return null;
-    const name = localStorage.getItem("userName");
-    const role = localStorage.getItem("userRole") as UserRole | null;
+    const name = getUserName();
+    const role = getRole();
     if (!name || !role) return null;
     return { id: "", email: "", name, role };
   }, []);
@@ -137,8 +118,7 @@ export function useAuthApi() {
       phoneNumber: me?.phoneNumber ? toNigerianDisplayPhoneNumber(me.phoneNumber) : me?.phoneNumber ?? null,
     };
     const displayName = resolveDisplayName(normalizedMe, normalizedMe?.role === "CUSTOMER" ? "Customer" : "User");
-    localStorage.setItem("userName", displayName);
-    emitAuthChanged();
+    setUserName(displayName);
     return normalizedMe;
   }, []);
 
@@ -164,8 +144,7 @@ export function useAuthApi() {
       } as MyProfile;
       // Keep the cached display name in sync so headers update immediately
       if (user?.name !== undefined) {
-        localStorage.setItem("userName", user.name ?? "");
-        emitAuthChanged();
+        setUserName(user.name ?? "");
       }
       return user;
     } catch (err) {
@@ -218,11 +197,7 @@ export function useAuthApi() {
         body:    JSON.stringify(payload),
       });
       if (res.accessToken && res.user) {
-        localStorage.setItem("accessToken", res.accessToken);
-        localStorage.setItem("userRole",    res.user.role);
-        localStorage.setItem("userName",    res.user.name ?? res.user.phoneNumber ?? "Customer");
-        document.cookie = "lrr_session=1; path=/; max-age=86400; SameSite=Lax";
-        emitAuthChanged();
+        writeSession(res.accessToken, res.user.role, res.user.name ?? res.user.phoneNumber ?? "Customer");
       }
       return res as { accessToken: string; user: User };
     } catch (err) {

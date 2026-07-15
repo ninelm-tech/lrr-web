@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useSubscriptionApi } from "../../hooks";
+import { getToken } from "../../lib/session";
 
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MS = 2000;
@@ -21,7 +22,7 @@ function CallbackContent() {
     const reference = params.get("reference") || params.get("trxref");
 
     // Guard: middleware handles server-side; this catches edge cases (e.g. token expired mid-session)
-    if (!localStorage.getItem("accessToken")) {
+    if (!getToken()) {
       router.replace("/login");
       return;
     }
