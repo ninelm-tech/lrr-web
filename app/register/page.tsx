@@ -6,7 +6,7 @@ import { getToken } from "../lib/session";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
-import { OperatorType, OPERATOR_TYPES } from "../types";
+import { OperatorType, OPERATOR_TYPES, TruckClass, TRUCK_CLASSES } from "../types";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function RegisterPage() {
     contactName: "",
     phoneNumber: "",
     operatorType: OperatorType.TOW_TRUCK,
+    truckClasses: [] as TruckClass[],
     serviceRadius: "50",
     email: "",
     password: "",
@@ -70,6 +71,18 @@ export default function RegisterPage() {
     }
   }
 
+  function handleTruckClassToggle(truckClass: TruckClass) {
+    setFormData((prev) => {
+      const isSelected = prev.truckClasses.includes(truckClass);
+      return {
+        ...prev,
+        truckClasses: isSelected
+          ? prev.truckClasses.filter((tc) => tc !== truckClass)
+          : [...prev.truckClasses, truckClass],
+      };
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -87,6 +100,11 @@ export default function RegisterPage() {
 
     if (!address) {
       setError("Please select a service address");
+      return;
+    }
+
+    if (formData.truckClasses.length === 0) {
+      setError("Please select at least one truck class your fleet can operate");
       return;
     }
 
@@ -117,6 +135,7 @@ export default function RegisterPage() {
         address: address,
         latitude: latLng?.lat || 0,
         longitude: latLng?.lng || 0,
+        truckClasses: formData.truckClasses,
       };
       
       await registerOperator(payload);
@@ -284,6 +303,27 @@ export default function RegisterPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
+                  Fleet / Truck Classes *
+                </label>
+                <p style={{ fontSize: "0.8rem", color: "#666", margin: "0 0 8px" }}>
+                  Select every truck class in your fleet — this determines which jobs you're offered.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {Object.entries(TRUCK_CLASSES).map(([value, label]) => (
+                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.truckClasses.includes(value as TruckClass)}
+                        onChange={() => handleTruckClassToggle(value as TruckClass)}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>
