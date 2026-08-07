@@ -36,6 +36,7 @@ export interface Operator {
   phoneNumber:   string;
   email:         string | null;
   type:          string;
+  truckClasses:  string[];
   address:       string;
   latitude:      number;
   longitude:     number;
@@ -143,7 +144,7 @@ export function useOperatorApi() {
 
   /** Update an operator's business profile (owner/manager or admin). */
   const updateOperator = useCallback(async (id: string, data: Partial<Pick<Operator,
-    "businessName" | "contactName" | "email" | "phoneNumber" | "address" | "latitude" | "longitude" | "type" | "serviceRadius"
+    "businessName" | "contactName" | "email" | "phoneNumber" | "address" | "latitude" | "longitude" | "type" | "serviceRadius" | "truckClasses"
   >>): Promise<Operator> => {
     setLoading(true);
     setError(null);
