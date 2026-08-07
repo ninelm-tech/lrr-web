@@ -82,6 +82,12 @@ export default function OperatorProfileForm() {
     e.preventDefault();
     if (!operator) return;
     setMsg(null);
+
+    if ((operator.truckClasses?.length ?? 0) > 0 && truckClasses.length === 0) {
+      setMsg({ msg: "Select at least one truck class — an empty fleet stops you receiving jobs.", ok: false });
+      return;
+    }
+
     setSaving(true);
     try {
       const updated = await updateOperator(operator.id, {

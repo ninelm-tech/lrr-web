@@ -103,7 +103,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.truckClasses.length === 0) {
+    if (formData.operatorType === OperatorType.TOW_TRUCK && formData.truckClasses.length === 0) {
       setError("Please select at least one truck class your fleet can operate");
       return;
     }
@@ -305,26 +305,28 @@ export default function RegisterPage() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Fleet / Truck Classes *
-                </label>
-                <p style={{ fontSize: "0.8rem", color: "#666", margin: "0 0 8px" }}>
-                  Select every truck class in your fleet — this determines which jobs you're offered.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {Object.entries(TRUCK_CLASSES).map(([value, label]) => (
-                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.truckClasses.includes(value as TruckClass)}
-                        onChange={() => handleTruckClassToggle(value as TruckClass)}
-                      />
-                      {label}
-                    </label>
-                  ))}
+              {formData.operatorType === OperatorType.TOW_TRUCK && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
+                    Fleet / Truck Classes *
+                  </label>
+                  <p style={{ fontSize: "0.8rem", color: "#666", margin: "0 0 8px" }}>
+                    Select every truck class in your fleet — this determines which jobs you're offered.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {Object.entries(TRUCK_CLASSES).map(([value, label]) => (
+                      <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.truckClasses.includes(value as TruckClass)}
+                          onChange={() => handleTruckClassToggle(value as TruckClass)}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
