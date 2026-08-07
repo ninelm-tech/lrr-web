@@ -46,6 +46,20 @@ export const OPERATOR_TYPES: Record<OperatorType, string> = {
   [OperatorType.BATTERY_JUMPSTART]: "Battery Jumpstart",
 };
 
+export enum TruckClass {
+  LIGHT_DUTY = "LIGHT_DUTY",
+  TEN_TYRE = "TEN_TYRE",
+  LOW_BED = "LOW_BED",
+  HIAB = "HIAB",
+}
+
+export const TRUCK_CLASSES: Record<TruckClass, string> = {
+  [TruckClass.LIGHT_DUTY]: "Light Duty",
+  [TruckClass.TEN_TYRE]: "10-Tyre",
+  [TruckClass.LOW_BED]: "Low Bed",
+  [TruckClass.HIAB]: "Hiab",
+};
+
 export interface RegisterOperatorRequest {
   businessName: string;
   contactName: string;
@@ -56,6 +70,7 @@ export interface RegisterOperatorRequest {
   address: string;
   latitude: number;
   longitude: number;
+  truckClasses: TruckClass[];
 }
 
 export interface OperatorResponse {
@@ -65,6 +80,7 @@ export interface OperatorResponse {
   phoneNumber: string;
   email: string;
   type: string;
+  truckClasses: TruckClass[];
   address: string;
   latitude: number;
   longitude: number;
