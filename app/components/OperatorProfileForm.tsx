@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { useOperatorApi } from "../hooks";
 import type { Operator } from "../hooks";
+import { TruckClass, TRUCK_CLASSES } from "../types";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const navy = "#07152f";
@@ -48,6 +49,7 @@ export default function OperatorProfileForm() {
   const [address, setAddress]             = useState("");
   const [type, setType]                   = useState("TOW_TRUCK");
   const [serviceRadius, setServiceRadius] = useState("10");
+  const [truckClasses, setTruckClasses] = useState<TruckClass[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,10 +64,19 @@ export default function OperatorProfileForm() {
         setAddress(op.address ?? "");
         setType(op.type ?? "TOW_TRUCK");
         setServiceRadius(String(op.serviceRadius ?? 10));
+        setTruckClasses((op.truckClasses ?? []) as TruckClass[]);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [fetchMe]);
+
+  function handleTruckClassToggle(truckClass: TruckClass) {
+    setTruckClasses((prev) =>
+      prev.includes(truckClass)
+        ? prev.filter((tc) => tc !== truckClass)
+        : [...prev, truckClass],
+    );
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +92,7 @@ export default function OperatorProfileForm() {
         address:       address.trim(),
         type,
         serviceRadius: Number(serviceRadius) || operator.serviceRadius,
+        truckClasses,
       });
       setOperator(updated);
       setMsg({ msg: "Business profile updated.", ok: true });
@@ -145,6 +157,21 @@ export default function OperatorProfileForm() {
               id="op-radius" type="number" min={1} max={100} style={inputStyle}
               value={serviceRadius} onChange={(e) => setServiceRadius(e.target.value)}
             />
+          </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Fleet / truck classes</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {Object.entries(TRUCK_CLASSES).map(([value, label]) => (
+              <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.92rem", fontFamily: dm, color: navy }}>
+                <input
+                  type="checkbox"
+                  checked={truckClasses.includes(value as TruckClass)}
+                  onChange={() => handleTruckClassToggle(value as TruckClass)}
+                />
+                {label}
+              </label>
+            ))}
           </div>
         </div>
       </div>
