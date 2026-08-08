@@ -4,7 +4,7 @@ import { SESSION_COOKIE } from "./app/lib/session.constants";
 // Routes that require an active session
 const PROTECTED = ["/dashboard", "/customer", "/payment"];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED.some((path) => pathname.startsWith(path));
