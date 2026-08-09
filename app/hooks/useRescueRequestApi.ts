@@ -27,10 +27,12 @@ export interface PendingOffer {
   expiresAt: string;
   request: {
     id: string;
-    issueType: string;
+    vehicleType: string | null;
+    destination: string | null;
     latitude: string;
     longitude: string;
     createdAt: string;
+    mediaLinks: string[];
   };
 }
 
@@ -210,14 +212,14 @@ export function useRescueRequestApi() {
     }
   }, []);
 
-  /** Accept or decline a dispatch offer. Returns the outcome message. */
-  const respondToOffer = useCallback(async (offerId: string, accept: boolean): Promise<{ accepted: boolean; message: string }> => {
+  /** Submit a price quote (or decline) on a dispatch offer. Returns the outcome message. */
+  const respondToOffer = useCallback(async (offerId: string, priceNaira?: number): Promise<{ quoted: boolean; message: string }> => {
     const res = await apiFetch(`/rescue-requests/offers/${encodeURIComponent(offerId)}/respond`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ accept }),
+      body:    JSON.stringify({ priceNaira }),
     });
-    return (res?.data ?? { accepted: false, message: "Unknown response" }) as { accepted: boolean; message: string };
+    return (res?.data ?? { quoted: false, message: "Unknown response" }) as { quoted: boolean; message: string };
   }, []);
 
   /** Thin wrapper — fetch customer's own requests without touching shared state. */

@@ -2,9 +2,9 @@
 /**
  * PendingOffers
  * -------------
- * Live dispatch offers for the logged-in operator, with Accept/Decline.
- * Mirrors the WhatsApp YES/NO flow — both channels share the same backend
- * state machine, so whichever responds first wins.
+ * Live dispatch offers for the logged-in operator. Operators submit a price
+ * quote or decline — both WhatsApp and the dashboard share the same backend
+ * quote/decline logic, so whichever channel responds first wins.
  *
  * Polls every 15s while mounted (offers expire in minutes, so freshness matters).
  */
@@ -16,11 +16,6 @@ const dm = "var(--font-dm-sans), sans-serif";
 const navy = "#07152f";
 const POLL_MS = 15_000;
 
-function formatIssue(issueType?: string) {
-  return (issueType ?? "ASSISTANCE").replace(/_/g, " ").toLowerCase()
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
-
 function secondsLeft(expiresAt: string) {
   return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
 }
@@ -28,6 +23,7 @@ function secondsLeft(expiresAt: string) {
 export default function PendingOffers() {
   const { fetchMyOffers, respondToOffer } = useRescueRequestApi();
   const [offers, setOffers]     = useState<PendingOffer[]>([]);
+  const [prices, setPrices]     = useState<Record<string, string>>({});
   const [busy, setBusy]         = useState<string | null>(null); // offerId being responded to
   const [outcome, setOutcome]   = useState<{ msg: string; ok: boolean } | null>(null);
   const [, forceTick]           = useState(0); // re-render for countdowns
@@ -46,22 +42,39 @@ export default function PendingOffers() {
     return () => { mounted.current = false; clearInterval(poll); clearInterval(tick); };
   }, [load]);
 
-  async function handleRespond(offer: PendingOffer, accept: boolean) {
+  async function handleQuote(offer: PendingOffer) {
+    const priceNaira = Number(prices[offer.id]);
+    if (!priceNaira || priceNaira <= 0) {
+      setOutcome({ msg: "Enter a price before submitting a quote.", ok: false });
+      return;
+    }
     setBusy(offer.id);
     setOutcome(null);
     try {
-      const res = await respondToOffer(offer.id, accept);
-      setOutcome({ msg: res.message, ok: res.accepted || !accept });
+      const res = await respondToOffer(offer.id, priceNaira);
+      setOutcome({ msg: res.message, ok: res.quoted });
     } catch (err) {
-      setOutcome({ msg: err instanceof Error ? err.message : "Failed to respond — try again.", ok: false });
+      setOutcome({ msg: err instanceof Error ? err.message : "Failed to submit quote — try again.", ok: false });
     } finally {
       setBusy(null);
       load();
     }
   }
 
-  // Render nothing when there are no live offers and no recent outcome —
-  // keeps the overview clean instead of showing an empty card.
+  async function handleDecline(offer: PendingOffer) {
+    setBusy(offer.id);
+    setOutcome(null);
+    try {
+      const res = await respondToOffer(offer.id, undefined);
+      setOutcome({ msg: res.message, ok: true });
+    } catch (err) {
+      setOutcome({ msg: err instanceof Error ? err.message : "Failed to decline — try again.", ok: false });
+    } finally {
+      setBusy(null);
+      load();
+    }
+  }
+
   if (offers.length === 0 && !outcome) return null;
 
   return (
@@ -86,13 +99,13 @@ export default function PendingOffers() {
           <div
             key={offer.id}
             style={{
-              display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between",
-              gap: 12, padding: "0.9rem 0", borderTop: "1px solid #f0f2f5",
+              display: "flex", flexDirection: "column", gap: 8,
+              padding: "0.9rem 0", borderTop: "1px solid #f0f2f5",
             }}
           >
             <div>
               <p style={{ margin: "0 0 2px", fontWeight: 700, color: navy, fontSize: "0.95rem" }}>
-                {formatIssue(offer.request.issueType)}
+                {offer.request.vehicleType ?? "Vehicle"} → {offer.request.destination ?? "Destination not specified"}
               </p>
               <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>
                 Offered {new Date(offer.offeredAt).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
@@ -101,10 +114,31 @@ export default function PendingOffers() {
                   {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")} left
                 </span>
               </p>
+              {offer.request.mediaLinks.length > 0 && (
+                <p style={{ margin: "4px 0 0", fontSize: "0.82rem" }}>
+                  {offer.request.mediaLinks.map((link, i) => (
+                    <a key={link} href={link} target="_blank" rel="noreferrer" style={{ marginRight: 8, color: "#003DB4" }}>
+                      Photo {i + 1}
+                    </a>
+                  ))}
+                </p>
+              )}
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="number"
+                min={0}
+                placeholder="Price (₦)"
+                value={prices[offer.id] ?? ""}
+                onChange={(e) => setPrices((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                disabled={busy !== null || secs === 0}
+                style={{
+                  padding: "0.55rem 0.8rem", border: "1px solid #dde8f8", borderRadius: 10,
+                  fontFamily: dm, fontSize: "0.88rem", width: 140,
+                }}
+              />
               <button
-                onClick={() => handleRespond(offer, true)}
+                onClick={() => handleQuote(offer)}
                 disabled={busy !== null || secs === 0}
                 style={{
                   padding: "0.55rem 1.2rem", background: "#19a56b", color: "#fff",
@@ -112,10 +146,10 @@ export default function PendingOffers() {
                   cursor: busy ? "not-allowed" : "pointer", opacity: busy === offer.id ? 0.6 : 1,
                 }}
               >
-                {busy === offer.id ? "…" : "Accept"}
+                {busy === offer.id ? "…" : "Submit Quote"}
               </button>
               <button
-                onClick={() => handleRespond(offer, false)}
+                onClick={() => handleDecline(offer)}
                 disabled={busy !== null || secs === 0}
                 style={{
                   padding: "0.55rem 1.2rem", background: "#fff", color: "#dc2626",
