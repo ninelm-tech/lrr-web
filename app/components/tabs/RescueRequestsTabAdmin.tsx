@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { CheckCircle2, Flag, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi } from "../../hooks";
-import type { RescueRequestListItem, RescueRequestStatus } from "../../types";
+import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   PENDING: { bg: "#fff3cd", text: "#856404" },
@@ -19,12 +19,14 @@ interface AvailableOperator { id: string; businessName: string; phoneNumber: str
 export default function RescueRequestsTab() {
   const {
     requests, loading, error, total, page, limit,
-    fetchList, assignOperator, updateStatus, cancelRequest: cancel,
+    fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel,
   } = useRescueRequestApi();
   const { fetchAll: fetchAllOperators } = useOperatorApi();
 
   const [filters, setFilters] = useState({ status: "", issueType: "", search: "" });
   const [selectedRequest, setSelectedRequest] = useState<RescueRequestListItem | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<RescueRequestDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [availableOperators, setAvailableOperators] = useState<AvailableOperator[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -43,12 +45,18 @@ export default function RescueRequestsTab() {
 
   const openModal = useCallback((req: RescueRequestListItem) => {
     setSelectedRequest(req);
+    setSelectedDetail(null);
     setSelectedOperatorId(req.assignedOperator?.id ?? "");
     setActionMsg(null);
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
       loadAvailableOperators();
     }
-  }, [loadAvailableOperators]);
+    setDetailLoading(true);
+    fetchDetail(req.id)
+      .then(setSelectedDetail)
+      .catch(() => { /* modal still works with list-item data if detail fetch fails */ })
+      .finally(() => setDetailLoading(false));
+  }, [loadAvailableOperators, fetchDetail]);
 
   const handleAssign = async () => {
     if (!selectedRequest || !selectedOperatorId) return;
@@ -441,7 +449,7 @@ export default function RescueRequestsTab() {
         return (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
-            onClick={() => setSelectedRequest(null)}
+            onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
           >
             <div
               style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
@@ -462,6 +470,8 @@ export default function RescueRequestsTab() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
                 {[
                   ["Issue", selectedRequest.issueType ?? "—"],
+                  ["Vehicle", selectedDetail?.vehicleType ?? "—"],
+                  ["Destination", selectedDetail?.destination ?? "—"],
                   ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
                   ["Created", formatTime(selectedRequest.createdAt)],
                   ["Updated", formatTime(selectedRequest.updatedAt)],
@@ -485,6 +495,63 @@ export default function RescueRequestsTab() {
                 >
                   📍 Open in Google Maps — {selectedRequest.latitude}, {selectedRequest.longitude}
                 </a>
+              )}
+
+              {/* ── Media links ── */}
+              {selectedDetail && selectedDetail.mediaLinks.length > 0 && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Media</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {selectedDetail.mediaLinks.map((link, i) => (
+                      <a key={link} href={link} target="_blank" rel="noreferrer"
+                        style={{ padding: "0.4rem 0.9rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, color: "#003DB4", textDecoration: "none" }}>
+                        Photo {i + 1}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Quotes (admin-only, read-only) ── */}
+              {detailLoading && (
+                <p style={{ color: "#999", fontSize: "0.88rem", marginBottom: "1.5rem" }}>Loading quotes…</p>
+              )}
+              {selectedDetail?.offers && selectedDetail.offers.length > 0 && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                    Quotes ({selectedDetail.offers.length})
+                  </p>
+                  <div style={{ border: "1px solid #dde8f8", borderRadius: 10, overflow: "hidden" }}>
+                    {selectedDetail.offers.map((offer, i) => (
+                      <div key={offer.operatorId + offer.offeredAt} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "0.75rem 1rem", fontSize: "0.88rem",
+                        borderTop: i === 0 ? "none" : "1px solid #f0f2f5",
+                      }}>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 600, color: "#333" }}>{offer.businessName}</p>
+                          <p style={{ margin: "2px 0 0 0", color: "#999", fontSize: "0.78rem" }}>
+                            Offered {formatTime(offer.offeredAt)}
+                            {offer.respondedAt ? ` · Responded ${formatTime(offer.respondedAt)}` : ""}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: "#003DB4" }}>
+                            {offer.quotedPrice ? `₦${(offer.quotedPrice / 100).toLocaleString()}` : "—"}
+                          </p>
+                          {offer.motoristFacingTotal && (
+                            <p style={{ margin: "2px 0 0 0", color: "#999", fontSize: "0.78rem" }}>
+                              ₦{(offer.motoristFacingTotal / 100).toLocaleString()} to motorist
+                            </p>
+                          )}
+                          <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", fontWeight: 700, color: "#6c7890" }}>
+                            {offer.status}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* ── Manual Assign ── */}
@@ -559,7 +626,7 @@ export default function RescueRequestsTab() {
               )}
 
               <button
-                onClick={() => setSelectedRequest(null)}
+                onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
                 style={{ padding: "0.6rem 1.5rem", background: "#dde8f8", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
               >
                 Close

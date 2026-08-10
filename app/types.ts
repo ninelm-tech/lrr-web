@@ -145,9 +145,23 @@ export interface RescueRequestListItem {
   updatedAt: string;
 }
 
+export interface DispatchOfferAdmin {
+  operatorId: string;
+  businessName: string;
+  status: string;
+  quotedPrice?: number;
+  motoristFacingTotal?: number;
+  offeredAt: string;
+  respondedAt?: string;
+}
+
 export interface RescueRequestDetail extends RescueRequestListItem {
   description?: string;
   adminNotes?: string;
+  vehicleType?: string;
+  destination?: string;
+  mediaLinks: string[];
+  offers?: DispatchOfferAdmin[];
   timeline?: {
     status: RescueRequestStatus;
     timestamp: string;

@@ -96,7 +96,8 @@ export function useRescueRequestApi() {
     setLoading(true);
     setError(null);
     try {
-      return await apiFetch(`/rescue-requests/${id}`) as RescueRequestDetail;
+      const res = await apiFetch(`/rescue-requests/${id}`);
+      return res.data as RescueRequestDetail;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to fetch request details";
       setError(msg);
