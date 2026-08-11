@@ -35,7 +35,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function OperatorProfileForm() {
-  const { fetchMe, updateOperator } = useOperatorApi();
+  const { fetchMe, updateOperator, fetchBanks, saveBankDetails } = useOperatorApi();
 
   const [operator, setOperator] = useState<Operator | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -50,6 +50,12 @@ export default function OperatorProfileForm() {
   const [type, setType]                   = useState("TOW_TRUCK");
   const [serviceRadius, setServiceRadius] = useState("10");
   const [truckClasses, setTruckClasses] = useState<TruckClass[]>([]);
+
+  const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [bankMsg, setBankMsg] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +75,27 @@ export default function OperatorProfileForm() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [fetchMe]);
+
+  useEffect(() => {
+    fetchBanks().then(setBanks);
+  }, [fetchBanks]);
+
+  async function handleSaveBankDetails() {
+    if (!operator) return;
+    setBankMsg(null);
+    setResolving(true);
+    try {
+      const bankName = banks.find((b) => b.code === bankCode)?.name ?? "";
+      const updated = await saveBankDetails(operator.id, { bankCode, bankName, accountNumber });
+      setOperator(updated);
+      setAccountNumber("");
+      setBankMsg({ msg: "Payout bank details saved.", ok: true });
+    } catch (err) {
+      setBankMsg({ msg: err instanceof Error ? err.message : "Failed to save bank details", ok: false });
+    } finally {
+      setResolving(false);
+    }
+  }
 
   function handleTruckClassToggle(truckClass: TruckClass) {
     setTruckClasses((prev) =>
@@ -200,6 +227,55 @@ export default function OperatorProfileForm() {
           {msg.msg}
         </p>
       )}
+
+      <div style={{ marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid #dde8f8" }}>
+        <h3 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.05rem", color: navy }}>
+          Payout details
+        </h3>
+        <p style={{ margin: "0 0 1rem", color: "#6c7890", fontSize: "0.85rem" }}>
+          Where we send your earnings after a job's balance is paid.
+        </p>
+        {operator.bankName && operator.accountNumberLast4 && (
+          <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "#333" }}>
+            Currently: {operator.bankName} ····{operator.accountNumberLast4} ({operator.accountName})
+          </p>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+          <div>
+            <label htmlFor="op-bank" style={labelStyle}>Bank</label>
+            <select id="op-bank" style={{ ...inputStyle, appearance: "auto" }} value={bankCode} onChange={(e) => setBankCode(e.target.value)}>
+              <option value="">Select a bank</option>
+              {banks.map((b) => (
+                <option key={b.code} value={b.code}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="op-account" style={labelStyle}>Account number</label>
+            <input
+              id="op-account" style={inputStyle} value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveBankDetails}
+            disabled={resolving || !bankCode || !accountNumber.trim()}
+            style={{
+              alignSelf: "flex-start", padding: "0.6rem 1.2rem", background: "#fff", color: blue,
+              border: `1.5px solid ${blue}`, borderRadius: 10, fontWeight: 700, fontSize: "0.88rem", fontFamily: dm,
+              cursor: resolving ? "not-allowed" : "pointer", opacity: resolving ? 0.6 : 1,
+            }}
+          >
+            {resolving ? "Verifying & saving…" : "Verify & save"}
+          </button>
+          {bankMsg && (
+            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600, color: bankMsg.ok ? "#19a56b" : "#dc2626" }}>
+              {bankMsg.msg}
+            </p>
+          )}
+        </div>
+      </div>
     </form>
   );
 }

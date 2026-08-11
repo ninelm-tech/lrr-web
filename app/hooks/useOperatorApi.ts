@@ -48,6 +48,10 @@ export interface Operator {
   verifiedAt:    string | null;
   createdAt:     string;
   updatedAt:     string;
+  bankName:              string | null;
+  accountName:           string | null;
+  accountNumberLast4:    string | null;
+  paystackRecipientCode: string | null;
   members?: OperatorMember[];
 }
 
@@ -168,6 +172,40 @@ export function useOperatorApi() {
     }
   }, []);
 
+  const fetchBanks = useCallback(async (): Promise<Array<{ name: string; code: string }>> => {
+    try {
+      const res = await apiFetch("/paystack/banks");
+      return (res.data ?? []) as Array<{ name: string; code: string }>;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Save payout bank details. The full bankCode/accountNumber are sent but never echoed back or stored client-side. */
+  const saveBankDetails = useCallback(async (
+    id: string,
+    data: { bankCode: string; bankName: string; accountNumber: string },
+  ): Promise<Operator> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/operators/${id}/bank-details`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(data),
+      });
+      const updated = res.data as Operator;
+      setOperators((prev) => prev.map((op) => (op.id === id ? { ...op, ...updated } : op)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save bank details";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ── Status / Availability ────────────────────────────────────────────────
 
   const updateStatus = useCallback(async (id: string, status: OperatorStatus): Promise<Operator> => {
@@ -270,8 +308,10 @@ export function useOperatorApi() {
     fetchById,
     fetchStats,
     fetchAllStats,
+    fetchBanks,
     // Write
     updateOperator,
+    saveBankDetails,
     updateStatus,
     setAvailability,
     // Members
