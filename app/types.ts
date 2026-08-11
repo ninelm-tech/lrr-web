@@ -162,6 +162,8 @@ export interface RescueRequestDetail extends RescueRequestListItem {
   destination?: string;
   mediaLinks: string[];
   offers?: DispatchOfferAdmin[];
+  depositAmount?: number;
+  balanceAmount?: number;
   timeline?: {
     status: RescueRequestStatus;
     timestamp: string;
