@@ -62,6 +62,7 @@ export default function DispatchBoardTab() {
   const [loading, setLoading] = useState(true);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function load() {
     const board = await fetchBoard();
@@ -71,47 +72,73 @@ export default function DispatchBoardTab() {
   useEffect(() => {
     load().finally(() => setLoading(false));
     fetchAll();
-    const poll = setInterval(load, POLL_MS);
+    const poll = setInterval(() => {
+      load().catch(() => {});
+    }, POLL_MS);
     return () => clearInterval(poll);
   }, []);
 
   async function handleCancel(id: string) {
     if (!confirm("Cancel this dispatch?")) return;
+    setActionError(null);
     setBusy(id);
     try {
       await cancelRequest(id, "Cancelled by admin from dispatch board");
       await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Action failed");
     } finally {
       setBusy(null);
     }
   }
 
   async function handleExpandRadius(id: string) {
+    setActionError(null);
     setBusy(id);
     try {
       await expandRadius(id);
       await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Action failed");
     } finally {
       setBusy(null);
     }
   }
 
   async function handleOfferTo(id: string, operatorId: string) {
+    setActionError(null);
     setBusy(id);
     setPickerFor(null);
     try {
       await offerToOperator(id, operatorId);
       await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Action failed");
     } finally {
       setBusy(null);
     }
   }
 
   if (loading) return <div>Loading dispatch board…</div>;
-  if (rows.length === 0) return <p style={{ color: "#999" }}>No active or recent dispatches.</p>;
+
+  const errorBanner = actionError && (
+    <p style={{ color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, padding: "0.6rem 0.9rem", fontSize: "0.85rem" }}>
+      {actionError}
+    </p>
+  );
+
+  if (rows.length === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {errorBanner}
+        <p style={{ color: "#999" }}>No active or recent dispatches.</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {errorBanner}
       {rows.map((row) => {
         const isLive = row.status === "DISPATCHING";
         return (
