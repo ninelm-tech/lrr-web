@@ -41,7 +41,7 @@ export default function FooterCta() {
                   className="px-5 py-3 rounded-xl font-semibold transition hover:bg-blue-50"
                   style={{ background: "#fff", color: "#07152f", fontFamily: "var(--font-dm-sans), sans-serif" }}
                 >
-                  Join Membership
+                  Get Started
                 </Link>
                 <Link
                   href="/login"

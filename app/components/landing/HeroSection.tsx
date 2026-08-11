@@ -66,8 +66,8 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
   const [loginOpen, setLoginOpen]       = useState(autoLogin);
   const { isLoggedIn, role } = useAuthState();
 
-  // If already logged in, "Join Membership" goes to the dashboard, not registration
-  const membershipHref = isLoggedIn ? dashboardPath(role) : "/register/customer";
+  // If already logged in, the CTA goes to the dashboard, not registration
+  const getStartedHref = isLoggedIn ? dashboardPath(role) : "/register/customer";
 
   return (
     <section className="relative overflow-hidden text-white">
@@ -105,7 +105,6 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
             style={{ color: "rgba(255,255,255,0.82)" }}
           >
             <a href="#how-it-works" className="hover:text-white transition">How it works</a>
-            <a href="#pricing"      className="hover:text-white transition">Membership</a>
             <a href="#operators"    className="hover:text-white transition">For operators</a>
             <a href="#faq"          className="hover:text-white transition">FAQ</a>
           </div>
@@ -278,11 +277,11 @@ export default function HeroSection({ autoLogin = false, next = "" }: HeroProps)
               style={{ animation: "fadeUp .7s .2s ease both" }}
             >
               <Link
-                href={membershipHref}
+                href={getStartedHref}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold text-sm transition hover:opacity-90"
                 style={{ background: "#003DB4", color: "#fff" }}
               >
-                {isLoggedIn ? "Go to Dashboard" : "Join Membership"}
+                {isLoggedIn ? "Go to Dashboard" : "Get Started"}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>

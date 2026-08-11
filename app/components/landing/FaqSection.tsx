@@ -3,8 +3,8 @@ import { useState } from "react";
 
 const faqs = [
   {
-    q: "What does my membership include?",
-    a: "Your membership gives you access to emergency dispatch, verified roadside operators, live tracking, and member support whenever you need help.",
+    q: "How much does it cost?",
+    a: "There's no subscription or membership fee. You only pay per rescue — operators quote you a price for the job, and you pay a small deposit to confirm plus the balance once you're helped.",
   },
   {
     q: "How quickly can help arrive?",

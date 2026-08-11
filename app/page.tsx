@@ -2,7 +2,7 @@ import LandingNav       from "./components/landing/LandingNav";
 import HeroSection      from "./components/landing/HeroSection";
 import StatsBar         from "./components/landing/StatsBar";
 import HowItWorks       from "./components/landing/HowItWorks";
-import PricingSection   from "./components/landing/PricingSection";
+import ProductDepthSection from "./components/landing/ProductDepthSection";
 import OperatorsSection from "./components/landing/OperatorsSection";
 import FaqSection       from "./components/landing/FaqSection";
 import FooterCta        from "./components/landing/FooterCta";
@@ -22,7 +22,7 @@ export default async function LandingPage({ searchParams }: Props) {
       <HeroSection autoLogin={autoLogin} next={next} />
       <StatsBar />
       <HowItWorks />
-      <PricingSection />
+      <ProductDepthSection />
       <OperatorsSection />
       <FaqSection />
       <FooterCta />
