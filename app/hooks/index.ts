@@ -18,6 +18,7 @@ export { useSubscriptionApi } from "./useSubscriptionApi";
 export { usePaymentApi }      from "./usePaymentApi";
 export { useSettingsApi }     from "./useSettingsApi";
 export { useRatingApi }       from "./useRatingApi";
+export { usePayoutApi }       from "./usePayoutApi";
 
 // Re-export types that components commonly need
 export type { UserListItem, UserListResult, ListUsersOptions }    from "./useAuthApi";
@@ -29,3 +30,4 @@ export type { PaymentRecord, PaymentSummary, PaymentListOptions } from "./usePay
 export type { SubscriptionPlanKey }                                from "./useSubscriptionApi";
 export type { PlatformSettings }                                   from "./useSettingsApi";
 export type { RatingDetail }                                       from "./useRatingApi";
+export type { PayoutListItem }                                     from "./usePayoutApi";

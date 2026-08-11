@@ -36,6 +36,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Management", roles: ADMINS },
   { label: "Team",         href: "/team",      icon: "user-cog",         section: "Management", roles: OPERATOR },
   { label: "Payments",     href: "/payments",  icon: "credit-card",      section: "Financial",  roles: [...ADMINS, ...OPERATOR] },
+  { label: "Payouts",      href: "/payouts",   icon: "credit-card",      section: "Financial",  roles: ADMINS },
   { label: "Settings",     href: "/settings",  icon: "settings",         section: "Account",    roles: ALL },
 ];
 
