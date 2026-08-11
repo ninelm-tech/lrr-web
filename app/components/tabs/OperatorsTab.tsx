@@ -306,7 +306,7 @@ export default function OperatorsTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Business", "Type", "Phone", "Status", "Available", "Acceptance", "Avg Response", "Joined", "Actions"].map((h) => (
+                {["Business", "Type", "Phone", "Status", "Available", "Acceptance", "Avg Response", "Avg Rating", "Joined", "Actions"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -368,6 +368,9 @@ export default function OperatorsTab() {
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {opStats ? fmtSec(opStats.avgResponseSec) : "—"}
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
+                        {opStats && opStats.averageRating !== null ? `${opStats.averageRating.toFixed(1)} ★ (${opStats.ratingCount})` : "—"}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>
                         {fmtDate(op.createdAt)}
