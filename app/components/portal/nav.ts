@@ -32,6 +32,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { label: "Overview",     href: "/dashboard", icon: "layout-dashboard", section: "Main",       roles: ALL },
   { label: "Requests",     href: "/requests",  icon: "sirens",           section: "Main",       roles: ALL },
   { label: "Operators",    href: "/operators", icon: "car",              section: "Management", roles: ADMINS },
+  { label: "Dispatch Board", href: "/dispatch-board", icon: "sirens",    section: "Management", roles: ADMINS },
   { label: "Manage Users", href: "/users",     icon: "users",            section: "Management", roles: ADMINS },
   { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Management", roles: ADMINS },
   { label: "Team",         href: "/team",      icon: "user-cog",         section: "Management", roles: OPERATOR },
