@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useOperatorApi, useRescueRequestApi } from "../../hooks";
+import type { OperatorStats } from "../../hooks";
 import PendingOffers from "../PendingOffers";
 
 const navy = "#07152f";
@@ -26,7 +27,7 @@ function statusBadge(status: string) {
 }
 
 export default function OverviewTabOperator() {
-  const { fetchMe, setAvailability } = useOperatorApi();
+  const { fetchMe, setAvailability, fetchStats } = useOperatorApi();
   const { fetchList }                = useRescueRequestApi();
 
   const [loading,    setLoading]    = useState(true);
@@ -34,6 +35,7 @@ export default function OverviewTabOperator() {
   const [activeJobs, setActiveJobs] = useState<any[]>([]);
   const [history,    setHistory]    = useState<any[]>([]);
   const [toggling,   setToggling]   = useState(false);
+  const [stats,      setStats]      = useState<OperatorStats | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -45,6 +47,9 @@ export default function OverviewTabOperator() {
       setOperator(op);
       setActiveJobs([...(assignedRes.data ?? []), ...(inProgressRes.data ?? [])]);
       setHistory(historyRes.data ?? []);
+      if (op?.id) {
+        fetchStats(op.id).then(setStats).catch(() => {});
+      }
     }).finally(() => setLoading(false));
   }, []);
 
@@ -100,6 +105,13 @@ export default function OverviewTabOperator() {
           { label: "Completed Jobs",   value: history.length,       accent: green },
           { label: "Status",           value: operator?.status ?? "—", accent: operator?.status === "ACTIVE" ? green : "#d97706" },
           { label: "Service Radius",   value: `${operator?.serviceRadius ?? "—"} km`, accent: blue },
+          {
+            label: "Rating",
+            value: !stats || stats.ratingCount === 0
+              ? "No ratings yet"
+              : `${stats.averageRating!.toFixed(1)} ★ (${stats.ratingCount})`,
+            accent: navy,
+          },
         ].map(({ label, value, accent }) => (
           <div key={label} style={{ background: "#fff", borderRadius: 14, padding: "1.25rem 1.5rem", border: "1px solid #e8edf5" }}>
             <p style={{ margin: "0 0 4px", fontSize: "0.8rem", color: "#6c7890", fontWeight: 500 }}>{label}</p>

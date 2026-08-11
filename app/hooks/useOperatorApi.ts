@@ -27,6 +27,8 @@ export interface OperatorStats {
   totalTimedOut:   number;
   acceptanceRate:  number;  // 0–1
   avgResponseSec:  number;
+  averageRating:   number | null; // ratings received from motorists only
+  ratingCount:     number;
 }
 
 export interface Operator {
