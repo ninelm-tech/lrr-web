@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSubscriptionApi, useRescueRequestApi } from "../../hooks";
+import { useRescueRequestApi } from "../../hooks";
 import type { RescueRequestListItem } from "../../types";
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "";
@@ -14,27 +14,17 @@ const TWILIO_SANDBOX_JOIN_CODE = "environment-apart";
 const CUSTOMER_SOS_TEXT = IS_STAGING_ENV ? `join ${TWILIO_SANDBOX_JOIN_CODE}\nSOS` : "SOS";
 
 const dm = "var(--font-dm-sans), sans-serif";
-const fraunces = "var(--font-fraunces), serif";
 const navy = "#07152f";
 const blue = "#003DB4";
 
-function fmtDate(d?: string) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-NG", { month: "short", year: "numeric" });
-}
-
 export default function CustomerOverviewContent() {
-  const { activeSubscription, loading, fetchMySubscriptions, subscribe } = useSubscriptionApi();
   const { fetchMyRequests } = useRescueRequestApi();
 
-  const [subscribing, setSubscribing] = useState(false);
-  const [toast, setToast]             = useState<{ msg: string; ok: boolean } | null>(null);
   const [requestHistory, setRequestHistory] = useState<RescueRequestListItem[]>([]);
   const [activeRequest, setActiveRequest]   = useState<RescueRequestListItem | null>(null);
   const [reqLoading, setReqLoading]         = useState(true);
 
   useEffect(() => {
-    fetchMySubscriptions();
     fetchMyRequests({ limit: 10 })
       .then((res) => {
         const all = res?.data ?? [];
@@ -47,118 +37,11 @@ export default function CustomerOverviewContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showToast = (msg: string, ok = true) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3500);
-  };
-
-  async function handleSubscribe() {
-    setSubscribing(true);
-    try {
-      const url = await subscribe("INDIVIDUAL_ANNUAL");
-      if (url) {
-        window.location.href = url;
-      } else {
-        showToast("Could not start checkout — please try again", false);
-      }
-    } catch {
-      showToast("Could not start checkout — please try again", false);
-    } finally {
-      setSubscribing(false);
-    }
-  }
-
-  const isActive = activeSubscription?.status === "ACTIVE";
-
-  // Human-readable plan label derived from subscription data (not hardcoded).
-  const planLabel = activeSubscription
-    ? `${(activeSubscription as any).plan === "COMMERCIAL" ? "Fleet" : "Individual"} ${(((activeSubscription as any).monthlyAmountKobo ?? 0) >= 1000000) ? "Annual" : "Monthly"}`
-    : "—";
-
   return (
     <>
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: "fixed", top: 20, right: 20, zIndex: 999,
-          background: toast.ok ? "#d4edda" : "#f8d7da",
-          color: toast.ok ? "#155724" : "#721c24",
-          borderRadius: 10, padding: "0.75rem 1.25rem",
-          fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", fontFamily: dm,
-        }}>
-          {toast.msg}
-        </div>
-      )}
-
       <div className="cust-main-grid">
         {/* LEFT column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-
-          {/* Membership status card */}
-          <div style={{
-            background: navy, borderRadius: 18, padding: "1.75rem 2rem",
-            color: "#fff", position: "relative", overflow: "hidden", fontFamily: dm,
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-              <p style={{ margin: 0, color: "rgba(219,232,255,0.55)", fontSize: "0.82rem", fontWeight: 500 }}>
-                Membership status
-              </p>
-              <span style={{
-                padding: "0.3rem 0.85rem", borderRadius: 20,
-                background: isActive ? "rgba(25,165,107,0.2)" : "rgba(255,200,0,0.15)",
-                color: isActive ? "#4ade80" : "#fbbf24",
-                fontSize: "0.78rem", fontWeight: 600,
-              }}>
-                {isActive ? "Active" : activeSubscription ? activeSubscription.status : "No plan"}
-              </span>
-            </div>
-
-            {loading ? (
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "1rem" }}>Loading…</p>
-            ) : activeSubscription ? (
-              <>
-                <h2 style={{ fontFamily: fraunces, fontWeight: 700, fontSize: "2rem", margin: "0 0 0.5rem 0" }}>
-                  You&apos;re covered.
-                </h2>
-                <p style={{ color: "rgba(219,232,255,0.6)", fontSize: "0.9rem", margin: "0 0 1.75rem 0" }}>
-                  Your LRR membership is active and ready whenever you need roadside support.
-                </p>
-                <div className="cust-member-grid">
-                  {[
-                    { label: "Plan",         value: planLabel },
-                    { label: "Member since", value: fmtDate(activeSubscription.currentPeriodStart) },
-                    { label: "Next renewal", value: fmtDate(activeSubscription.currentPeriodEnd) },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <p style={{ margin: "0 0 2px 0", color: "rgba(219,232,255,0.45)", fontSize: "0.75rem" }}>{label}</p>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem" }}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 style={{ fontFamily: fraunces, fontWeight: 700, fontSize: "1.8rem", margin: "0 0 0.5rem 0" }}>
-                  No active plan.
-                </h2>
-                <p style={{ color: "rgba(219,232,255,0.6)", fontSize: "0.9rem", margin: "0 0 1.5rem 0" }}>
-                  Subscribe to get unlimited dispatch access and skip the ₦5,000 deposit.
-                </p>
-                <button
-                  onClick={handleSubscribe}
-                  disabled={subscribing}
-                  style={{
-                    padding: "0.75rem 1.5rem", background: "#fff", color: navy,
-                    border: "none", borderRadius: 10, fontWeight: 700, fontFamily: dm,
-                    fontSize: "0.9rem", cursor: subscribing ? "not-allowed" : "pointer",
-                    opacity: subscribing ? 0.7 : 1,
-                  }}
-                >
-                  {subscribing ? "Starting checkout…" : "Get membership →"}
-                </button>
-              </>
-            )}
-          </div>
 
           {/* Active request card */}
           <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem 1.75rem", border: "1px solid #e8edf5", fontFamily: dm }}>
@@ -284,32 +167,6 @@ export default function CustomerOverviewContent() {
               Message us on WhatsApp
             </a>
           </div>
-
-          {/* Billing summary */}
-          {activeSubscription && (
-            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5", fontFamily: dm }}>
-              <p style={{ margin: "0 0 2px 0", color: "#6c7890", fontSize: "0.78rem", fontWeight: 500 }}>Payments</p>
-              <h3 style={{ margin: "0 0 1rem 0", fontWeight: 700, fontSize: "1.05rem", color: navy }}>Membership billing</h3>
-              <p style={{ margin: "0 0 2px 0", fontFamily: fraunces, fontWeight: 700, fontSize: "1.75rem", color: navy }}>
-                ₦{(((activeSubscription as any).monthlyAmountKobo ?? 0) / 100).toLocaleString("en-NG")}
-              </p>
-              <p style={{ margin: 0, color: "#6c7890", fontSize: "0.82rem" }}>
-                {(activeSubscription as any).plan === "INDIVIDUAL" ? "Individual plan" : "Commercial plan"}
-              </p>
-            </div>
-          )}
-
-          {/* Manage membership → Settings */}
-          {activeSubscription && isActive && (
-            <div style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", border: "1px solid #e8edf5", fontFamily: dm }}>
-              <Link
-                href="/settings"
-                style={{ color: "#9ca3af", fontFamily: dm, fontSize: "0.85rem", textDecoration: "none" }}
-              >
-                Manage membership →
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </>

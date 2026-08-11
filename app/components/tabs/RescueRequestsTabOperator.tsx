@@ -163,9 +163,6 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                   Time
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Issue
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Status
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
@@ -189,9 +186,6 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                   <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>{formatTime(request.createdAt)}</span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: "0.9rem", color: "#333" }}>{request.issueType}</span>
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span

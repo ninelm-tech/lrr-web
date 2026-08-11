@@ -285,9 +285,6 @@ export default function RescueRequestsTab() {
                   Customer Phone
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Issue
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Status
                 </th>
                 <th style={{ padding: "1rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
@@ -322,9 +319,6 @@ export default function RescueRequestsTab() {
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>
                         {formatPhoneNumber(request.customer.phoneNumber)}
                       </span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: "0.9rem", color: "#333" }}>{request.issueType}</span>
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span
@@ -469,7 +463,6 @@ export default function RescueRequestsTab() {
               {/* Info grid */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
                 {[
-                  ["Issue", selectedRequest.issueType ?? "—"],
                   ["Vehicle", selectedDetail?.vehicleType ?? "—"],
                   ["Destination", selectedDetail?.destination ?? "—"],
                   ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
