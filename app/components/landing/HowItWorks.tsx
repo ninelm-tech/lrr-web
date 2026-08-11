@@ -35,8 +35,8 @@ const steps = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" />
       </svg>
     ),
-    title: "Track help in real time",
-    copy: "Follow your operator's route, ETA, and updates from dispatch to resolution.",
+    title: "Stay updated automatically",
+    copy: "Get your operator's location link when they're dispatched, plus automatic WhatsApp updates when they arrive and when the job's done.",
   },
 ];
 
