@@ -39,9 +39,30 @@ interface StatsModalProps {
   operator: Operator;
   stats: OperatorStats | null;
   onClose: () => void;
+  banks: Array<{ name: string; code: string }>;
+  onSaveBankDetails: (bankCode: string, bankName: string, accountNumber: string) => Promise<void>;
 }
 
-function StatsModal({ operator, stats, onClose }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails }: StatsModalProps) {
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  async function handleSave() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const bankName = banks.find((b) => b.code === bankCode)?.name ?? "";
+      await onSaveBankDetails(bankCode, bankName, accountNumber);
+      setAccountNumber("");
+      setMsg({ msg: "Bank details saved.", ok: true });
+    } catch (err) {
+      setMsg({ msg: err instanceof Error ? err.message : "Failed to save bank details", ok: false });
+    } finally {
+      setSaving(false);
+    }
+  }
   return (
     <div
       style={{
@@ -121,6 +142,40 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
           <p style={{ color: "#999", textAlign: "center" }}>No stats available yet</p>
         )}
 
+        <h3 style={{ margin: "1.5rem 0 1rem 0", fontSize: "1rem", color: "#333", borderTop: "1px solid #dde8f8", paddingTop: "1rem" }}>
+          Payout bank details
+        </h3>
+        {operator.bankName && operator.accountNumberLast4 && (
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.85rem", color: "#666" }}>
+            Current: {operator.bankName} ····{operator.accountNumberLast4} ({operator.accountName})
+          </p>
+        )}
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Bank</label>
+            <select value={bankCode} onChange={(e) => setBankCode(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
+              <option value="">Select a bank</option>
+              {banks.map((b) => (
+                <option key={b.code} value={b.code}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Account number</label>
+            <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }} />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving || !bankCode || !accountNumber.trim()}
+            style={{ padding: "0.5rem 1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: saving ? "not-allowed" : "pointer", fontWeight: 600 }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+        {msg && (
+          <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
+        )}
+
         <button
           onClick={onClose}
           style={{
@@ -137,8 +192,9 @@ function StatsModal({ operator, stats, onClose }: StatsModalProps) {
 }
 
 export default function OperatorsTab() {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability } = useOperatorApi();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails } = useOperatorApi();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
+  const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterType, setFilterType] = useState("");
   const [search, setSearch] = useState("");
@@ -153,7 +209,8 @@ export default function OperatorsTab() {
       rows.forEach((r) => { m[r.operatorId] = r.stats; });
       setStatsMap(m);
     });
-  }, [fetchAll, fetchAllStats]);
+    fetchBanks().then(setBanks);
+  }, [fetchAll, fetchAllStats, fetchBanks]);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -443,6 +500,11 @@ export default function OperatorsTab() {
           operator={selectedOp}
           stats={statsMap[selectedOp.id] ?? null}
           onClose={() => setSelectedOp(null)}
+          banks={banks}
+          onSaveBankDetails={async (bankCode, bankName, accountNumber) => {
+            const updated = await saveBankDetails(selectedOp.id, { bankCode, bankName, accountNumber });
+            setSelectedOp(updated);
+          }}
         />
       )}
     </div>
