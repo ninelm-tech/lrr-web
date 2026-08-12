@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { useOperatorApi } from "../../hooks";
+import { useOperatorApi, useAuthState } from "../../hooks";
 import type { Operator, OperatorStats } from "../../hooks";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -41,9 +41,10 @@ interface StatsModalProps {
   onClose: () => void;
   banks: Array<{ name: string; code: string }>;
   onSaveBankDetails: (bankCode: string, bankName: string, accountNumber: string) => Promise<void>;
+  viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewerRole }: StatsModalProps) {
   const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
@@ -150,30 +151,34 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails }: Stat
             Current: {operator.bankName} ····{operator.accountNumberLast4} ({operator.accountName})
           </p>
         )}
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Bank</label>
-            <select value={bankCode} onChange={(e) => setBankCode(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
-              <option value="">Select a bank</option>
-              {banks.map((b) => (
-                <option key={b.code} value={b.code}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Account number</label>
-            <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }} />
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saving || !bankCode || !accountNumber.trim()}
-            style={{ padding: "0.5rem 1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: saving ? "not-allowed" : "pointer", fontWeight: 600 }}
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </div>
-        {msg && (
-          <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
+        {viewerRole !== "PRODUCT" && (
+          <>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Bank</label>
+                <select value={bankCode} onChange={(e) => setBankCode(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
+                  <option value="">Select a bank</option>
+                  {banks.map((b) => (
+                    <option key={b.code} value={b.code}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Account number</label>
+                <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }} />
+              </div>
+              <button
+                onClick={handleSave}
+                disabled={saving || !bankCode || !accountNumber.trim()}
+                style={{ padding: "0.5rem 1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: saving ? "not-allowed" : "pointer", fontWeight: 600 }}
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {msg && (
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
+            )}
+          </>
         )}
 
         <button
@@ -193,6 +198,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails }: Stat
 
 export default function OperatorsTab() {
   const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails } = useOperatorApi();
+  const { role: myRole } = useAuthState();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
   const [filterStatus, setFilterStatus] = useState("");
@@ -405,20 +411,34 @@ export default function OperatorsTab() {
                         </span>
                       </td>
                       <td style={{ padding: "0.9rem 1rem", textAlign: "center" }}>
-                        <button
-                          onClick={() => handleAvailability(op)}
-                          disabled={actionLoading === op.id + "avail" || op.status !== "ACTIVE"}
-                          style={{
-                            padding: "0.3rem 0.7rem",
-                            background: op.isAvailable ? "#d4edda" : "#e2e3e5",
-                            color: op.isAvailable ? "#155724" : "#383d41",
-                            border: "none", borderRadius: 4, cursor: op.status === "ACTIVE" ? "pointer" : "default",
-                            fontSize: "0.82rem", fontWeight: 600,
-                            opacity: op.status !== "ACTIVE" ? 0.5 : 1,
-                          }}
-                        >
-                          {op.isAvailable ? "Online" : "Offline"}
-                        </button>
+                        {myRole === "PRODUCT" ? (
+                          <span
+                            style={{
+                              display: "inline-block", padding: "0.3rem 0.7rem",
+                              background: op.isAvailable ? "#d4edda" : "#e2e3e5",
+                              color: op.isAvailable ? "#155724" : "#383d41",
+                              borderRadius: 4, fontSize: "0.82rem", fontWeight: 600,
+                              opacity: op.status !== "ACTIVE" ? 0.5 : 1,
+                            }}
+                          >
+                            {op.isAvailable ? "Online" : "Offline"}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleAvailability(op)}
+                            disabled={actionLoading === op.id + "avail" || op.status !== "ACTIVE"}
+                            style={{
+                              padding: "0.3rem 0.7rem",
+                              background: op.isAvailable ? "#d4edda" : "#e2e3e5",
+                              color: op.isAvailable ? "#155724" : "#383d41",
+                              border: "none", borderRadius: 4, cursor: op.status === "ACTIVE" ? "pointer" : "default",
+                              fontSize: "0.82rem", fontWeight: 600,
+                              opacity: op.status !== "ACTIVE" ? 0.5 : 1,
+                            }}
+                          >
+                            {op.isAvailable ? "Online" : "Offline"}
+                          </button>
+                        )}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {opStats ? pct(opStats.acceptanceRate) : "—"}
@@ -444,7 +464,7 @@ export default function OperatorsTab() {
                           >
                             Stats
                           </button>
-                          {op.status === "PENDING" && (
+                          {myRole !== "PRODUCT" && op.status === "PENDING" && (
                             <button
                               onClick={() => handleStatusChange(op, "ACTIVE")}
                               disabled={actionLoading === op.id + "ACTIVE"}
@@ -457,7 +477,7 @@ export default function OperatorsTab() {
                               Approve
                             </button>
                           )}
-                          {op.status === "ACTIVE" && (
+                          {myRole !== "PRODUCT" && op.status === "ACTIVE" && (
                             <button
                               onClick={() => handleStatusChange(op, "SUSPENDED")}
                               disabled={actionLoading === op.id + "SUSPENDED"}
@@ -470,7 +490,7 @@ export default function OperatorsTab() {
                               Suspend
                             </button>
                           )}
-                          {(op.status === "INACTIVE" || op.status === "SUSPENDED") && (
+                          {myRole !== "PRODUCT" && (op.status === "INACTIVE" || op.status === "SUSPENDED") && (
                             <button
                               onClick={() => handleStatusChange(op, "ACTIVE")}
                               disabled={actionLoading === op.id + "ACTIVE"}
@@ -505,6 +525,7 @@ export default function OperatorsTab() {
             const updated = await saveBankDetails(selectedOp.id, { bankCode, bankName, accountNumber });
             setSelectedOp(updated);
           }}
+          viewerRole={myRole}
         />
       )}
     </div>

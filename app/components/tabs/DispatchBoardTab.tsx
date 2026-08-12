@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useDispatchBoardApi } from "../../hooks";
 import type { DispatchBoardRow } from "../../hooks";
-import { useRescueRequestApi, useOperatorApi } from "../../hooks";
+import { useRescueRequestApi, useOperatorApi, useAuthState } from "../../hooks";
 import type { Operator } from "../../hooks";
 
 const POLL_MS = 15_000;
@@ -57,6 +57,7 @@ export default function DispatchBoardTab() {
   const { fetchBoard, expandRadius, offerToOperator } = useDispatchBoardApi();
   const { cancelRequest } = useRescueRequestApi();
   const { operators, fetchAll } = useOperatorApi();
+  const { role: myRole } = useAuthState();
 
   const [rows, setRows] = useState<DispatchBoardRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +181,7 @@ export default function DispatchBoardTab() {
               </tbody>
             </table>
 
-            {isLive && (
+            {isLive && myRole !== "PRODUCT" && (
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => handleCancel(row.id)} disabled={busy === row.id} style={{ padding: "0.4rem 0.8rem", background: "#f8d7da", color: "#721c24", border: "none", borderRadius: 6, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}>
                   Cancel
