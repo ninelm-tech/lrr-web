@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useAuthApi } from "../../hooks";
+import { useAuthApi, useAuthState } from "../../hooks";
 
 const navy = "#07152f";
 const blue = "#003DB4";
@@ -21,7 +21,8 @@ const ROLE_STYLE: Record<string, { bg: string; color: string }> = {
 };
 
 export default function ManageUsersTab() {
-  const { listUsers } = useAuthApi();
+  const { listUsers, createStaff } = useAuthApi();
+  const { role: myRole } = useAuthState();
 
   const [users, setUsers]       = useState<any[]>([]);
   const [pages, setPages]       = useState(1);
@@ -30,6 +31,14 @@ export default function ManageUsersTab() {
   const [search, setSearch]     = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [staffEmail, setStaffEmail]     = useState("");
+  const [staffName, setStaffName]       = useState("");
+  const [staffRole, setStaffRole]       = useState("ADMIN");
+  const [staffPassword, setStaffPassword] = useState("");
+  const [creating, setCreating]         = useState(false);
+  const [createMsg, setCreateMsg]       = useState<string | null>(null);
 
   const load = useCallback(async (p = 1, q = search, r = roleFilter) => {
     setLoading(true);
@@ -56,6 +65,30 @@ export default function ManageUsersTab() {
   function handleRoleFilter(r: string) {
     setRoleFilter(r);
     load(1, search, r);
+  }
+
+  async function handleCreateStaff(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setCreateMsg(null);
+    try {
+      await createStaff({
+        email: staffEmail,
+        name: staffName,
+        role: staffRole,
+        temporaryPassword: staffPassword,
+      });
+      setCreateMsg("Staff account created.");
+      setStaffEmail("");
+      setStaffName("");
+      setStaffPassword("");
+      setStaffRole("ADMIN");
+      load(page, search, roleFilter);
+    } catch (err) {
+      setCreateMsg(err instanceof Error ? err.message : "Failed to create staff account");
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -103,6 +136,85 @@ export default function ManageUsersTab() {
           ))}
         </div>
       </div>
+
+      {/* Add staff (SUPER_ADMIN only) */}
+      {myRole === "SUPER_ADMIN" && (
+        <div style={{ background: "#fff", borderRadius: 14, padding: "1rem 1.25rem", border: "1px solid #e8edf5" }}>
+          <button
+            onClick={() => { setShowAddStaff((v) => !v); setCreateMsg(null); }}
+            style={{
+              padding: "0.55rem 1rem", background: showAddStaff ? "#f0f3f8" : blue,
+              color: showAddStaff ? navy : "#fff", border: "none", borderRadius: 8,
+              fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
+            }}
+          >
+            {showAddStaff ? "Cancel" : "+ Add staff"}
+          </button>
+
+          {showAddStaff && (
+            <form onSubmit={handleCreateStaff} style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: "0.76rem", fontWeight: 600, color: "#9ca3af" }}>Name</label>
+                <input
+                  type="text"
+                  required
+                  value={staffName}
+                  onChange={(e) => setStaffName(e.target.value)}
+                  style={{ padding: "0.55rem 0.85rem", borderRadius: 8, border: "1px solid #dde8f8", fontSize: "0.88rem", outline: "none" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: "0.76rem", fontWeight: 600, color: "#9ca3af" }}>Email</label>
+                <input
+                  type="email"
+                  required
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  style={{ padding: "0.55rem 0.85rem", borderRadius: 8, border: "1px solid #dde8f8", fontSize: "0.88rem", outline: "none" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: "0.76rem", fontWeight: 600, color: "#9ca3af" }}>Role</label>
+                <select
+                  value={staffRole}
+                  onChange={(e) => setStaffRole(e.target.value)}
+                  style={{ padding: "0.55rem 0.85rem", borderRadius: 8, border: "1px solid #dde8f8", fontSize: "0.88rem", outline: "none" }}
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="PRODUCT">Product</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <label style={{ fontSize: "0.76rem", fontWeight: 600, color: "#9ca3af" }}>Temporary password</label>
+                <input
+                  type="text"
+                  required
+                  minLength={8}
+                  value={staffPassword}
+                  onChange={(e) => setStaffPassword(e.target.value)}
+                  style={{ padding: "0.55rem 0.85rem", borderRadius: 8, border: "1px solid #dde8f8", fontSize: "0.88rem", outline: "none" }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={creating}
+                style={{
+                  padding: "0.55rem 1rem", background: blue, color: "#fff", border: "none",
+                  borderRadius: 8, fontWeight: 600, fontSize: "0.85rem", cursor: creating ? "not-allowed" : "pointer",
+                  opacity: creating ? 0.7 : 1,
+                }}
+              >
+                {creating ? "Creating…" : "Create"}
+              </button>
+              {createMsg && (
+                <span style={{ fontSize: "0.85rem", color: createMsg.startsWith("Staff account created") ? "#15803d" : "#dc2626" }}>
+                  {createMsg}
+                </span>
+              )}
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8edf5", overflow: "hidden" }}>
