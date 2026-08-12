@@ -7,7 +7,7 @@
 // User & Authentication Types
 // ============================================
 
-export type UserRole = "SUPER_ADMIN" | "ADMIN" | "OPERATOR" | "CUSTOMER";
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "PRODUCT" | "OPERATOR" | "CUSTOMER";
 
 export interface User {
   id: string;

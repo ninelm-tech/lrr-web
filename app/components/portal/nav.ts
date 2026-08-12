@@ -24,20 +24,22 @@ export interface PortalNavItem {
   roles: UserRole[];
 }
 
-const ALL: UserRole[]      = ["CUSTOMER", "OPERATOR", "ADMIN", "SUPER_ADMIN"];
+const ALL: UserRole[]      = ["CUSTOMER", "OPERATOR", "PRODUCT", "ADMIN", "SUPER_ADMIN"];
 const ADMINS: UserRole[]   = ["ADMIN", "SUPER_ADMIN"];
 const OPERATOR: UserRole[] = ["OPERATOR"];
+const SUPER_ADMIN_ONLY: UserRole[] = ["SUPER_ADMIN"];
+const STAFF_VISIBILITY: UserRole[] = ["ADMIN", "SUPER_ADMIN", "PRODUCT"];
 
 export const PORTAL_NAV: PortalNavItem[] = [
   { label: "Overview",     href: "/dashboard", icon: "layout-dashboard", section: "Main",       roles: ALL },
   { label: "Requests",     href: "/requests",  icon: "sirens",           section: "Main",       roles: ALL },
-  { label: "Operators",    href: "/operators", icon: "car",              section: "Management", roles: ADMINS },
-  { label: "Dispatch Board", href: "/dispatch-board", icon: "sirens",    section: "Management", roles: ADMINS },
+  { label: "Operators",    href: "/operators", icon: "car",              section: "Management", roles: STAFF_VISIBILITY },
+  { label: "Dispatch Board", href: "/dispatch-board", icon: "sirens",    section: "Management", roles: STAFF_VISIBILITY },
   { label: "Manage Users", href: "/users",     icon: "users",            section: "Management", roles: ADMINS },
-  { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Management", roles: ADMINS },
+  { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Management", roles: SUPER_ADMIN_ONLY },
   { label: "Team",         href: "/team",      icon: "user-cog",         section: "Management", roles: OPERATOR },
-  { label: "Payments",     href: "/payments",  icon: "credit-card",      section: "Financial",  roles: [...ADMINS, ...OPERATOR] },
-  { label: "Payouts",      href: "/payouts",   icon: "credit-card",      section: "Financial",  roles: ADMINS },
+  { label: "Payments",     href: "/payments",  icon: "credit-card",      section: "Financial",  roles: [...STAFF_VISIBILITY, ...OPERATOR] },
+  { label: "Payouts",      href: "/payouts",   icon: "credit-card",      section: "Financial",  roles: SUPER_ADMIN_ONLY },
   { label: "Settings",     href: "/settings",  icon: "settings",         section: "Account",    roles: ALL },
 ];
 

@@ -254,6 +254,27 @@ export function useAuthApi() {
     }
   }, []);
 
+  const createStaff = useCallback(async (data: {
+    email: string; name: string; role: string; temporaryPassword: string;
+  }): Promise<{ id: string; email: string; name: string | null; role: UserRole }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/auth/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to create staff account";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     error,
@@ -272,5 +293,6 @@ export function useAuthApi() {
     registerOperator,
     // Admin
     listUsers,
+    createStaff,
   };
 }
