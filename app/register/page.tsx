@@ -6,7 +6,58 @@ import { getToken } from "../lib/session";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
-import { OperatorType, OPERATOR_TYPES, TruckClass, TRUCK_CLASSES } from "../types";
+import { OperatorType, TruckClass, TRUCK_CLASSES } from "../types";
+
+const inputStyle = (hasError?: boolean): React.CSSProperties => ({
+  width: "100%",
+  fontSize: "1rem",
+  background: hasError ? "#fff5f5" : "#F6FAFF",
+  border: `1.5px solid ${hasError ? "#ffcccc" : "#dde8f8"}`,
+  borderRadius: 8,
+  padding: "0.9rem 1rem",
+  boxSizing: "border-box",
+  transition: "all 0.2s ease",
+});
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: "0.95rem",
+  fontWeight: 600,
+  color: "#333",
+  marginBottom: 8,
+};
+
+const helperStyle: React.CSSProperties = {
+  fontSize: "0.8rem",
+  color: "#8892a6",
+  margin: "6px 0 0",
+};
+
+/** One section of a continuously-scrollable form, with a rail connecting it to the next. */
+function Step({ n, total, title, subtitle, children }: {
+  n: number; total: number; title: string; subtitle: string; children: React.ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 20 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: "50%",
+          background: "#003DB4", color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 700, fontSize: "0.95rem", flexShrink: 0,
+        }}>
+          {n}
+        </div>
+        {n < total && <div style={{ flex: 1, width: 2, background: "#dde8f8", marginTop: 6, minHeight: 24 }} />}
+      </div>
+      <div style={{ flex: 1, paddingBottom: n < total ? 8 : 0, minWidth: 0 }}>
+        <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#07152f", margin: "0 0 2px" }}>{title}</h3>
+        <p style={{ fontSize: "0.85rem", color: "#8892a6", margin: "0 0 18px" }}>{subtitle}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,8 +65,8 @@ export default function RegisterPage() {
   const { address, setAddress, suggestions, selectSuggestion, latLng } = useGooglePlacesAutocomplete();
 
   const [formData, setFormData] = useState({
-    businessName: "",
     contactName: "",
+    businessName: "",
     phoneNumber: "",
     operatorType: OperatorType.TOW_TRUCK,
     truckClasses: [] as TruckClass[],
@@ -39,10 +90,8 @@ export default function RegisterPage() {
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    
-    if (name === "operatorType") {
-      setFormData((prev) => ({ ...prev, [name]: value as OperatorType }));
-    } else if (name === "phoneNumber") {
+
+    if (name === "phoneNumber") {
       const normalized = toNigerianDisplayPhoneNumber(value);
       setFormData((prev) => ({ ...prev, [name]: normalized }));
       if (normalized) {
@@ -92,9 +141,13 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate Nigerian phone number
     if (!isValidNigerianPhoneNumber(formData.phoneNumber)) {
       setError(getPhoneNumberErrorMessage(formData.phoneNumber));
+      return;
+    }
+
+    if (formData.truckClasses.length === 0) {
+      setError("Please select at least one truck class your fleet can operate");
       return;
     }
 
@@ -103,8 +156,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.operatorType === OperatorType.TOW_TRUCK && formData.truckClasses.length === 0) {
-      setError("Please select at least one truck class your fleet can operate");
+    if (!formData.serviceRadius) {
+      setError("Please enter a service radius");
       return;
     }
 
@@ -137,7 +190,7 @@ export default function RegisterPage() {
         longitude: latLng?.lng || 0,
         truckClasses: formData.truckClasses,
       };
-      
+
       await registerOperator(payload);
 
       setIsRedirecting(true);
@@ -166,7 +219,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "radial-gradient(circle at 60% 40%, #dde8f8 0%, #F6FAFF 100%)", fontFamily: "var(--font-dm-sans), sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#F6FAFF", fontFamily: "var(--font-dm-sans), sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem" }}>
         <a href="/"><img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 44, width: "auto", objectFit: "contain" }} /></a>
         <a href="/" style={{ color: "#6c7890", fontSize: "0.9rem", fontWeight: 500, textDecoration: "none" }}>Back to website</a>
@@ -178,76 +231,42 @@ export default function RegisterPage() {
       justifyContent: "center",
       padding: "2rem 1rem"
     }}>
-      <div style={{
-        boxShadow: "0 8px 40px 0 rgba(0,61,180,0.13)",
+      <div className="lrr-reg-shell" style={{
+        boxShadow: "0 20px 60px 0 rgba(7,21,47,0.16)",
         background: "#fff",
-        borderRadius: 18,
-        padding: "2.5rem",
+        borderRadius: 20,
         width: "100%",
-        maxWidth: 750,
+        maxWidth: "80%",
+        overflow: "hidden",
         animation: "fadeInUp .7s cubic-bezier(.23,1.01,.32,1)"
       }}>
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#003DB4", marginBottom: 24, letterSpacing: "-1px" }}>
+      <div className="lrr-reg-cols">
+      <div className="lrr-reg-pad" style={{ padding: "3rem" }}>
+        <h2 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#07152f", marginBottom: 6, letterSpacing: "-1px" }}>
           Become an Operator
         </h2>
+        <p style={{ fontSize: "1rem", color: "#8892a6", marginBottom: 32 }}>
+          Join Lagos's rescue network — three quick steps and you're in.
+        </p>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Business Information Section */}
-          <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
-              Business Information
-            </h3>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          <Step n={1} total={3} title="Who you are" subtitle="This is what motorists and our dispatch team will see.">
             <div className="lrr-reg-grid">
               <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Business Name *
-                </label>
-                <input
-                  type="text"
-                  name="businessName"
-                  value={formData.businessName}
-                  onChange={handleInputChange}
-                  placeholder="Your business name"
-                  required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Contact Name *
-                </label>
+                <label style={labelStyle}>Your Full Name *</label>
                 <input
                   type="text"
                   name="contactName"
                   value={formData.contactName}
                   onChange={handleInputChange}
-                  placeholder="Your full name"
+                  placeholder="e.g. Adaeze Okafor"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
+                  style={inputStyle()}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Phone Number *
-                </label>
+                <label style={labelStyle}>Phone Number *</label>
                 <input
                   type="tel"
                   name="phoneNumber"
@@ -255,113 +274,53 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   placeholder="e.g., 08012345678"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: phoneError ? "#fff5f5" : "#F6FAFF",
-                    border: `1.5px solid ${phoneError ? "#ffcccc" : "#dde8f8"}`,
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box",
-                    transition: "all 0.2s ease",
-                  }}
+                  style={inputStyle(Boolean(phoneError))}
                 />
                 {phoneError && (
-                  <p style={{ fontSize: "0.85rem", color: "#d63031", marginTop: 6, margin: "6px 0 0 0" }}>
+                  <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
                     {phoneError}
                   </p>
                 )}
                 {formData.phoneNumber && !phoneError && (
-                  <p style={{ fontSize: "0.85rem", color: "#003DB4", marginTop: 6, margin: "6px 0 0 0" }}>
+                  <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
                     ✓ Valid number
                   </p>
                 )}
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Operator Type *
-                </label>
-                <select
-                  name="operatorType"
-                  value={formData.operatorType}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box",
-                    cursor: "pointer"
-                  }}
-                >
-                  {Object.entries(OPERATOR_TYPES).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {formData.operatorType === OperatorType.TOW_TRUCK && (
-                <div>
-                  <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                    Fleet / Truck Classes *
-                  </label>
-                  <p style={{ fontSize: "0.8rem", color: "#666", margin: "0 0 8px" }}>
-                    Select every truck class in your fleet — this determines which jobs you're offered.
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {Object.entries(TRUCK_CLASSES).map(([value, label]) => (
-                      <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
-                        <input
-                          type="checkbox"
-                          checked={formData.truckClasses.includes(value as TruckClass)}
-                          onChange={() => handleTruckClassToggle(value as TruckClass)}
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Service Radius (km) *
-                </label>
+                <label style={labelStyle}>Business Name *</label>
                 <input
-                  type="number"
-                  name="serviceRadius"
-                  value={formData.serviceRadius}
+                  type="text"
+                  name="businessName"
+                  value={formData.businessName}
                   onChange={handleInputChange}
-                  placeholder="50"
-                  min="1"
+                  placeholder="e.g. Swift Towing Services"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
+                  style={inputStyle()}
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Service Location Section */}
-          <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
-              Service Location
-            </h3>
-            <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-              Service Address *
-            </label>
+              <div>
+                <label style={labelStyle}>Fleet / Truck Classes *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[TruckClass.LIGHT_DUTY, TruckClass.LOW_BED, TruckClass.TEN_TYRE, TruckClass.HIAB].map((value) => (
+                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.truckClasses.includes(value)}
+                        onChange={() => handleTruckClassToggle(value)}
+                      />
+                      {TRUCK_CLASSES[value]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Step>
+
+          <Step n={2} total={3} title="Where you operate" subtitle="Your base location and how far you're willing to travel for a job.">
+            <label style={labelStyle}>Service Address *</label>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
@@ -369,15 +328,7 @@ export default function RegisterPage() {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Enter your service location address"
                 required
-                style={{
-                  width: "100%",
-                  fontSize: "1rem",
-                  background: "#F6FAFF",
-                  border: "1.5px solid #dde8f8",
-                  borderRadius: 8,
-                  padding: "0.9rem 1rem",
-                  boxSizing: "border-box"
-                }}
+                style={inputStyle()}
               />
               {suggestions.length > 0 && (
                 <div style={{
@@ -422,18 +373,27 @@ export default function RegisterPage() {
                 📍 Coordinates: {latLng.lat.toFixed(4)}, {latLng.lng.toFixed(4)}
               </p>
             )}
-          </div>
 
-          {/* Login Credentials Section */}
-          <div>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#003DB4", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid #dde8f8" }}>
-              Login Credentials
-            </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+            <div style={{ marginTop: 20, maxWidth: 260 }}>
+              <label style={labelStyle}>Service Radius (km) *</label>
+              <input
+                type="number"
+                name="serviceRadius"
+                value={formData.serviceRadius}
+                onChange={handleInputChange}
+                placeholder="50"
+                min="1"
+                required
+                style={inputStyle()}
+              />
+              <p style={helperStyle}>How far from your base you're willing to travel for a job.</p>
+            </div>
+          </Step>
+
+          <Step n={3} total={3} title="Create your account" subtitle="You'll use this email and password to log in to your dashboard.">
+            <div className="lrr-reg-grid">
               <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Email *
-                </label>
+                <label style={labelStyle}>Email *</label>
                 <input
                   type="email"
                   name="email"
@@ -441,22 +401,12 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   placeholder="your@email.com"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
+                  style={inputStyle()}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Password *
-                </label>
+                <label style={labelStyle}>Password *</label>
                 <input
                   type="password"
                   name="password"
@@ -464,22 +414,12 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   placeholder="At least 6 characters"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
+                  style={inputStyle()}
                 />
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, color: "#333", marginBottom: 8 }}>
-                  Confirm Password *
-                </label>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>Confirm Password *</label>
                 <input
                   type="password"
                   name="confirmPassword"
@@ -487,19 +427,11 @@ export default function RegisterPage() {
                   onChange={handleInputChange}
                   placeholder="Confirm your password"
                   required
-                  style={{
-                    width: "100%",
-                    fontSize: "1rem",
-                    background: "#F6FAFF",
-                    border: "1.5px solid #dde8f8",
-                    borderRadius: 8,
-                    padding: "0.9rem 1rem",
-                    boxSizing: "border-box"
-                  }}
+                  style={inputStyle()}
                 />
               </div>
             </div>
-          </div>
+          </Step>
 
           {/* Submit Button */}
           <button
@@ -549,28 +481,80 @@ export default function RegisterPage() {
           )}
         </form>
 
-        {/* Login / Customer Links */}
+        {/* Login link */}
         <p style={{ marginTop: 32, fontSize: "1rem", textAlign: "center" }}>
           Already have an account? <a href="/login" style={{ color: "#003DB4", fontWeight: 700, textDecoration: "underline" }}>Login</a>
         </p>
-        <p style={{ marginTop: 10, fontSize: "0.88rem", textAlign: "center", color: "#aaa" }}>
-          Looking for personal roadside cover?{" "}
-          <a href="/register/customer" style={{ color: "#003DB4", textDecoration: "underline" }}>Sign up as a customer</a>
+      </div>
+
+      {/* Sidebar — why join, in the operator's own terms */}
+      <div className="lrr-reg-pad" style={{
+        background: "#07152f",
+        color: "#fff",
+        padding: "3rem 2.5rem",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", top: -60, right: -60, width: 200, height: 200,
+          borderRadius: "50%", background: "radial-gradient(circle, rgba(245,166,35,0.25) 0%, rgba(245,166,35,0) 70%)",
+        }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F5A623", boxShadow: "0 0 12px 2px rgba(245,166,35,0.7)" }} />
+          <span style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.08em", color: "#F5A623", textTransform: "uppercase" }}>
+            For tow operators
+          </span>
+        </div>
+        <h3 style={{ fontSize: "1.6rem", fontWeight: 700, lineHeight: 1.25, margin: "0 0 16px", letterSpacing: "-0.5px" }}>
+          You keep Lagos moving. We keep the jobs coming.
+        </h3>
+        <p style={{ fontSize: "0.92rem", color: "#aab4cc", margin: "0 0 32px", lineHeight: 1.6 }}>
+          No subscription, no upfront cost — just real rescue jobs sent straight to your phone.
         </p>
 
-        <style>{`
-          @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(40px); }
-            to { opacity: 1; transform: none; }
-          }
-          input:focus, select:focus { border-color: #003DB4 !important; outline: none; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
-          .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-          @media (max-width: 600px) {
-            .lrr-reg-grid { grid-template-columns: 1fr !important; }
-            .lrr-reg-card { padding: 1.5rem 1rem !important; }
-          }
-        `}</style>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {[
+            "Get paid per job — no monthly fees",
+            "Jobs matched to your truck class & location",
+            "Automatic WhatsApp alerts, no app to install",
+            "Build a rating that wins you more jobs",
+          ].map((benefit) => (
+            <div key={benefit} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{
+                flexShrink: 0, width: 18, height: 18, borderRadius: "50%",
+                background: "rgba(245,166,35,0.15)", color: "#F5A623",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.7rem", fontWeight: 700, marginTop: 2,
+              }}>
+                ✓
+              </span>
+              <span style={{ fontSize: "0.92rem", color: "#e3e8f2", lineHeight: 1.5 }}>{benefit}</span>
+            </div>
+          ))}
+        </div>
       </div>
+      </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: none; }
+        }
+        input:focus, select:focus { border-color: #003DB4 !important; outline: none; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
+        .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .lrr-reg-cols { display: grid; grid-template-columns: 2fr 1fr; }
+        @media (max-width: 860px) {
+          .lrr-reg-cols { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          .lrr-reg-grid { grid-template-columns: 1fr !important; }
+          .lrr-reg-pad { padding: 1.75rem 1.25rem !important; }
+        }
+      `}</style>
     </div>
     </div>
   );

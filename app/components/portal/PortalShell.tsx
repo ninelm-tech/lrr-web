@@ -6,7 +6,7 @@
  * and header. Menu items are filtered by role (see nav.ts); page content is
  * permission-gated per route (see RequireRole.tsx).
  */
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Car,
@@ -43,12 +43,17 @@ export default function PortalShell({ children }: { children: ReactNode }) {
 
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const loggingOutRef = useRef(false);
 
   const displayName = userName.trim() || "";
 
-  // Token guard — the portal is for logged-in users only.
+  // Token guard — the portal is for logged-in users only. Skipped during an
+  // explicit logout: logout() flips isLoggedIn false synchronously, which
+  // would otherwise re-trigger this effect and redirect to /login (which
+  // itself bounces to /?login=1) racing against handleLogout's own
+  // router.replace("/") — landing every logout on /?login=1 instead of "/".
   useEffect(() => {
-    if (ready && !isLoggedIn) router.replace("/login");
+    if (ready && !isLoggedIn && !loggingOutRef.current) router.replace("/login");
   }, [ready, isLoggedIn, router]);
 
   useEffect(() => {
@@ -82,6 +87,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
 
   function handleLogout() {
     if (typeof window !== "undefined" && confirm("Are you sure you want to logout?")) {
+      loggingOutRef.current = true;
       logout();
       router.replace("/");
     }
