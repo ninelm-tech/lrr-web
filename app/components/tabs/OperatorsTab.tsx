@@ -108,16 +108,26 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
           <div style={{ gridColumn: "1 / -1" }}>
             <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Coordinates</p>
             <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>
-              {operator.latitude.toFixed(5)}, {operator.longitude.toFixed(5)}
-              {" — "}
-              <a
-                href={`https://www.google.com/maps?q=${operator.latitude},${operator.longitude}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: "#003DB4", fontWeight: 600 }}
-              >
-                View on map
-              </a>
+              {(() => {
+                // Prisma Decimal fields serialize over JSON as strings, not numbers.
+                const lat = Number(operator.latitude);
+                const lng = Number(operator.longitude);
+                if (Number.isNaN(lat) || Number.isNaN(lng)) return "Not available";
+                return (
+                  <>
+                    {lat.toFixed(5)}, {lng.toFixed(5)}
+                    {" — "}
+                    <a
+                      href={`https://www.google.com/maps?q=${lat},${lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "#003DB4", fontWeight: 600 }}
+                    >
+                      View on map
+                    </a>
+                  </>
+                );
+              })()}
             </p>
           </div>
           {[
@@ -525,7 +535,7 @@ export default function OperatorsTab() {
                               fontSize: "0.82rem", fontWeight: 600,
                             }}
                           >
-                            Stats
+                            Details
                           </button>
                           {myRole !== "PRODUCT" && op.status === "PENDING" && (
                             <button

@@ -40,8 +40,10 @@ export interface Operator {
   type:          string;
   truckClasses:  string[];
   address:       string;
-  latitude:      number;
-  longitude:     number;
+  // Prisma Decimal fields serialize over JSON as strings, not numbers —
+  // callers must Number(...) before doing arithmetic.
+  latitude:      number | string;
+  longitude:     number | string;
   serviceRadius: number;
   status:        OperatorStatus;
   isAvailable:   boolean;
