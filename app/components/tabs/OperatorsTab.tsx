@@ -45,10 +45,11 @@ interface StatsModalProps {
   onSaveBankDetails: (bankCode: string, bankName: string, accountNumber: string) => Promise<void>;
   onClearBankDetails: () => Promise<void>;
   onUpdateAddress: (address: string, latitude: number, longitude: number) => Promise<void>;
+  onUpdateRadius: (serviceRadius: number) => Promise<void>;
   viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, viewerRole }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, viewerRole }: StatsModalProps) {
   const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
 
   const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
@@ -96,6 +97,27 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
       setAddressMsg({ msg: err instanceof Error ? err.message : "Failed to update address", ok: false });
     } finally {
       setSavingAddress(false);
+    }
+  }
+
+  const [editingRadius, setEditingRadius] = useState(false);
+  const [radiusValue, setRadiusValue] = useState("");
+  const [savingRadius, setSavingRadius] = useState(false);
+  const [radiusMsg, setRadiusMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  async function handleSaveRadius() {
+    const n = Number(radiusValue);
+    if (!n || n <= 0) return;
+    setSavingRadius(true);
+    setRadiusMsg(null);
+    try {
+      await onUpdateRadius(n);
+      setRadiusMsg({ msg: "Service radius updated.", ok: true });
+      setEditingRadius(false);
+    } catch (err) {
+      setRadiusMsg({ msg: err instanceof Error ? err.message : "Failed to update service radius", ok: false });
+    } finally {
+      setSavingRadius(false);
     }
   }
 
@@ -313,8 +335,62 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                 })()}
               </p>
             </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Service Radius</p>
+                {!editingRadius && viewerRole !== "PRODUCT" && (
+                  <button
+                    onClick={() => { setRadiusValue(String(operator.serviceRadius)); setRadiusMsg(null); setEditingRadius(true); }}
+                    aria-label="Edit service radius"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 24, height: 24, background: "none", border: "none",
+                      color: "#003DB4", cursor: "pointer",
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
+              </div>
+              {editingRadius ? (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={radiusValue}
+                      onChange={(e) => setRadiusValue(e.target.value)}
+                      style={{ width: 80, padding: "0.4rem 0.5rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                    />
+                    <span style={{ fontSize: "0.9rem", color: "#6c7890" }}>km</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      onClick={() => { setEditingRadius(false); setRadiusMsg(null); }}
+                      style={{ padding: "0.4rem 0.8rem", background: "#fff", color: "#6c7890", border: "1px solid #dde8f8", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveRadius}
+                      disabled={savingRadius || !radiusValue || Number(radiusValue) <= 0}
+                      style={{
+                        padding: "0.4rem 0.8rem", background: (!radiusValue || Number(radiusValue) <= 0) ? "#c7d2e0" : "#003DB4", color: "#fff",
+                        border: "none", borderRadius: 6, cursor: savingRadius ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem",
+                      }}
+                    >
+                      {savingRadius ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                  {radiusMsg && (
+                    <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", fontWeight: 600, color: radiusMsg.ok ? "#19a56b" : "#dc2626" }}>{radiusMsg.msg}</p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.serviceRadius} km</p>
+              )}
+            </div>
             {[
-              { label: "Service Radius", value: `${operator.serviceRadius} km` },
               { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
               {
                 label: "Available Now",
@@ -846,6 +922,10 @@ export default function OperatorsTab() {
           }}
           onUpdateAddress={async (address, latitude, longitude) => {
             const updated = await updateOperator(selectedOp.id, { address, latitude, longitude });
+            setSelectedOp(updated);
+          }}
+          onUpdateRadius={async (serviceRadius) => {
+            const updated = await updateOperator(selectedOp.id, { serviceRadius });
             setSelectedOp(updated);
           }}
           viewerRole={myRole}
