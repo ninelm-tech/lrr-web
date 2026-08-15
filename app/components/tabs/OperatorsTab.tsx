@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { CheckCircle2, MapPin, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { useOperatorApi, useAuthState } from "../../hooks";
+import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
 import type { Operator, OperatorStats } from "../../hooks";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -41,20 +43,71 @@ interface StatsModalProps {
   onClose: () => void;
   banks: Array<{ name: string; code: string }>;
   onSaveBankDetails: (bankCode: string, bankName: string, accountNumber: string) => Promise<void>;
+  onClearBankDetails: () => Promise<void>;
+  onUpdateAddress: (address: string, latitude: number, longitude: number) => Promise<void>;
   viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewerRole }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, viewerRole }: StatsModalProps) {
+  const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
+
+  const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
+  const [editingBank, setEditingBank] = useState(!hasBankOnFile);
   const [bankCode, setBankCode] = useState("");
   const [bankSearch, setBankSearch] = useState("");
   const [showBankList, setShowBankList] = useState(false);
+  const [bankListRect, setBankListRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+  const bankInputRef = useRef<HTMLInputElement>(null);
+
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressMsg, setAddressMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [addressListRect, setAddressListRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const { address: addressQuery, setAddress: handleAddressChange, suggestions: addressSuggestions, selectSuggestion, latLng } = useGooglePlacesAutocomplete();
+
+  function startEditingAddress() {
+    handleAddressChange(operator.address);
+    setAddressMsg(null);
+    setEditingAddress(true);
+  }
+
+  function openAddressList() {
+    const rect = addressInputRef.current?.getBoundingClientRect();
+    if (rect) setAddressListRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  async function handleSaveAddress() {
+    if (!latLng) {
+      setAddressMsg({ msg: "Please select an address from the suggestions list", ok: false });
+      return;
+    }
+    setSavingAddress(true);
+    setAddressMsg(null);
+    try {
+      await onUpdateAddress(addressQuery, latLng.lat, latLng.lng);
+      setAddressMsg({ msg: "Address updated.", ok: true });
+      setEditingAddress(false);
+    } catch (err) {
+      setAddressMsg({ msg: err instanceof Error ? err.message : "Failed to update address", ok: false });
+    } finally {
+      setSavingAddress(false);
+    }
+  }
 
   const filteredBanks = bankSearch.trim()
     ? banks.filter((b) => b.name.toLowerCase().includes(bankSearch.trim().toLowerCase()))
     : banks;
+
+  function openBankList() {
+    const rect = bankInputRef.current?.getBoundingClientRect();
+    if (rect) setBankListRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setShowBankList(true);
+  }
 
   function selectBank(bank: { code: string; name: string }) {
     setBankCode(bank.code);
@@ -72,10 +125,26 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
       setBankCode("");
       setBankSearch("");
       setMsg({ msg: "Bank details saved.", ok: true });
+      setEditingBank(false);
     } catch (err) {
       setMsg({ msg: err instanceof Error ? err.message : "Failed to save bank details", ok: false });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Remove ${operator.bankName} ····${operator.accountNumberLast4} as this operator's payout account?`)) return;
+    setDeleting(true);
+    setMsg(null);
+    try {
+      await onClearBankDetails();
+      setMsg({ msg: "Bank details removed.", ok: true });
+      setEditingBank(true);
+    } catch (err) {
+      setMsg({ msg: err instanceof Error ? err.message : "Failed to remove bank details", ok: false });
+    } finally {
+      setDeleting(false);
     }
   }
   return (
@@ -88,189 +157,362 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
     >
       <div
         style={{
-          background: "#fff", borderRadius: 12, padding: "2rem",
-          width: 480, maxHeight: "80vh", overflow: "auto",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+          background: "#fff", borderRadius: 14,
+          width: 720, maxWidth: "92vw", maxHeight: "85vh", overflow: "auto",
+          boxShadow: "0 12px 40px rgba(7,21,47,0.22)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ margin: "0 0 0.25rem 0", color: "#003DB4" }}>{operator.businessName}</h2>
-        <p style={{ margin: "0 0 1.5rem 0", color: "#999", fontSize: "0.9rem" }}>
-          {TYPE_LABELS[operator.type] ?? operator.type} · {operator.phoneNumber}
-        </p>
-
-        {/* Info grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Address</p>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.address}</p>
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Coordinates</p>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>
-              {(() => {
-                // Prisma Decimal fields serialize over JSON as strings, not numbers.
-                const lat = Number(operator.latitude);
-                const lng = Number(operator.longitude);
-                if (Number.isNaN(lat) || Number.isNaN(lng)) return "Not available";
-                return (
-                  <>
-                    {lat.toFixed(5)}, {lng.toFixed(5)}
-                    {" — "}
-                    <a
-                      href={`https://www.google.com/maps?q=${lat},${lng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: "#003DB4", fontWeight: 600 }}
-                    >
-                      View on map
-                    </a>
-                  </>
-                );
-              })()}
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+          padding: "1.5rem 1.75rem", borderBottom: "1px solid #f0f3f8",
+        }}>
+          <div>
+            <h2 style={{ margin: "0 0 0.2rem 0", fontSize: "1.3rem", color: "#07152f" }}>{operator.businessName}</h2>
+            <p style={{ margin: 0, color: "#8892a6", fontSize: "0.88rem" }}>
+              {TYPE_LABELS[operator.type] ?? operator.type} · {operator.phoneNumber}
             </p>
           </div>
-          {[
-            { label: "Service Radius", value: `${operator.serviceRadius} km` },
-            { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
-            {
-              label: "Available Now",
-              value: operator.isAvailable ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#16a34a", fontWeight: 600 }}>
-                  <CheckCircle2 size={15} /> Yes
-                </span>
-              ) : (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#dc2626", fontWeight: 600 }}>
-                  <XCircle size={15} /> No
-                </span>
-              ),
-            },
-            { label: "Joined",         value: fmtDate(operator.createdAt) },
-            { label: "Verified",       value: operator.verifiedAt ? fmtDate(operator.verifiedAt) : "Not yet" },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>{label}</p>
-              <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{value}</p>
-            </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 32, height: 32, flexShrink: 0, marginLeft: 12,
+              background: "#F6FAFF", border: "none", borderRadius: "50%",
+              color: "#6c7890", cursor: "pointer",
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, padding: "0 1.75rem", borderBottom: "1px solid #f0f3f8" }}>
+          {([
+            { key: "details", label: "Details" },
+            { key: "performance", label: "Performance" },
+            { key: "payouts", label: "Payouts" },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                padding: "0.75rem 0.25rem", marginRight: 20, background: "none", border: "none",
+                borderBottom: activeTab === tab.key ? "2px solid #003DB4" : "2px solid transparent",
+                color: activeTab === tab.key ? "#003DB4" : "#8892a6",
+                fontWeight: 600, fontSize: "0.88rem", cursor: "pointer",
+              }}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
 
-        {/* Performance stats */}
-        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1rem", color: "#333", borderTop: "1px solid #dde8f8", paddingTop: "1rem" }}>
-          30-Day Performance
-        </h3>
-        {stats ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
-            {[
-              { label: "Jobs Offered",    value: stats.totalOffered },
-              { label: "Accepted",        value: stats.totalAccepted },
-              { label: "Declined",        value: stats.totalDeclined },
-              { label: "Timed Out",       value: stats.totalTimedOut },
-              { label: "Acceptance Rate", value: pct(stats.acceptanceRate) },
-              { label: "Avg Response",    value: fmtSec(stats.avgResponseSec) },
-            ].map(({ label, value }) => (
-              <div
-                key={label}
-                style={{
-                  background: "#F6FAFF", borderRadius: 8, padding: "0.75rem",
-                  border: "1px solid #dde8f8", textAlign: "center",
-                }}
-              >
-                <p style={{ margin: "0 0 4px 0", fontSize: "1.4rem", fontWeight: 700, color: "#003DB4" }}>{value}</p>
-                <p style={{ margin: 0, fontSize: "0.75rem", color: "#999" }}>{label}</p>
+        <div style={{ padding: "1.5rem 1.75rem" }}>
+        {activeTab === "details" && (
+        <>
+          {/* Info grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.1rem", marginBottom: "1.75rem" }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Address</p>
+                {!editingAddress && viewerRole !== "PRODUCT" && (
+                  <button
+                    onClick={startEditingAddress}
+                    aria-label="Edit address"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 24, height: 24, background: "none", border: "none",
+                      color: "#003DB4", cursor: "pointer",
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: "#999", textAlign: "center" }}>No stats available yet</p>
-        )}
-
-        <h3 style={{ margin: "1.5rem 0 1rem 0", fontSize: "1rem", color: "#333", borderTop: "1px solid #dde8f8", paddingTop: "1rem" }}>
-          Payout bank details
-        </h3>
-        {operator.bankName && operator.accountNumberLast4 && (
-          <p style={{ margin: "0 0 0.75rem", fontSize: "0.85rem", color: "#666" }}>
-            Current: {operator.bankName} ····{operator.accountNumberLast4} ({operator.accountName})
-          </p>
-        )}
-        {viewerRole !== "PRODUCT" && (
-          <>
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div style={{ position: "relative" }}>
-                <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Bank</label>
-                <input
-                  type="text"
-                  value={bankSearch}
-                  onChange={(e) => {
-                    setBankSearch(e.target.value);
-                    setBankCode("");
-                    setShowBankList(true);
-                  }}
-                  onFocus={() => setShowBankList(true)}
-                  onBlur={() => setTimeout(() => setShowBankList(false), 150)}
-                  placeholder="Search for a bank…"
-                  style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8", width: 200 }}
-                />
-                {showBankList && (
-                  <div style={{
-                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-                    background: "#fff", border: "1px solid #dde8f8", borderRadius: 6,
-                    marginTop: 4, maxHeight: 200, overflowY: "auto",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  }}>
-                    {filteredBanks.length === 0 ? (
-                      <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", color: "#999" }}>No banks match</div>
-                    ) : (
-                      filteredBanks.map((b) => (
+              {editingAddress ? (
+                <div>
+                  <input
+                    ref={addressInputRef}
+                    type="text"
+                    value={addressQuery}
+                    onChange={(e) => { handleAddressChange(e.target.value); openAddressList(); }}
+                    onFocus={openAddressList}
+                    placeholder="Search for an address…"
+                    style={{ width: "100%", padding: "0.5rem 0.6rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                  />
+                  {addressSuggestions.length > 0 && addressListRect && typeof document !== "undefined" && createPortal(
+                    <div style={{
+                      position: "fixed", top: addressListRect.top, left: addressListRect.left, width: addressListRect.width,
+                      zIndex: 1000, background: "#fff", border: "1px solid #dde8f8", borderRadius: 8,
+                      maxHeight: 200, overflowY: "auto", boxShadow: "0 8px 20px rgba(7,21,47,0.16)",
+                    }}>
+                      {addressSuggestions.map((s: any) => (
                         <div
-                          key={b.code}
-                          onMouseDown={() => selectBank(b)}
-                          style={{ padding: "0.5rem 0.75rem", fontSize: "0.9rem", cursor: "pointer" }}
+                          key={s.place_id}
+                          onMouseDown={() => selectSuggestion(s)}
+                          style={{ padding: "0.5rem 0.75rem", fontSize: "0.88rem", cursor: "pointer" }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = "#F6FAFF"; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
                         >
-                          {b.name}
+                          {s.description}
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>,
+                    document.body,
+                  )}
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      onClick={() => { setEditingAddress(false); setAddressMsg(null); }}
+                      style={{ padding: "0.4rem 0.8rem", background: "#fff", color: "#6c7890", border: "1px solid #dde8f8", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveAddress}
+                      disabled={savingAddress || !latLng}
+                      style={{
+                        padding: "0.4rem 0.8rem", background: (!latLng) ? "#c7d2e0" : "#003DB4", color: "#fff",
+                        border: "none", borderRadius: 6, cursor: savingAddress ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem",
+                      }}
+                    >
+                      {savingAddress ? "Saving…" : "Save"}
+                    </button>
                   </div>
-                )}
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Account number</label>
-                <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }} />
-              </div>
-              <button
-                onClick={handleSave}
-                disabled={saving || !bankCode || !accountNumber.trim()}
-                style={{ padding: "0.5rem 1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: saving ? "not-allowed" : "pointer", fontWeight: 600 }}
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
+                  {addressMsg && (
+                    <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", fontWeight: 600, color: addressMsg.ok ? "#19a56b" : "#dc2626" }}>{addressMsg.msg}</p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.address}</p>
+              )}
             </div>
-            {msg && (
-              <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
-            )}
-          </>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Coordinates</p>
+              <p style={{ margin: 0, fontSize: "0.95rem", color: "#333", display: "flex", alignItems: "center", gap: 6 }}>
+                {(() => {
+                  // Prisma Decimal fields serialize over JSON as strings, not numbers.
+                  const lat = Number(operator.latitude);
+                  const lng = Number(operator.longitude);
+                  if (Number.isNaN(lat) || Number.isNaN(lng)) return "Not available";
+                  return (
+                    <>
+                      {lat.toFixed(5)}, {lng.toFixed(5)}
+                      <a
+                        href={`https://www.google.com/maps?q=${lat},${lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#003DB4", fontWeight: 600, fontSize: "0.85rem" }}
+                      >
+                        <MapPin size={13} /> View on map
+                      </a>
+                    </>
+                  );
+                })()}
+              </p>
+            </div>
+            {[
+              { label: "Service Radius", value: `${operator.serviceRadius} km` },
+              { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
+              {
+                label: "Available Now",
+                value: operator.isAvailable ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#16a34a", fontWeight: 600 }}>
+                    <CheckCircle2 size={15} /> Yes
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#dc2626", fontWeight: 600 }}>
+                    <XCircle size={15} /> No
+                  </span>
+                ),
+              },
+              { label: "Joined",         value: fmtDate(operator.createdAt) },
+              { label: "Verified",       value: operator.verifiedAt ? fmtDate(operator.verifiedAt) : "Not yet" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</p>
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        </>
         )}
 
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: "1.5rem", width: "100%",
-            padding: "0.7rem", background: "#dde8f8", color: "#003DB4",
-            border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600,
-          }}
-        >
-          Close
-        </button>
+        {activeTab === "performance" && (
+        <>
+          <h3 style={{ margin: "0 0 1rem 0", fontSize: "0.95rem", fontWeight: 700, color: "#07152f" }}>
+            30-Day Performance
+          </h3>
+          {stats ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
+              {[
+                { label: "Jobs Offered",    value: stats.totalOffered },
+                { label: "Accepted",        value: stats.totalAccepted },
+                { label: "Declined",        value: stats.totalDeclined },
+                { label: "Timed Out",       value: stats.totalTimedOut },
+                { label: "Acceptance Rate", value: pct(stats.acceptanceRate) },
+                { label: "Avg Response",    value: fmtSec(stats.avgResponseSec) },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "#F6FAFF", borderRadius: 10, padding: "0.85rem 0.5rem",
+                    border: "1px solid #eef2fa", textAlign: "center",
+                  }}
+                >
+                  <p style={{ margin: "0 0 4px 0", fontSize: "1.35rem", fontWeight: 700, color: "#003DB4" }}>{value}</p>
+                  <p style={{ margin: 0, fontSize: "0.74rem", color: "#8892a6" }}>{label}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: "#9ca3af", textAlign: "center", fontSize: "0.9rem" }}>No stats available yet</p>
+          )}
+        </>
+        )}
+
+        {activeTab === "payouts" && (
+        <>
+          {hasBankOnFile && !editingBank && (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "#F9FAFC", border: "1px solid #f0f3f8", borderRadius: 10, padding: "0.85rem 1rem",
+            }}>
+              <p style={{ margin: 0, fontSize: "0.9rem", color: "#333" }}>
+                <strong>{operator.bankName}</strong> ····{operator.accountNumberLast4}
+                <span style={{ color: "#8892a6" }}> ({operator.accountName})</span>
+              </p>
+              {viewerRole !== "PRODUCT" && (
+                <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                  <button
+                    onClick={() => setEditingBank(true)}
+                    aria-label="Edit bank details"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 30, height: 30, background: "#fff", border: "1px solid #dde8f8",
+                      borderRadius: 7, color: "#003DB4", cursor: "pointer",
+                    }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    aria-label="Remove bank details"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 30, height: 30, background: "#fff", border: "1px solid #f8d7da",
+                      borderRadius: 7, color: "#dc2626", cursor: deleting ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {msg && !editingBank && (
+            <p style={{ margin: "0.6rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
+          )}
+          {viewerRole !== "PRODUCT" && editingBank && (
+            <div style={{ background: "#F9FAFC", border: "1px solid #f0f3f8", borderRadius: 10, padding: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#8892a6", marginBottom: 4, fontWeight: 600 }}>Bank</label>
+                  <input
+                    ref={bankInputRef}
+                    type="text"
+                    value={bankSearch}
+                    onChange={(e) => {
+                      setBankSearch(e.target.value);
+                      setBankCode("");
+                      openBankList();
+                    }}
+                    onFocus={openBankList}
+                    onBlur={() => setTimeout(() => setShowBankList(false), 150)}
+                    placeholder="Search for a bank…"
+                    style={{ width: "100%", padding: "0.55rem 0.65rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                  />
+                  {showBankList && bankListRect && typeof document !== "undefined" && createPortal(
+                    <div style={{
+                      position: "fixed", top: bankListRect.top, left: bankListRect.left, width: bankListRect.width,
+                      zIndex: 1000,
+                      background: "#fff", border: "1px solid #dde8f8", borderRadius: 8,
+                      maxHeight: 200, overflowY: "auto",
+                      boxShadow: "0 8px 20px rgba(7,21,47,0.16)",
+                    }}>
+                      {filteredBanks.length === 0 ? (
+                        <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", color: "#999" }}>No banks match</div>
+                      ) : (
+                        filteredBanks.map((b) => (
+                          <div
+                            key={b.code}
+                            onMouseDown={() => selectBank(b)}
+                            style={{ padding: "0.5rem 0.75rem", fontSize: "0.9rem", cursor: "pointer" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "#F6FAFF"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+                          >
+                            {b.name}
+                          </div>
+                        ))
+                      )}
+                    </div>,
+                    document.body,
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "#8892a6", marginBottom: 4, fontWeight: 600 }}>Account number</label>
+                  <input
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    inputMode="numeric"
+                    placeholder="10 digits"
+                    style={{ width: "100%", padding: "0.55rem 0.65rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: "0.85rem" }}>
+                {hasBankOnFile && (
+                  <button
+                    onClick={() => { setEditingBank(false); setMsg(null); setAccountNumber(""); setBankCode(""); setBankSearch(""); }}
+                    style={{
+                      padding: "0.6rem 1rem", background: "#fff", color: "#6c7890",
+                      border: "1px solid #dde8f8", borderRadius: 7, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !bankCode || accountNumber.length !== 10}
+                  style={{
+                    flex: 1, padding: "0.6rem",
+                    background: (!bankCode || accountNumber.length !== 10) ? "#c7d2e0" : "#003DB4",
+                    color: "#fff", border: "none", borderRadius: 7,
+                    cursor: saving ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.9rem",
+                  }}
+                >
+                  {saving ? "Saving…" : "Save bank details"}
+                </button>
+              </div>
+              {msg && (
+                <p style={{ margin: "0.6rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
+              )}
+            </div>
+          )}
+        </>
+        )}
+        </div>
       </div>
     </div>
   );
 }
 
 export default function OperatorsTab() {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails } = useOperatorApi();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails, clearBankDetails, updateOperator } = useOperatorApi();
   const { role: myRole } = useAuthState();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
@@ -596,6 +838,14 @@ export default function OperatorsTab() {
           banks={banks}
           onSaveBankDetails={async (bankCode, bankName, accountNumber) => {
             const updated = await saveBankDetails(selectedOp.id, { bankCode, bankName, accountNumber });
+            setSelectedOp(updated);
+          }}
+          onClearBankDetails={async () => {
+            const updated = await clearBankDetails(selectedOp.id);
+            setSelectedOp(updated);
+          }}
+          onUpdateAddress={async (address, latitude, longitude) => {
+            const updated = await updateOperator(selectedOp.id, { address, latitude, longitude });
             setSelectedOp(updated);
           }}
           viewerRole={myRole}

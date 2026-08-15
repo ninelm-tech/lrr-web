@@ -98,6 +98,10 @@ export function useGooglePlacesAutocomplete() {
         if (status === "OK" && results?.[0]?.geometry?.location) {
           const loc = results[0].geometry.location;
           setLatLng({ lat: loc.lat(), lng: loc.lng() });
+          // The geocoder's formatted_address is Google's canonical address for
+          // this place — it includes house number/street when Google has that
+          // detail, which the raw autocomplete prediction text often doesn't.
+          if (results[0].formatted_address) setAddress(results[0].formatted_address);
         } else {
           console.error("Geocoding failed:", status);
         }

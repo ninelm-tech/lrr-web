@@ -177,7 +177,13 @@ export function useOperatorApi() {
   const fetchBanks = useCallback(async (): Promise<Array<{ name: string; code: string }>> => {
     try {
       const res = await apiFetch("/paystack/banks");
-      return (res.data ?? []) as Array<{ name: string; code: string }>;
+      const raw = (res.data ?? []) as Array<{ name: string; code: string }>;
+      // Paystack's bank list has duplicate codes across channel variants
+      // (e.g. the same bank listed for nuban and mobile_money) — dedupe by
+      // code so React keys stay unique and the picker doesn't show the same
+      // bank twice.
+      const seen = new Set<string>();
+      return raw.filter((b) => (seen.has(b.code) ? false : (seen.add(b.code), true)));
     } catch {
       return [];
     }
@@ -201,6 +207,23 @@ export function useOperatorApi() {
       return updated;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save bank details";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const clearBankDetails = useCallback(async (id: string): Promise<Operator> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/operators/${id}/bank-details`, { method: "DELETE" });
+      const updated = res.data as Operator;
+      setOperators((prev) => prev.map((op) => (op.id === id ? { ...op, ...updated } : op)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to remove bank details";
       setError(msg);
       throw err;
     } finally {
@@ -314,6 +337,7 @@ export function useOperatorApi() {
     // Write
     updateOperator,
     saveBankDetails,
+    clearBankDetails,
     updateStatus,
     setAvailability,
     // Members

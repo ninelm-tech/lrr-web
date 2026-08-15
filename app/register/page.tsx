@@ -151,8 +151,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!address) {
-      setError("Please select a service address");
+    if (!address || !latLng) {
+      setError("Please select your address from the suggestions list so we can pinpoint your location");
       return;
     }
 
@@ -186,8 +186,8 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         address: address,
-        latitude: latLng?.lat || 0,
-        longitude: latLng?.lng || 0,
+        latitude: latLng.lat,
+        longitude: latLng.lng,
         truckClasses: formData.truckClasses,
       };
 
@@ -326,7 +326,7 @@ export default function RegisterPage() {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="Enter your service location address"
+                placeholder="e.g. 12 Adeniyi Jones Ave, Ikeja, Lagos"
                 required
                 style={inputStyle()}
               />
