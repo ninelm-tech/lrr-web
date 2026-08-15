@@ -93,13 +93,14 @@ export interface OperatorResponse {
 // Rescue Request Types
 // ============================================
 
-export type RescueRequestStatus = 
-  | "PENDING" 
-  | "OPERATOR_ASSIGNED" 
-  | "IN_PROGRESS" 
-  | "ARRIVED" 
-  | "COMPLETED" 
-  | "CANCELLED" 
+export type RescueRequestStatus =
+  | "PENDING"
+  | "WAITING_FOR_DEPOSIT"
+  | "OPERATOR_ASSIGNED"
+  | "IN_PROGRESS"
+  | "ARRIVED"
+  | "COMPLETED"
+  | "CANCELLED"
   | "STALLED"
   | "DISPATCHING";
 

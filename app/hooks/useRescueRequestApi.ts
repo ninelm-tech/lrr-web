@@ -109,14 +109,14 @@ export function useRescueRequestApi() {
 
   // ── Mutations ────────────────────────────────────────────────────────────
 
-  const assignOperator = useCallback(async (id: string, operatorId: string) => {
+  const assignOperator = useCallback(async (id: string, operatorId: string, priceKobo: number) => {
     setLoading(true);
     setError(null);
     try {
       const res = await apiFetch(`/rescue-requests/${id}/assign-operator`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ operatorId }),
+        body:    JSON.stringify({ operatorId, priceKobo }),
       });
       await fetchList();
       return res;

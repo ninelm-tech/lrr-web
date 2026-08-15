@@ -46,9 +46,21 @@ interface StatsModalProps {
 
 function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewerRole }: StatsModalProps) {
   const [bankCode, setBankCode] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
+  const [showBankList, setShowBankList] = useState(false);
   const [accountNumber, setAccountNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  const filteredBanks = bankSearch.trim()
+    ? banks.filter((b) => b.name.toLowerCase().includes(bankSearch.trim().toLowerCase()))
+    : banks;
+
+  function selectBank(bank: { code: string; name: string }) {
+    setBankCode(bank.code);
+    setBankSearch(bank.name);
+    setShowBankList(false);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -57,6 +69,8 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
       const bankName = banks.find((b) => b.code === bankCode)?.name ?? "";
       await onSaveBankDetails(bankCode, bankName, accountNumber);
       setAccountNumber("");
+      setBankCode("");
+      setBankSearch("");
       setMsg({ msg: "Bank details saved.", ok: true });
     } catch (err) {
       setMsg({ msg: err instanceof Error ? err.message : "Failed to save bank details", ok: false });
@@ -87,8 +101,26 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
 
         {/* Info grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Address</p>
+            <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.address}</p>
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <p style={{ margin: "0 0 2px 0", fontSize: "0.8rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Coordinates</p>
+            <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>
+              {operator.latitude.toFixed(5)}, {operator.longitude.toFixed(5)}
+              {" — "}
+              <a
+                href={`https://www.google.com/maps?q=${operator.latitude},${operator.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#003DB4", fontWeight: 600 }}
+              >
+                View on map
+              </a>
+            </p>
+          </div>
           {[
-            { label: "Address",        value: operator.address },
             { label: "Service Radius", value: `${operator.serviceRadius} km` },
             { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
             {
@@ -154,14 +186,45 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, viewer
         {viewerRole !== "PRODUCT" && (
           <>
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div>
+              <div style={{ position: "relative" }}>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Bank</label>
-                <select value={bankCode} onChange={(e) => setBankCode(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
-                  <option value="">Select a bank</option>
-                  {banks.map((b) => (
-                    <option key={b.code} value={b.code}>{b.name}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={bankSearch}
+                  onChange={(e) => {
+                    setBankSearch(e.target.value);
+                    setBankCode("");
+                    setShowBankList(true);
+                  }}
+                  onFocus={() => setShowBankList(true)}
+                  onBlur={() => setTimeout(() => setShowBankList(false), 150)}
+                  placeholder="Search for a bank…"
+                  style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8", width: 200 }}
+                />
+                {showBankList && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+                    background: "#fff", border: "1px solid #dde8f8", borderRadius: 6,
+                    marginTop: 4, maxHeight: 200, overflowY: "auto",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}>
+                    {filteredBanks.length === 0 ? (
+                      <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", color: "#999" }}>No banks match</div>
+                    ) : (
+                      filteredBanks.map((b) => (
+                        <div
+                          key={b.code}
+                          onMouseDown={() => selectBank(b)}
+                          style={{ padding: "0.5rem 0.75rem", fontSize: "0.9rem", cursor: "pointer" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#F6FAFF"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+                        >
+                          {b.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", color: "#999", marginBottom: 4 }}>Account number</label>

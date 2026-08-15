@@ -5,6 +5,7 @@ import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } 
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   PENDING: { bg: "#fff3cd", text: "#856404" },
+  WAITING_FOR_DEPOSIT: { bg: "#cfe2ff", text: "#084298" },
   OPERATOR_ASSIGNED: { bg: "#d1ecf1", text: "#0c5460" },
   IN_PROGRESS: { bg: "#cce5ff", text: "#004085" },
   ARRIVED: { bg: "#d4edda", text: "#155724" },
@@ -29,6 +30,7 @@ export default function RescueRequestsTab() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [availableOperators, setAvailableOperators] = useState<AvailableOperator[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState("");
+  const [assignPriceNaira, setAssignPriceNaira] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -59,12 +61,14 @@ export default function RescueRequestsTab() {
   }, [loadAvailableOperators, fetchDetail]);
 
   const handleAssign = async () => {
-    if (!selectedRequest || !selectedOperatorId) return;
+    const priceNaira = Number(assignPriceNaira);
+    if (!selectedRequest || !selectedOperatorId || !priceNaira || priceNaira <= 0) return;
     setActionLoading(true);
     try {
-      await assignOperator(selectedRequest.id, selectedOperatorId);
-      setActionMsg({ text: "Operator assigned and customer notified ✓", ok: true });
-      setSelectedRequest(prev => prev ? { ...prev, status: "OPERATOR_ASSIGNED" as RescueRequestStatus } : null);
+      await assignOperator(selectedRequest.id, selectedOperatorId, Math.round(priceNaira * 100));
+      setActionMsg({ text: "Operator assigned — customer sent a deposit payment link ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, status: "WAITING_FOR_DEPOSIT" as RescueRequestStatus } : null);
+      setAssignPriceNaira("");
     } catch (e: unknown) {
       setActionMsg({ text: e instanceof Error ? e.message : "Failed to assign", ok: false });
     } finally { setActionLoading(false); }
@@ -569,14 +573,26 @@ export default function RescueRequestsTab() {
                         <option key={op.id} value={op.id}>{op.businessName} ({op.phoneNumber})</option>
                       ))}
                     </select>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Agreed price (₦)"
+                      value={assignPriceNaira}
+                      onChange={e => setAssignPriceNaira(e.target.value)}
+                      style={{ width: 160, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
+                    />
                     <button
                       onClick={handleAssign}
-                      disabled={!selectedOperatorId || actionLoading}
-                      style={{ padding: "0.6rem 1.2rem", background: selectedOperatorId ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: selectedOperatorId ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
+                      disabled={!selectedOperatorId || !assignPriceNaira || Number(assignPriceNaira) <= 0 || actionLoading}
+                      style={{ padding: "0.6rem 1.2rem", background: (selectedOperatorId && assignPriceNaira) ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: (selectedOperatorId && assignPriceNaira) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
                     >
                       {actionLoading ? "…" : "Assign"}
                     </button>
                   </div>
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "#8892a6" }}>
+                    Customer gets a deposit payment link for this price — same fee split as a normal quote.
+                  </p>
                 </div>
               )}
 
