@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, MapPin, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { useOperatorApi, useAuthState } from "../../hooks";
 import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
+import ServiceRadiusMap from "../ServiceRadiusMap";
 import type { Operator, OperatorStats } from "../../hooks";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -69,7 +70,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
   const [addressMsg, setAddressMsg] = useState<{ msg: string; ok: boolean } | null>(null);
   const [addressListRect, setAddressListRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
-  const { address: addressQuery, setAddress: handleAddressChange, suggestions: addressSuggestions, selectSuggestion, latLng } = useGooglePlacesAutocomplete();
+  const { address: addressQuery, setAddress: handleAddressChange, suggestions: addressSuggestions, selectSuggestion, latLng, mapsReady } = useGooglePlacesAutocomplete();
 
   function startEditingAddress() {
     handleAddressChange(operator.address);
@@ -413,6 +414,21 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
               </div>
             ))}
           </div>
+
+          {(() => {
+            const previewLat = editingAddress && latLng ? latLng.lat : Number(operator.latitude);
+            const previewLng = editingAddress && latLng ? latLng.lng : Number(operator.longitude);
+            const previewRadius = editingRadius && Number(radiusValue) > 0 ? Number(radiusValue) : operator.serviceRadius;
+            if (Number.isNaN(previewLat) || Number.isNaN(previewLng)) return null;
+            return (
+              <div style={{ marginTop: "0.5rem" }}>
+                <p style={{ margin: "0 0 8px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                  Coverage area
+                </p>
+                <ServiceRadiusMap lat={previewLat} lng={previewLng} radiusKm={previewRadius} mapsReady={mapsReady} />
+              </div>
+            );
+          })()}
         </>
         )}
 

@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../hooks";
 import { getToken } from "../lib/session";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
+import ServiceRadiusMap from "../components/ServiceRadiusMap";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
 import type { RegisterOperatorRequest } from "../types";
 import { OperatorType, TruckClass, TRUCK_CLASSES } from "../types";
@@ -62,7 +64,7 @@ function Step({ n, total, title, subtitle, children }: {
 export default function RegisterPage() {
   const router = useRouter();
   const { registerOperator } = useAuthApi();
-  const { address, setAddress, suggestions, selectSuggestion, latLng } = useGooglePlacesAutocomplete();
+  const { address, setAddress, suggestions, selectSuggestion, latLng, mapsReady } = useGooglePlacesAutocomplete();
 
   const [formData, setFormData] = useState({
     contactName: "",
@@ -80,6 +82,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [phoneError, setPhoneError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (getToken()) {
@@ -388,11 +392,25 @@ export default function RegisterPage() {
               />
               <p style={helperStyle}>How far from your base you're willing to travel for a job.</p>
             </div>
+
+            {latLng && Number(formData.serviceRadius) > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <p style={helperStyle}>This is roughly the area you'll be offered jobs in:</p>
+                <div style={{ marginTop: 8 }}>
+                  <ServiceRadiusMap
+                    lat={latLng.lat}
+                    lng={latLng.lng}
+                    radiusKm={Number(formData.serviceRadius)}
+                    mapsReady={mapsReady}
+                  />
+                </div>
+              </div>
+            )}
           </Step>
 
           <Step n={3} total={3} title="Create your account" subtitle="You'll use this email and password to log in to your dashboard.">
             <div className="lrr-reg-grid">
-              <div>
+              <div style={{ gridColumn: "1 / -1" }}>
                 <label style={labelStyle}>Email *</label>
                 <input
                   type="email"
@@ -407,28 +425,56 @@ export default function RegisterPage() {
 
               <div>
                 <label style={labelStyle}>Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="At least 6 characters"
-                  required
-                  style={inputStyle()}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="At least 6 characters"
+                    required
+                    style={{ ...inputStyle(), paddingRight: "2.6rem" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    style={{
+                      position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", padding: 4, cursor: "pointer",
+                      color: "#8892a6", display: "flex", alignItems: "center",
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </div>
 
-              <div style={{ gridColumn: "1 / -1" }}>
+              <div>
                 <label style={labelStyle}>Confirm Password *</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Confirm your password"
-                  required
-                  style={inputStyle()}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm your password"
+                    required
+                    style={{ ...inputStyle(), paddingRight: "2.6rem" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    style={{
+                      position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                      background: "none", border: "none", padding: 4, cursor: "pointer",
+                      color: "#8892a6", display: "flex", alignItems: "center",
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </div>
             </div>
           </Step>

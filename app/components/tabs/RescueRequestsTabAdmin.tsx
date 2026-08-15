@@ -562,11 +562,11 @@ export default function RescueRequestsTab() {
                       Current: <strong>{selectedRequest.assignedOperator.businessName}</strong>
                     </p>
                   )}
-                  <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     <select
                       value={selectedOperatorId}
                       onChange={e => setSelectedOperatorId(e.target.value)}
-                      style={{ flex: 1, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
+                      style={{ flex: "1 1 200px", minWidth: 0, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
                     >
                       <option value="">— Select operator —</option>
                       {availableOperators.map(op => (
@@ -580,12 +580,12 @@ export default function RescueRequestsTab() {
                       placeholder="Agreed price (₦)"
                       value={assignPriceNaira}
                       onChange={e => setAssignPriceNaira(e.target.value)}
-                      style={{ width: 160, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
+                      style={{ flex: "1 1 140px", minWidth: 0, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
                     />
                     <button
                       onClick={handleAssign}
                       disabled={!selectedOperatorId || !assignPriceNaira || Number(assignPriceNaira) <= 0 || actionLoading}
-                      style={{ padding: "0.6rem 1.2rem", background: (selectedOperatorId && assignPriceNaira) ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: (selectedOperatorId && assignPriceNaira) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
+                      style={{ flex: "0 0 auto", padding: "0.6rem 1.2rem", background: (selectedOperatorId && assignPriceNaira) ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: (selectedOperatorId && assignPriceNaira) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
                     >
                       {actionLoading ? "…" : "Assign"}
                     </button>
