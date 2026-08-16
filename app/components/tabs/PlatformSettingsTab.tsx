@@ -7,6 +7,7 @@ export default function PlatformSettingsTab() {
   const { settings, loading, error, fetchSettings, updateSettings } = useSettingsApi();
   const [serviceFeePercent, setServiceFeePercent] = useState("");
   const [depositPercent, setDepositPercent] = useState("");
+  const [dispatchWindowMinutes, setDispatchWindowMinutes] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function PlatformSettingsTab() {
     if (settings) {
       setServiceFeePercent(String(settings.serviceFeePercent));
       setDepositPercent(String(settings.depositPercent));
+      setDispatchWindowMinutes(String(settings.dispatchWindowMinutes));
     }
   }, [settings]);
 
@@ -27,6 +29,7 @@ export default function PlatformSettingsTab() {
     await updateSettings({
       serviceFeePercent: Number(serviceFeePercent),
       depositPercent: Number(depositPercent),
+      dispatchWindowMinutes: Number(dispatchWindowMinutes),
     });
     setSaved(true);
   }
@@ -66,6 +69,23 @@ export default function PlatformSettingsTab() {
             onChange={(e) => setDepositPercent(e.target.value)}
             style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
           />
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            Operator response window (minutes)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            step="1"
+            value={dispatchWindowMinutes}
+            onChange={(e) => setDispatchWindowMinutes(e.target.value)}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            How long each batch of offered operators has to respond (quote or decline) before dispatch retries.
+          </p>
         </div>
         {error && <p style={{ color: "#c00" }}>{error}</p>}
         {saved && !error && <p style={{ color: "#0a0" }}>Saved.</p>}

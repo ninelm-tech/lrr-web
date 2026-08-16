@@ -4,6 +4,7 @@ import { apiFetch } from "./api";
 export interface PlatformSettings {
   serviceFeePercent: number;
   depositPercent: number;
+  dispatchWindowMinutes: number;
 }
 
 export function useSettingsApi() {
