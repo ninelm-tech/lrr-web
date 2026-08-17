@@ -14,7 +14,6 @@ export { useAuthApi }         from "./useAuthApi";
 export { useAuthState, dashboardPath } from "./useAuthState";
 export { useRescueRequestApi } from "./useRescueRequestApi";
 export { useOperatorApi }     from "./useOperatorApi";
-export { useSubscriptionApi } from "./useSubscriptionApi";
 export { usePaymentApi }      from "./usePaymentApi";
 export { useSettingsApi }     from "./useSettingsApi";
 export { useRatingApi }       from "./useRatingApi";
@@ -28,7 +27,6 @@ export type { Operator, OperatorMember, OperatorStats,
               OperatorStatus, OperatorMemberRole,
               OperatorLeaderboardEntry }                           from "./useOperatorApi";
 export type { PaymentRecord, PaymentSummary, PaymentListOptions } from "./usePaymentApi";
-export type { SubscriptionPlanKey }                                from "./useSubscriptionApi";
 export type { PlatformSettings }                                   from "./useSettingsApi";
 export type { RatingDetail }                                       from "./useRatingApi";
 export type { PayoutListItem }                                     from "./usePayoutApi";

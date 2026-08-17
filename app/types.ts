@@ -227,33 +227,6 @@ export interface RescueRequest {
 }
 
 // ============================================
-// Subscription Types
-// ============================================
-
-export interface SubscriptionPlan {
-  key: string;
-  name: string;
-  amountKobo: number;
-  interval: string;         // "monthly" | "annually"
-  intervalCount: number;
-  towsPerMonth: number;
-  description?: string;
-}
-
-export type SubscriptionStatus = "PENDING" | "ACTIVE" | "EXPIRED" | "CANCELLED";
-
-export interface Subscription {
-  id: string;
-  plan: string;
-  status: SubscriptionStatus;
-  towsIncludedPerMonth: number;
-  towsUsedThisMonth: number;
-  currentPeriodStart?: string;
-  currentPeriodEnd?: string;
-  createdAt: string;
-}
-
-// ============================================
 // API Error Response
 // ============================================
 
