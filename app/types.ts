@@ -71,6 +71,7 @@ export interface RegisterOperatorRequest {
   latitude: number;
   longitude: number;
   truckClasses: TruckClass[];
+  serviceRadius: number;
 }
 
 export interface OperatorResponse {

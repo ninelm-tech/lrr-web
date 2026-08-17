@@ -193,6 +193,7 @@ export default function RegisterPage() {
         latitude: latLng.lat,
         longitude: latLng.lng,
         truckClasses: formData.truckClasses,
+        serviceRadius: Number(formData.serviceRadius),
       };
 
       await registerOperator(payload);
