@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAuthApi } from "../hooks";
+import { useAuthApi, useOtpApi } from "../hooks";
 import { getToken } from "../lib/session";
 import { useGooglePlacesAutocomplete } from "../hooks/useGooglePlacesAutocomplete";
 import ServiceRadiusMap from "../components/ServiceRadiusMap";
@@ -79,6 +79,7 @@ function Step({ n, total, title, subtitle, children }: {
 export default function RegisterPage() {
   const router = useRouter();
   const { registerOperator } = useAuthApi();
+  const { sendCode, verifyCode } = useOtpApi();
   const { address, setAddress, suggestions, selectSuggestion, latLng, mapsReady } = useGooglePlacesAutocomplete();
 
   const [formData, setFormData] = useState({
@@ -94,6 +95,13 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [sameAsPersonalPhone, setSameAsPersonalPhone] = useState(true);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpToken, setOtpToken] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [phoneUnavailable, setPhoneUnavailable] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -145,6 +153,23 @@ export default function RegisterPage() {
     }
   }
 
+  async function handlePersonalPhoneBlur() {
+    if (!formData.phoneNumber || phoneError) return;
+    setOtpRequired(false);
+    setOtpVerified(false);
+    setPhoneUnavailable(false);
+    try {
+      const result = await sendCode(formData.phoneNumber);
+      if (result.available === false) {
+        setPhoneUnavailable(true);
+      } else if (result.required) {
+        setOtpRequired(true);
+      }
+    } catch {
+      // sendCode already sets its own error state; nothing else to do here
+    }
+  }
+
   function handleTruckClassToggle(truckClass: TruckClass) {
     setFormData((prev) => {
       const isSelected = prev.truckClasses.includes(truckClass);
@@ -168,6 +193,15 @@ export default function RegisterPage() {
 
     if (!isValidNigerianPhoneNumber(formData.phoneNumber)) {
       setError(getPhoneNumberErrorMessage(formData.phoneNumber));
+      return;
+    }
+
+    if (phoneUnavailable) {
+      setError("This phone number is already registered to an operator account.");
+      return;
+    }
+    if (otpRequired && !otpVerified) {
+      setError("Please verify your phone number before continuing.");
       return;
     }
 
@@ -227,6 +261,7 @@ export default function RegisterPage() {
         longitude: latLng.lng,
         truckClasses: formData.truckClasses,
         serviceRadius: Number(formData.serviceRadius),
+        phoneVerificationToken: otpVerified ? otpToken : undefined,
       };
 
       await registerOperator(payload);
@@ -310,6 +345,7 @@ export default function RegisterPage() {
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
+                  onBlur={handlePersonalPhoneBlur}
                   placeholder="e.g., 08012345678"
                   required
                   style={inputStyle(Boolean(phoneError))}
@@ -322,6 +358,62 @@ export default function RegisterPage() {
                 {formData.phoneNumber && !phoneError && (
                   <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
                     ✓ Valid number
+                  </p>
+                )}
+                {phoneUnavailable && (
+                  <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
+                    This number is already registered to an operator account. If this is you, please log in instead.
+                  </p>
+                )}
+                {otpRequired && !otpVerified && (
+                  <div style={{ marginTop: 10, padding: 12, background: "#F6FAFF", borderRadius: 8 }}>
+                    <p style={{ fontSize: "0.85rem", color: "#333", margin: "0 0 8px" }}>
+                      This number has an existing customer account. Enter the code we sent via WhatsApp to continue.
+                    </p>
+                    {!otpSent ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await sendCode(formData.phoneNumber);
+                          setOtpSent(true);
+                        }}
+                        style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "1px solid #003DB4", background: "#fff", color: "#003DB4", cursor: "pointer" }}
+                      >
+                        Send code
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          type="text"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          placeholder="6-digit code"
+                          style={{ ...inputStyle(Boolean(otpError)), maxWidth: 160 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setOtpError("");
+                            try {
+                              const result = await verifyCode(formData.phoneNumber, otpCode);
+                              setOtpToken(result.token);
+                              setOtpVerified(true);
+                            } catch (err) {
+                              setOtpError(err instanceof Error ? err.message : "Verification failed");
+                            }
+                          }}
+                          style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "none", background: "#003DB4", color: "#fff", cursor: "pointer" }}
+                        >
+                          Verify
+                        </button>
+                      </div>
+                    )}
+                    {otpError && <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "8px 0 0" }}>{otpError}</p>}
+                  </div>
+                )}
+                {otpVerified && (
+                  <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
+                    ✓ Number verified
                   </p>
                 )}
               </div>

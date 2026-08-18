@@ -14,6 +14,7 @@ export { useAuthApi }         from "./useAuthApi";
 export { useAuthState, dashboardPath } from "./useAuthState";
 export { useRescueRequestApi } from "./useRescueRequestApi";
 export { useOperatorApi }     from "./useOperatorApi";
+export { useOtpApi }          from "./useOtpApi";
 export { usePaymentApi }      from "./usePaymentApi";
 export { useSettingsApi }     from "./useSettingsApi";
 export { useRatingApi }       from "./useRatingApi";

@@ -74,6 +74,7 @@ export interface RegisterOperatorRequest {
   longitude: number;
   truckClasses: TruckClass[];
   serviceRadius: number;
+  phoneVerificationToken?: string;
 }
 
 export interface OperatorResponse {
