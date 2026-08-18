@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { CheckCircle2, Flag, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi } from "../../hooks";
 import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
@@ -20,7 +20,7 @@ interface AvailableOperator { id: string; businessName: string; phoneNumber: str
 export default function RescueRequestsTab() {
   const {
     requests, loading, error, total, page, limit,
-    fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel,
+    fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel, resolveDispute,
   } = useRescueRequestApi();
   const { fetchAll: fetchAllOperators } = useOperatorApi();
 
@@ -33,6 +33,9 @@ export default function RescueRequestsTab() {
   const [assignPriceNaira, setAssignPriceNaira] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [disputeToast, setDisputeToast] = useState<string | null>(null);
+  const knownUnresolvedDisputes = useRef<Set<string>>(new Set());
+  const isFirstPoll = useRef(true);
 
   const loadAvailableOperators = useCallback(async () => {
     try {
@@ -98,9 +101,49 @@ export default function RescueRequestsTab() {
     } finally { setActionLoading(false); }
   };
 
+  const handleResolveDispute = async () => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      await resolveDispute(selectedRequest.id);
+      setActionMsg({ text: "Dispute resolved ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, disputeResolvedAt: new Date().toISOString() } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve dispute", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
   useEffect(() => {
     fetchList({ page: 1, limit: 20 });
+    const interval = setInterval(() => fetchList({ page: 1, limit: 20 }), 15_000);
+    return () => clearInterval(interval);
   }, [fetchList]);
+
+  // Detects TRANSITION INTO unresolved dispute — not "disputed now vs. before."
+  // `disputed` stays true forever once set, so a reopen (disputeResolvedAt
+  // going from a timestamp back to null) would be missed by a plain
+  // wasn't-disputed-now-is check. The initial poll only establishes the
+  // baseline — no toast for disputes that already existed on page load.
+  useEffect(() => {
+    const currentlyUnresolved = new Set(
+      requests.filter((r) => r.disputed && !r.disputeResolvedAt).map((r) => r.id)
+    );
+
+    if (isFirstPoll.current) {
+      isFirstPoll.current = false;
+      knownUnresolvedDisputes.current = currentlyUnresolved;
+      return;
+    }
+
+    const newlyUnresolved = [...currentlyUnresolved].filter(
+      (id) => !knownUnresolvedDisputes.current.has(id)
+    );
+    if (newlyUnresolved.length > 0) {
+      setDisputeToast(`⚠️ ${newlyUnresolved.length} new dispute${newlyUnresolved.length === 1 ? '' : 's'} raised`);
+      setTimeout(() => setDisputeToast(null), 6000);
+    }
+    knownUnresolvedDisputes.current = currentlyUnresolved;
+  }, [requests]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -144,6 +187,16 @@ export default function RescueRequestsTab() {
 
   return (
     <div>
+      {disputeToast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 1000,
+          background: "#f8d7da", color: "#721c24",
+          padding: "0.9rem 1.4rem", borderRadius: 8,
+          fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+        }}>
+          {disputeToast}
+        </div>
+      )}
       {/* Filters Section */}
       <div
         style={{
@@ -338,6 +391,22 @@ export default function RescueRequestsTab() {
                       >
                         {request.status}
                       </span>
+                      {request.disputed && (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            marginLeft: 8,
+                            padding: "0.4rem 0.8rem",
+                            background: request.disputeResolvedAt ? "#d4edda" : "#f8d7da",
+                            color: request.disputeResolvedAt ? "#155724" : "#721c24",
+                            borderRadius: 4,
+                            fontSize: "0.85rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "1rem", textAlign: "center" }}>
                       <span style={{ fontSize: "0.9rem", color: request.depositPaid ? "#155724" : "#721c24" }}>
@@ -459,9 +528,20 @@ export default function RescueRequestsTab() {
                   <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>Rescue Request</h2>
                   <code style={{ fontSize: "0.78rem", color: "#999" }}>{selectedRequest.id}</code>
                 </div>
-                <span style={{ padding: "0.35rem 0.9rem", background: colors.bg, color: colors.text, borderRadius: 20, fontSize: "0.82rem", fontWeight: 700 }}>
-                  {selectedRequest.status}
-                </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ padding: "0.35rem 0.9rem", background: colors.bg, color: colors.text, borderRadius: 20, fontSize: "0.82rem", fontWeight: 700 }}>
+                    {selectedRequest.status}
+                  </span>
+                  {selectedRequest.disputed && (
+                    <span style={{
+                      padding: "0.35rem 0.9rem", borderRadius: 20, fontSize: "0.82rem", fontWeight: 700,
+                      background: selectedRequest.disputeResolvedAt ? "#d4edda" : "#f8d7da",
+                      color: selectedRequest.disputeResolvedAt ? "#155724" : "#721c24",
+                    }}>
+                      {selectedRequest.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Info grid */}
@@ -623,6 +703,12 @@ export default function RescueRequestsTab() {
                       style={{ padding: "0.55rem 1.1rem", background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <XCircle size={14} /> Cancel Request
                     </button>
+                    {selectedRequest.disputed && !selectedRequest.disputeResolvedAt && (
+                      <button onClick={handleResolveDispute} disabled={actionLoading}
+                        style={{ padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> Resolve Dispute
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

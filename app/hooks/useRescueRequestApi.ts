@@ -169,6 +169,24 @@ export function useRescueRequestApi() {
     }
   }, [fetchList]);
 
+  const resolveDispute = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/rescue-requests/${id}/resolve-dispute`, {
+        method: "PATCH",
+      });
+      await fetchList();
+      return res;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to resolve dispute";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchList]);
+
   // ── Admin overview stats ──────────────────────────────────────────────────
   /**
    * Fires several lightweight count-only queries in parallel and returns
@@ -253,5 +271,6 @@ export function useRescueRequestApi() {
     assignOperator,
     updateStatus,
     cancelRequest,
+    resolveDispute,
   };
 }

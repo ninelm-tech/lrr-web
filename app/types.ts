@@ -145,6 +145,9 @@ export interface RescueRequestListItem {
   balancePaid: boolean;
   customer: Customer;
   assignedOperator?: AssignedOperator;
+  disputed: boolean;
+  disputeRaisedAt: string | null;
+  disputeResolvedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
