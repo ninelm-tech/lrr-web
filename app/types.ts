@@ -61,9 +61,11 @@ export const TRUCK_CLASSES: Record<TruckClass, string> = {
 };
 
 export interface RegisterOperatorRequest {
+  name: string;
   businessName: string;
   contactName: string;
   phoneNumber: string;
+  businessPhoneNumber: string;
   email: string;
   password: string;
   type: OperatorType;

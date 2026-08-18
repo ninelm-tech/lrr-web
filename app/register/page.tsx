@@ -35,6 +35,21 @@ const helperStyle: React.CSSProperties = {
   margin: "6px 0 0",
 };
 
+/** A field label with an optional info icon — hover/focus reveals a short description. Every field uses this, so the amount of explanation available never varies field to field. */
+function FieldLabel({ children, tip }: { children: React.ReactNode; tip?: string }) {
+  return (
+    <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6 }}>
+      {children}
+      {tip && (
+        <span className="info-tip" tabIndex={0}>
+          <span className="info-tip-icon" aria-hidden="true">i</span>
+          <span className="info-tip-text" role="tooltip">{tip}</span>
+        </span>
+      )}
+    </label>
+  );
+}
+
 /** One section of a continuously-scrollable form, with a rail connecting it to the next. */
 function Step({ n, total, title, subtitle, children }: {
   n: number; total: number; title: string; subtitle: string; children: React.ReactNode;
@@ -70,6 +85,7 @@ export default function RegisterPage() {
     contactName: "",
     businessName: "",
     phoneNumber: "",
+    businessPhoneNumber: "",
     operatorType: OperatorType.TOW_TRUCK,
     truckClasses: [] as TruckClass[],
     serviceRadius: "50",
@@ -77,11 +93,13 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
+  const [sameAsPersonalPhone, setSameAsPersonalPhone] = useState(true);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [phoneError, setPhoneError] = useState("");
+  const [businessPhoneError, setBusinessPhoneError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -97,30 +115,33 @@ export default function RegisterPage() {
 
     if (name === "phoneNumber") {
       const normalized = toNigerianDisplayPhoneNumber(value);
-      setFormData((prev) => ({ ...prev, [name]: normalized }));
-      if (normalized) {
-        if (!isValidNigerianPhoneNumber(normalized)) {
-          setPhoneError(getPhoneNumberErrorMessage(normalized));
-        } else {
-          setPhoneError("");
-        }
-      } else {
-        setPhoneError("");
-      }
+      setFormData((prev) => ({
+        ...prev,
+        phoneNumber: normalized,
+        // Keep the business line in sync while the "same as above" box is
+        // checked, so the common solo-operator case never requires retyping.
+        businessPhoneNumber: sameAsPersonalPhone ? normalized : prev.businessPhoneNumber,
+      }));
+      setPhoneError(normalized && !isValidNigerianPhoneNumber(normalized) ? getPhoneNumberErrorMessage(normalized) : "");
+      if (sameAsPersonalPhone) setBusinessPhoneError("");
       return;
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
     }
 
-    // Real-time phone validation
-    if (name === "phoneNumber" && value) {
-      if (!isValidNigerianPhoneNumber(value)) {
-        setPhoneError(getPhoneNumberErrorMessage(value));
-      } else {
-        setPhoneError("");
-      }
-    } else if (name === "phoneNumber") {
-      setPhoneError("");
+    if (name === "businessPhoneNumber") {
+      const normalized = toNigerianDisplayPhoneNumber(value);
+      setFormData((prev) => ({ ...prev, businessPhoneNumber: normalized }));
+      setBusinessPhoneError(normalized && !isValidNigerianPhoneNumber(normalized) ? getPhoneNumberErrorMessage(normalized) : "");
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function handleSameAsPersonalPhoneToggle(checked: boolean) {
+    setSameAsPersonalPhone(checked);
+    if (checked) {
+      setFormData((prev) => ({ ...prev, businessPhoneNumber: prev.phoneNumber }));
+      setBusinessPhoneError(phoneError);
     }
   }
 
@@ -140,13 +161,23 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (!formData.businessName || !formData.contactName || !formData.phoneNumber) {
-      setError("Please fill in all business information fields");
+    if (!formData.contactName || !formData.phoneNumber) {
+      setError("Please fill in your name and phone number");
       return;
     }
 
     if (!isValidNigerianPhoneNumber(formData.phoneNumber)) {
       setError(getPhoneNumberErrorMessage(formData.phoneNumber));
+      return;
+    }
+
+    if (!formData.businessName || !formData.businessPhoneNumber) {
+      setError("Please fill in all business information fields");
+      return;
+    }
+
+    if (!isValidNigerianPhoneNumber(formData.businessPhoneNumber)) {
+      setError(getPhoneNumberErrorMessage(formData.businessPhoneNumber));
       return;
     }
 
@@ -183,9 +214,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const payload: RegisterOperatorRequest = {
+        name: formData.contactName,
         businessName: formData.businessName,
         contactName: formData.contactName,
         phoneNumber: formData.phoneNumber,
+        businessPhoneNumber: formData.businessPhoneNumber,
         type: formData.operatorType,
         email: formData.email,
         password: formData.password,
@@ -255,10 +288,10 @@ export default function RegisterPage() {
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-          <Step n={1} total={3} title="Who you are" subtitle="This is what motorists and our dispatch team will see.">
+          <Step n={1} total={3} title="About you" subtitle="Your own contact details — separate from the business line customers will text.">
             <div className="lrr-reg-grid">
               <div>
-                <label style={labelStyle}>Your Full Name *</label>
+                <FieldLabel tip="The person dispatch and support will contact if there's an issue.">Your Full Name *</FieldLabel>
                 <input
                   type="text"
                   name="contactName"
@@ -271,7 +304,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>Phone Number *</label>
+                <FieldLabel tip="Used for your own account — not shown to motorists.">Your Phone Number *</FieldLabel>
                 <input
                   type="tel"
                   name="phoneNumber"
@@ -292,9 +325,13 @@ export default function RegisterPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </Step>
 
+          <Step n={2} total={3} title="About the business" subtitle="This is what motorists and our dispatch team will see.">
+            <div className="lrr-reg-grid">
               <div>
-                <label style={labelStyle}>Business Name *</label>
+                <FieldLabel tip="Shown to motorists when you're offered or assigned a job.">Business Name *</FieldLabel>
                 <input
                   type="text"
                   name="businessName"
@@ -307,7 +344,127 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>Fleet / Truck Classes *</label>
+                <FieldLabel tip="Must be a number that can receive WhatsApp messages — this is the line motorists and dispatch will message for jobs.">Business Phone Number *</FieldLabel>
+                <input
+                  type="tel"
+                  name="businessPhoneNumber"
+                  value={formData.businessPhoneNumber}
+                  onChange={handleInputChange}
+                  disabled={sameAsPersonalPhone}
+                  placeholder="e.g., 08012345678"
+                  required
+                  style={inputStyle(Boolean(businessPhoneError))}
+                />
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: "#333", marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={sameAsPersonalPhone}
+                    onChange={(e) => handleSameAsPersonalPhoneToggle(e.target.checked)}
+                  />
+                  Same as my number above
+                </label>
+                {!sameAsPersonalPhone && businessPhoneError && (
+                  <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
+                    {businessPhoneError}
+                  </p>
+                )}
+                {!sameAsPersonalPhone && formData.businessPhoneNumber && !businessPhoneError && (
+                  <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
+                    ✓ Valid number
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="lrr-reg-grid" style={{ marginTop: 20 }}>
+              <div>
+                <FieldLabel tip="Your base location — used to calculate distance to job requests.">Service Address *</FieldLabel>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. 12 Adeniyi Jones Ave, Ikeja, Lagos"
+                    required
+                    style={inputStyle()}
+                  />
+                  {suggestions.length > 0 && (
+                    <div style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      background: "#fff",
+                      border: "1.5px solid #dde8f8",
+                      borderTop: "none",
+                      borderRadius: "0 0 8px 8px",
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      zIndex: 1000
+                    }}>
+                      {suggestions.map((suggestion: any, idx: number) => (
+                        <div
+                          key={idx}
+                          onClick={() => selectSuggestion(suggestion)}
+                          style={{
+                            padding: "0.75rem 1rem",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #dde8f8",
+                            fontSize: "0.95rem",
+                            transition: "background 0.2s"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#F6FAFF";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "#fff";
+                          }}
+                        >
+                          {suggestion.description}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {latLng && (
+                  <p style={{ fontSize: "0.85rem", color: "#003DB4", marginTop: 8 }}>
+                    📍 Coordinates: {latLng.lat.toFixed(4)}, {latLng.lng.toFixed(4)}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <FieldLabel tip="How far from your base you're willing to travel for a job.">Service Radius (km) *</FieldLabel>
+                <input
+                  type="number"
+                  name="serviceRadius"
+                  value={formData.serviceRadius}
+                  onChange={handleInputChange}
+                  placeholder="50"
+                  min="1"
+                  required
+                  style={inputStyle()}
+                />
+              </div>
+            </div>
+
+            {latLng && Number(formData.serviceRadius) > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <p style={helperStyle}>This is roughly the area you'll be offered jobs in:</p>
+                <div style={{ marginTop: 8 }}>
+                  <ServiceRadiusMap
+                    lat={latLng.lat}
+                    lng={latLng.lng}
+                    radiusKm={Number(formData.serviceRadius)}
+                    mapsReady={mapsReady}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="lrr-reg-grid" style={{ marginTop: 20 }}>
+              <div>
+                <FieldLabel tip="Jobs are only offered to you if they match one of your selected classes.">Fleet / Truck Classes *</FieldLabel>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {[TruckClass.LIGHT_DUTY, TruckClass.LOW_BED, TruckClass.TEN_TYRE, TruckClass.HIAB].map((value) => (
                     <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.95rem", color: "#333" }}>
@@ -324,95 +481,10 @@ export default function RegisterPage() {
             </div>
           </Step>
 
-          <Step n={2} total={3} title="Where you operate" subtitle="Your base location and how far you're willing to travel for a job.">
-            <label style={labelStyle}>Service Address *</label>
-            <div style={{ position: "relative" }}>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 12 Adeniyi Jones Ave, Ikeja, Lagos"
-                required
-                style={inputStyle()}
-              />
-              {suggestions.length > 0 && (
-                <div style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "#fff",
-                  border: "1.5px solid #dde8f8",
-                  borderTop: "none",
-                  borderRadius: "0 0 8px 8px",
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  zIndex: 1000
-                }}>
-                  {suggestions.map((suggestion: any, idx: number) => (
-                    <div
-                      key={idx}
-                      onClick={() => selectSuggestion(suggestion)}
-                      style={{
-                        padding: "0.75rem 1rem",
-                        cursor: "pointer",
-                        borderBottom: "1px solid #dde8f8",
-                        fontSize: "0.95rem",
-                        transition: "background 0.2s"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#F6FAFF";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "#fff";
-                      }}
-                    >
-                      {suggestion.description}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {latLng && (
-              <p style={{ fontSize: "0.85rem", color: "#003DB4", marginTop: 8 }}>
-                📍 Coordinates: {latLng.lat.toFixed(4)}, {latLng.lng.toFixed(4)}
-              </p>
-            )}
-
-            <div style={{ marginTop: 20, maxWidth: 260 }}>
-              <label style={labelStyle}>Service Radius (km) *</label>
-              <input
-                type="number"
-                name="serviceRadius"
-                value={formData.serviceRadius}
-                onChange={handleInputChange}
-                placeholder="50"
-                min="1"
-                required
-                style={inputStyle()}
-              />
-              <p style={helperStyle}>How far from your base you're willing to travel for a job.</p>
-            </div>
-
-            {latLng && Number(formData.serviceRadius) > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <p style={helperStyle}>This is roughly the area you'll be offered jobs in:</p>
-                <div style={{ marginTop: 8 }}>
-                  <ServiceRadiusMap
-                    lat={latLng.lat}
-                    lng={latLng.lng}
-                    radiusKm={Number(formData.serviceRadius)}
-                    mapsReady={mapsReady}
-                  />
-                </div>
-              </div>
-            )}
-          </Step>
-
           <Step n={3} total={3} title="Create your account" subtitle="You'll use this email and password to log in to your dashboard.">
             <div className="lrr-reg-grid">
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStyle}>Email *</label>
+                <FieldLabel tip="Used to log in to your dashboard.">Email *</FieldLabel>
                 <input
                   type="email"
                   name="email"
@@ -425,7 +497,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>Password *</label>
+                <FieldLabel tip="At least 6 characters.">Password *</FieldLabel>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -452,7 +524,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label style={labelStyle}>Confirm Password *</label>
+                <FieldLabel tip="Must match the password above.">Confirm Password *</FieldLabel>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showConfirmPassword ? "text" : "password"}
@@ -592,6 +664,24 @@ export default function RegisterPage() {
           to { opacity: 1; transform: none; }
         }
         input:focus, select:focus { border-color: #003DB4 !important; outline: none; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
+        .info-tip { position: relative; display: inline-flex; align-items: center; }
+        .info-tip-icon {
+          width: 16px; height: 16px; border-radius: 50%;
+          background: #dde8f8; color: #6c7890;
+          font-size: 11px; font-weight: 700; font-style: italic;
+          display: flex; align-items: center; justify-content: center;
+          cursor: help; user-select: none;
+        }
+        .info-tip-text {
+          display: none;
+          position: absolute; bottom: 130%; left: 0;
+          background: #07152f; color: #fff;
+          font-size: 0.78rem; font-weight: 500; line-height: 1.4;
+          padding: 8px 10px; border-radius: 6px;
+          width: 220px; z-index: 20;
+          box-shadow: 0 8px 24px rgba(7,21,47,0.25);
+        }
+        .info-tip:hover .info-tip-text, .info-tip:focus .info-tip-text, .info-tip:focus-within .info-tip-text { display: block; }
         .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .lrr-reg-cols { display: grid; grid-template-columns: 2fr 1fr; }
         @media (max-width: 860px) {
