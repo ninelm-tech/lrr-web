@@ -5,6 +5,7 @@ export interface PlatformSettings {
   serviceFeePercent: number;
   depositPercent: number;
   dispatchWindowMinutes: number;
+  disputeAlertPhoneNumber: string | null;
 }
 
 export function useSettingsApi() {

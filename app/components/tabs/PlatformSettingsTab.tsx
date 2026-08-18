@@ -8,6 +8,7 @@ export default function PlatformSettingsTab() {
   const [serviceFeePercent, setServiceFeePercent] = useState("");
   const [depositPercent, setDepositPercent] = useState("");
   const [dispatchWindowMinutes, setDispatchWindowMinutes] = useState("");
+  const [disputeAlertPhoneNumber, setDisputeAlertPhoneNumber] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function PlatformSettingsTab() {
       setServiceFeePercent(String(settings.serviceFeePercent));
       setDepositPercent(String(settings.depositPercent));
       setDispatchWindowMinutes(String(settings.dispatchWindowMinutes));
+      setDisputeAlertPhoneNumber(settings.disputeAlertPhoneNumber ?? "");
     }
   }, [settings]);
 
@@ -30,6 +32,7 @@ export default function PlatformSettingsTab() {
       serviceFeePercent: Number(serviceFeePercent),
       depositPercent: Number(depositPercent),
       dispatchWindowMinutes: Number(dispatchWindowMinutes),
+      disputeAlertPhoneNumber: disputeAlertPhoneNumber || null,
     });
     setSaved(true);
   }
@@ -85,6 +88,21 @@ export default function PlatformSettingsTab() {
           />
           <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
             How long each batch of offered operators has to respond (quote or decline) before dispatch retries.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            Dispute alert number
+          </label>
+          <input
+            type="tel"
+            placeholder="e.g. +2348012345678"
+            value={disputeAlertPhoneNumber}
+            onChange={(e) => setDisputeAlertPhoneNumber(e.target.value)}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            WhatsApp number alerted the moment a customer raises a dispute. Leave blank to disable staff alerts.
           </p>
         </div>
         {error && <p style={{ color: "#c00" }}>{error}</p>}

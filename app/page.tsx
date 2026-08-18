@@ -1,6 +1,6 @@
 import LandingNav       from "./components/landing/LandingNav";
 import HeroSection      from "./components/landing/HeroSection";
-import StatsBar         from "./components/landing/StatsBar";
+import FeaturesBar      from "./components/landing/FeaturesBar";
 import HowItWorks       from "./components/landing/HowItWorks";
 import ProductDepthSection from "./components/landing/ProductDepthSection";
 import OperatorsSection from "./components/landing/OperatorsSection";
@@ -20,7 +20,7 @@ export default async function LandingPage({ searchParams }: Props) {
     <div style={{ position: "relative" }}>
       <LandingNav />
       <HeroSection autoLogin={autoLogin} next={next} />
-      <StatsBar />
+      <FeaturesBar />
       <HowItWorks />
       <ProductDepthSection />
       <OperatorsSection />
