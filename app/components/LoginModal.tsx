@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthApi } from "../hooks";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const dm = "var(--font-dm-sans), sans-serif";
 const fraunces = "var(--font-fraunces), serif";
@@ -20,6 +21,7 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
 
   // Focus email field when modal opens
@@ -151,6 +153,19 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
               }}
             />
 
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              style={{
+                alignSelf: "flex-end",
+                background: "none", border: "none", padding: 0,
+                fontFamily: dm, fontSize: "0.85rem", fontWeight: 600,
+                color: "#003DB4", cursor: "pointer",
+              }}
+            >
+              Forgot password?
+            </button>
+
             {error && (
               <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
             )}
@@ -193,6 +208,8 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
         input:focus { border-color: #003DB4 !important; box-shadow: 0 0 0 3px rgba(0,61,180,0.1); }
         input::placeholder { color: rgba(108,120,144,0.55); }
       `}</style>
+
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </>
   );
 }

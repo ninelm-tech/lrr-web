@@ -97,6 +97,50 @@ export function useAuthApi() {
     clearSession();
   }, []);
 
+  /**
+   * Request a password reset (email or phone number, plus the new
+   * password). If the backend's OTP verification is off, this resets the
+   * password immediately (otpRequired: false). If it's on, this only
+   * sends a WhatsApp code and the new password here is ignored — the
+   * caller must follow up with resetPassword(phoneNumber, code, newPassword).
+   */
+  const forgotPassword = useCallback(async (identifier: string, newPassword: string): Promise<{ message: string; otpRequired: boolean }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await apiFetch("/auth/forgot-password", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ identifier, newPassword }),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to reset password";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Verify a password-reset code and set the new password. */
+  const resetPassword = useCallback(async (phoneNumber: string, code: string, newPassword: string): Promise<{ message: string }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await apiFetch("/auth/reset-password", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ phoneNumber: toNigerianApiPhoneNumber(phoneNumber), code, newPassword }),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to reset password";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const isAuthenticated = useCallback((): boolean => Boolean(getToken()), []);
 
   const getStoredRole = useCallback((): UserRole | null => getRole(), []);
@@ -281,6 +325,8 @@ export function useAuthApi() {
     // Auth
     login,
     logout,
+    forgotPassword,
+    resetPassword,
     isAuthenticated,
     getStoredRole,
     getStoredUser,
