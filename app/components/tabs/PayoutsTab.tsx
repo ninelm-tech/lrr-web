@@ -29,6 +29,7 @@ export default function PayoutsTab() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [retryNotice, setRetryNotice] = useState<{ text: string; tone: "info" | "error" } | null>(null);
 
   useEffect(() => {
     fetchPayouts(filterStatus || undefined).then(setPayouts).finally(() => setLoading(false));
@@ -36,10 +37,23 @@ export default function PayoutsTab() {
 
   async function handleRetry(id: string) {
     setRetrying(id);
+    setRetryNotice(null);
     try {
-      await retryPayout(id);
+      // A retry can succeed at the HTTP level and still not move any money
+      // (e.g. re-blocked on missing bank details), so show what the server
+      // says happened rather than assuming success.
+      const { message } = await retryPayout(id);
       const refreshed = await fetchPayouts(filterStatus || undefined);
       setPayouts(refreshed);
+      setRetryNotice({ text: message, tone: "info" });
+    } catch (err) {
+      // The server rejects retries of SUCCESS/PROCESSING payouts (a second
+      // transfer would pay the operator twice). Surface that rather than
+      // letting the spinner stop with no explanation.
+      setRetryNotice({
+        text: err instanceof Error ? err.message : "Failed to retry payout",
+        tone: "error",
+      });
     } finally {
       setRetrying(null);
     }
@@ -58,6 +72,19 @@ export default function PayoutsTab() {
           <option value="FAILED">Failed</option>
         </select>
       </div>
+      {retryNotice && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: 8, fontSize: "0.9rem",
+            ...(retryNotice.tone === "error"
+              ? { background: "#fdecec", border: "1px solid #f5c2c2", color: "#a33a3a" }
+              : { background: "#eef5ff", border: "1px solid #cddffb", color: "#274b8a" }),
+          }}
+        >
+          {retryNotice.text}
+        </div>
+      )}
       <div style={{ overflowX: "auto", background: "#fff", borderRadius: 10, border: "1px solid #dde8f8" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
           <thead>

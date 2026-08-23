@@ -33,11 +33,16 @@ export function usePayoutApi() {
     }
   }, []);
 
-  const retryPayout = useCallback(async (id: string): Promise<void> => {
+  /**
+   * Returns the server's description of what actually happened — a retry
+   * can legitimately end up re-blocked (e.g. the operator still has no
+   * bank details), which is not a success and shouldn't be reported as one.
+   */
+  const retryPayout = useCallback(async (id: string): Promise<{ message: string }> => {
     setLoading(true);
     setError(null);
     try {
-      await apiFetch(`/payouts/${id}/retry`, { method: "POST" });
+      return await apiFetch(`/payouts/${id}/retry`, { method: "POST" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to retry payout";
       setError(msg);
