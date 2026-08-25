@@ -62,8 +62,8 @@ export default function PayoutsTab() {
   if (loading) return <div>Loading payouts…</div>;
 
   return (
-    <div>
-      <div style={{ marginBottom: "1rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "1rem 1.25rem", border: "1px solid #e8edf5", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
           <option value="">All statuses</option>
           <option value="PENDING">Pending</option>
@@ -76,7 +76,7 @@ export default function PayoutsTab() {
         <div
           role="alert"
           style={{
-            marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: 8, fontSize: "0.9rem",
+            padding: "0.75rem 1rem", borderRadius: 8, fontSize: "0.9rem",
             ...(retryNotice.tone === "error"
               ? { background: "#fdecec", border: "1px solid #f5c2c2", color: "#a33a3a" }
               : { background: "#eef5ff", border: "1px solid #cddffb", color: "#274b8a" }),

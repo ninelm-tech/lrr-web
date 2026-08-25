@@ -5,6 +5,8 @@ export interface PlatformSettings {
   serviceFeePercent: number;
   depositPercent: number;
   dispatchWindowMinutes: number;
+  quoteCollectionMinutes: number;
+  dispatchBatchSize: number;
   disputeAlertPhoneNumber: string | null;
 }
 

@@ -64,6 +64,7 @@ export default function DispatchBoardTab() {
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   async function load() {
     const board = await fetchBoard();
@@ -76,8 +77,27 @@ export default function DispatchBoardTab() {
     const poll = setInterval(() => {
       load().catch(() => {});
     }, POLL_MS);
-    return () => clearInterval(poll);
+    // Separate, faster tick just to re-evaluate the Expand-button guard below
+    // between polls — quoteCollectionDeadline itself only changes on a poll,
+    // but "how close are we to it" needs to move every second regardless.
+    const clock = setInterval(() => setNow(Date.now()), 1_000);
+    return () => {
+      clearInterval(poll);
+      clearInterval(clock);
+    };
   }, []);
+
+  const EXPAND_DISABLE_THRESHOLD_MS = 30_000;
+
+  function expandDisabledReason(row: DispatchBoardRow): string | null {
+    if (!row.quoteCollectionDeadline) return null;
+    const remaining = new Date(row.quoteCollectionDeadline).getTime() - now;
+    if (remaining <= 0) return "Bidding has closed for this request.";
+    if (remaining < EXPAND_DISABLE_THRESHOLD_MS) {
+      return `Less than ${Math.ceil(remaining / 1000)}s left to collect quotes — too little time left for a new operator to respond.`;
+    }
+    return null;
+  }
 
   async function handleCancel(id: string) {
     if (!confirm("Cancel this dispatch?")) return;
@@ -186,7 +206,12 @@ export default function DispatchBoardTab() {
                 <button onClick={() => handleCancel(row.id)} disabled={busy === row.id} style={{ padding: "0.4rem 0.8rem", background: "#f8d7da", color: "#721c24", border: "none", borderRadius: 6, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}>
                   Cancel
                 </button>
-                <button onClick={() => handleExpandRadius(row.id)} disabled={busy === row.id} style={{ padding: "0.4rem 0.8rem", background: "#cfe2ff", color: "#084298", border: "none", borderRadius: 6, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}>
+                <button
+                  onClick={() => handleExpandRadius(row.id)}
+                  disabled={busy === row.id || !!expandDisabledReason(row)}
+                  title={expandDisabledReason(row) ?? undefined}
+                  style={{ padding: "0.4rem 0.8rem", background: "#cfe2ff", color: "#084298", border: "none", borderRadius: 6, cursor: expandDisabledReason(row) ? "not-allowed" : "pointer", fontSize: "0.82rem", fontWeight: 600, opacity: expandDisabledReason(row) ? 0.5 : 1 }}
+                >
                   Expand radius
                 </button>
                 <button onClick={() => setPickerFor(row.id)} disabled={busy === row.id} style={{ padding: "0.4rem 0.8rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}>

@@ -17,6 +17,8 @@ export interface DispatchBoardRow {
   destination: string | null;
   round: number;
   createdAt: string;
+  /** Set once the first quote arrives; absent while still SEARCHING (phase 1). */
+  quoteCollectionDeadline: string | null;
   offers: DispatchBoardOffer[];
 }
 

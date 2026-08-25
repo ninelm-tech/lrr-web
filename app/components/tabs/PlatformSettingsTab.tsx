@@ -8,6 +8,8 @@ export default function PlatformSettingsTab() {
   const [serviceFeePercent, setServiceFeePercent] = useState("");
   const [depositPercent, setDepositPercent] = useState("");
   const [dispatchWindowMinutes, setDispatchWindowMinutes] = useState("");
+  const [quoteCollectionMinutes, setQuoteCollectionMinutes] = useState("");
+  const [dispatchBatchSize, setDispatchBatchSize] = useState("");
   const [disputeAlertPhoneNumber, setDisputeAlertPhoneNumber] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -21,6 +23,8 @@ export default function PlatformSettingsTab() {
       setServiceFeePercent(String(settings.serviceFeePercent));
       setDepositPercent(String(settings.depositPercent));
       setDispatchWindowMinutes(String(settings.dispatchWindowMinutes));
+      setQuoteCollectionMinutes(String(settings.quoteCollectionMinutes));
+      setDispatchBatchSize(String(settings.dispatchBatchSize));
       setDisputeAlertPhoneNumber(settings.disputeAlertPhoneNumber ?? "");
     }
   }, [settings]);
@@ -32,6 +36,8 @@ export default function PlatformSettingsTab() {
       serviceFeePercent: Number(serviceFeePercent),
       depositPercent: Number(depositPercent),
       dispatchWindowMinutes: Number(dispatchWindowMinutes),
+      quoteCollectionMinutes: Number(quoteCollectionMinutes),
+      dispatchBatchSize: Number(dispatchBatchSize),
       disputeAlertPhoneNumber: disputeAlertPhoneNumber || null,
     });
     setSaved(true);
@@ -39,11 +45,6 @@ export default function PlatformSettingsTab() {
 
   return (
     <div style={{ maxWidth: 480 }}>
-      <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "1rem" }}>Platform Settings</h2>
-      <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-        These percentages apply to every new quote a motorist selects going forward.
-        Jobs already in progress keep the terms the motorist originally agreed to.
-      </p>
       <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
@@ -88,6 +89,43 @@ export default function PlatformSettingsTab() {
           />
           <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
             How long each batch of offered operators has to respond (quote or decline) before dispatch retries.
+            Only applies before the first quote arrives.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            Quote collection window (minutes)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={60}
+            step="1"
+            value={quoteCollectionMinutes}
+            onChange={(e) => setQuoteCollectionMinutes(e.target.value)}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            Once the first operator quotes, bidding closes after this many minutes (or sooner if everyone
+            has responded) and the motorist is shown the quotes collected so far. Nothing can extend this
+            window once it starts.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            Operators per batch
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            step="1"
+            value={dispatchBatchSize}
+            onChange={(e) => setDispatchBatchSize(e.target.value)}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            How many operators are offered a job at once, before the search radius expands to reach more.
           </p>
         </div>
         <div>

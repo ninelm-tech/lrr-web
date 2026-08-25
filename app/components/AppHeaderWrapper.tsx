@@ -5,7 +5,10 @@ export default function AppHeaderWrapper() {
   const pathname = usePathname();
 
   // Portal routes render their own shell (PortalShell) — no public header there.
-  const PORTAL_PATHS = ["/dashboard", "/requests", "/operators", "/users", "/team", "/payments", "/settings", "/customer"];
+  const PORTAL_PATHS = [
+    "/dashboard", "/requests", "/operators", "/users", "/team", "/payments", "/settings", "/customer",
+    "/dispatch-board", "/platform-settings", "/payouts",
+  ];
   if (
     pathname === "/" ||
     pathname.startsWith("/login") ||
