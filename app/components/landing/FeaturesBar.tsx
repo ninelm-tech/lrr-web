@@ -1,8 +1,8 @@
 const features = [
-  { title: "WhatsApp only",    description: "No app to install — just message us" },
+  { title: "WhatsApp only",    description: "No app to install, just message us" },
   { title: "Upfront quotes",   description: "See the price before you confirm" },
   { title: "Vetted operators", description: "Every operator is verified before going live" },
-  { title: "Pay per job",      description: "No subscriptions or membership fees" },
+  { title: "Pay per job",      description: "Deposit to confirm, balance once you're helped" },
 ];
 
 export default function FeaturesBar() {

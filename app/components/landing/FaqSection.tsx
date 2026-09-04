@@ -4,11 +4,11 @@ import { useState } from "react";
 const faqs = [
   {
     q: "How much does it cost?",
-    a: "There's no subscription or membership fee. You only pay per rescue — operators quote you a price for the job, and you pay a small deposit to confirm plus the balance once you're helped.",
+    a: "You only pay per rescue: operators quote you a price for the job, and you pay a small deposit to confirm plus the balance once you're helped.",
   },
   {
     q: "How quickly can help arrive?",
-    a: "Response times vary by location and traffic, but our network is designed to match you with the nearest qualified operator as quickly as possible — typically within 12 minutes.",
+    a: "Response times vary by location and traffic, but our network is designed to match you with the nearest qualified operator as quickly as possible, typically within 12 minutes.",
   },
   {
     q: "Can operators join the network?",
@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "Do I need an app to use LRR?",
-    a: "No app required. You can request help directly via WhatsApp — just send a message to our number and we handle everything from there.",
+    a: "No app required. You can request help directly via WhatsApp: just send a message to our number and we handle everything from there.",
   },
 ];
 

@@ -6,8 +6,8 @@ const features = [
         <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.854L0 24l6.324-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.373l-.36-.213-3.728.889.923-3.636-.234-.374A9.818 9.818 0 1112 21.818z"/>
       </svg>
     ),
-    title: "No app, ever",
-    copy: "The entire flow — request, quotes, payment, updates — runs over WhatsApp. Nothing to download.",
+    title: "Nothing to install",
+    copy: "The entire flow (request, quotes, payment, updates) runs over WhatsApp. Nothing to download.",
   },
   {
     icon: (
@@ -25,7 +25,7 @@ const features = [
       </svg>
     ),
     title: "Instant digital receipts",
-    copy: "Get an itemized, printable receipt the moment your balance is paid — deposit, balance, total, all accounted for.",
+    copy: "Get an itemized, printable receipt the moment your balance is paid: deposit, balance, total, all accounted for.",
   },
   {
     icon: (
@@ -43,7 +43,7 @@ const features = [
       </svg>
     ),
     title: "Automatic WhatsApp updates",
-    copy: "Get notified the moment your operator arrives and the moment the job is marked complete — no need to ask.",
+    copy: "Get notified the moment your operator arrives and the moment the job is marked complete. No need to ask.",
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a4 4 0 00-8 0v2m-2 0h12a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a2 2 0 012-2z" />
       </svg>
     ),
-    title: "Pay only for what you use",
-    copy: "No subscription. A small deposit confirms your request; the balance is due once you're helped.",
+    title: "Simple, transparent pricing",
+    copy: "A small deposit confirms your request; the balance is due once you're helped.",
   },
 ];
 
@@ -76,10 +76,10 @@ export default function ProductDepthSection() {
               color: "#0b1736",
             }}
           >
-            More than a landing page. A working product.
+            What LRR actually does
           </h2>
           <p className="mt-4 leading-7" style={{ color: "#6c7890" }}>
-            Every feature below is live today, not on a roadmap.
+            Roadside assistance when you need it most.
           </p>
         </div>
 
