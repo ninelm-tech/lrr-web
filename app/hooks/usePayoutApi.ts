@@ -10,7 +10,7 @@ export interface PayoutListItem {
   createdAt: string;
   completedAt: string | null;
   operator: { businessName: string };
-  rescueRequest: { id: string };
+  rescueRequest: { id: string; disputed: boolean; disputeResolvedAt: string | null };
 }
 
 export function usePayoutApi() {

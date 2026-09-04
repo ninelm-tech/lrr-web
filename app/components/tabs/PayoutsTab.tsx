@@ -101,7 +101,21 @@ export default function PayoutsTab() {
               const canRetry = p.status === "FAILED" || (p.status === "PENDING" && p.blockReason);
               return (
                 <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
-                  <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#666" }}>{p.rescueRequest.id}</td>
+                  <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#666" }}>
+                    {p.rescueRequest.id}
+                    {p.rescueRequest.disputed && (
+                      <span
+                        style={{
+                          display: "inline-block", marginLeft: 8, padding: "0.15rem 0.5rem",
+                          background: p.rescueRequest.disputeResolvedAt ? "#d4edda" : "#f8d7da",
+                          color: p.rescueRequest.disputeResolvedAt ? "#155724" : "#721c24",
+                          borderRadius: 4, fontSize: "0.75rem", fontWeight: 600,
+                        }}
+                      >
+                        {p.rescueRequest.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>{p.operator.businessName}</td>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>{fmtNaira(p.amount)}</td>
                   <td style={{ padding: "0.9rem 1rem" }}>

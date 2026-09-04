@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { apiFetch } from "./api";
 import { clearSession, getRole, getToken, getUserName, setUserName, writeSession } from "../lib/session";
 import { toNigerianApiPhoneNumber, toNigerianDisplayPhoneNumber } from "../utils/phoneValidation";
@@ -212,6 +213,7 @@ export function useAuthApi() {
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to change password";
+      Sentry.captureException(err, { tags: { flow: "change-password" } });
       setError(msg);
       throw err;
     } finally {
