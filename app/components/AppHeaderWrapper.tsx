@@ -31,7 +31,7 @@ export default function AppHeaderWrapper() {
       boxShadow: "0 1px 4px rgba(0,61,180,0.05)",
     }}>
       <a href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-        <img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 36, objectFit: "contain" }} />
+        <img src="/lrr-logo.png" alt="Local Roadside Rescue" style={{ height: 36, objectFit: "contain" }} />
       </a>
       <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
         <a href="/plans" style={{ color: "#555", fontWeight: 500, fontSize: "0.92rem", textDecoration: "none" }}>Plans</a>

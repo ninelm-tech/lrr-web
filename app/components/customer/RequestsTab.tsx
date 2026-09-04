@@ -153,7 +153,7 @@ export default function RequestsTab() {
             ) : receipt && (
               <>
                 <div style={{ textAlign: "center", borderBottom: "1px dashed #ccc", paddingBottom: "1rem", marginBottom: "1rem" }}>
-                  <img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 36, display: "block", margin: "0 auto 0.5rem" }} />
+                  <img src="/lrr-logo.png" alt="Local Roadside Rescue" style={{ height: 36, display: "block", margin: "0 auto 0.5rem" }} />
                   <div style={{ color: "#999", fontSize: "0.75rem" }}>Receipt · #{receipt.id.slice(0, 10)}…</div>
                 </div>
 

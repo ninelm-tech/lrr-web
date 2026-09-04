@@ -294,7 +294,7 @@ export default function RegisterPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#F6FAFF", fontFamily: "var(--font-dm-sans), sans-serif" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem" }}>
-        <a href="/"><img src="/lrr-logo.png" alt="Lagos Roadside Rescue" style={{ height: 44, width: "auto", objectFit: "contain" }} /></a>
+        <a href="/"><img src="/lrr-logo.png" alt="Local Roadside Rescue" style={{ height: 44, width: "auto", objectFit: "contain" }} /></a>
         <a href="/" style={{ color: "#6c7890", fontSize: "0.9rem", fontWeight: 500, textDecoration: "none" }}>Back to website</a>
       </header>
     <div style={{
@@ -319,7 +319,7 @@ export default function RegisterPage() {
           Become an Operator
         </h2>
         <p style={{ fontSize: "1rem", color: "#8892a6", marginBottom: 32 }}>
-          Join Lagos's rescue network — three quick steps and you're in.
+          Join our rescue network — three quick steps and you're in.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 32 }}>
@@ -720,7 +720,7 @@ export default function RegisterPage() {
           </span>
         </div>
         <h3 style={{ fontSize: "1.6rem", fontWeight: 700, lineHeight: 1.25, margin: "0 0 16px", letterSpacing: "-0.5px" }}>
-          You keep Lagos moving. We keep the jobs coming.
+          You keep the country moving. We keep the jobs coming.
         </h3>
         <p style={{ fontSize: "0.92rem", color: "#aab4cc", margin: "0 0 32px", lineHeight: 1.6 }}>
           No subscription, no upfront cost — just real rescue jobs sent straight to your phone.

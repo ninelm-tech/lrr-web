@@ -22,7 +22,7 @@ export default function FooterCta() {
               Drive with confidence.
             </h2>
             <p className="mt-2" style={{ color: "rgba(219,232,255,0.8)", fontFamily: "var(--font-dm-sans), sans-serif" }}>
-              Join Lagos Roadside Rescue today and stay covered wherever the road takes you.
+              Join Local Roadside Rescue today and stay covered wherever the road takes you.
             </p>
           </div>
           <div className="flex gap-3 shrink-0">
@@ -68,7 +68,7 @@ export default function FooterCta() {
           style={{ opacity: 0.6 }}
         />
         <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.85rem", fontFamily: "var(--font-dm-sans), sans-serif" }}>
-          © {new Date().getFullYear()} LRR — Lagos Roadside Rescue. A Ninelm product.
+          © {new Date().getFullYear()} LRR: Local Roadside Rescue. A Ninelm product.
         </p>
       </footer>
     </>

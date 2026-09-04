@@ -27,8 +27,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "LRR — Lagos Roadside Rescue",
-  description: "Fast, verified roadside assistance across Lagos. One WhatsApp message away.",
+  title: "LRR — Local Roadside Rescue",
+  description: "Fast, verified roadside assistance across Nigeria. One WhatsApp message away.",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",

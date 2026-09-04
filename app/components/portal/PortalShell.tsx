@@ -174,7 +174,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
       <aside className={`lrr-sidebar${sidebarOpen ? " open" : ""}`}>
         <div style={{ padding: "1.5rem 1.5rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/lrr-logo-white.png" alt="Lagos Roadside Rescue" style={{ height: 40, width: "auto", objectFit: "contain" }} />
+          <img src="/lrr-logo-white.png" alt="Local Roadside Rescue" style={{ height: 40, width: "auto", objectFit: "contain" }} />
           <button
             className="lrr-hamburger"
             onClick={() => setSidebarOpen(false)}
