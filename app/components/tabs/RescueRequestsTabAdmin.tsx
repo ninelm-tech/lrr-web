@@ -9,6 +9,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   OPERATOR_ASSIGNED: { bg: "#d1ecf1", text: "#0c5460" },
   IN_PROGRESS: { bg: "#cce5ff", text: "#004085" },
   ARRIVED: { bg: "#d4edda", text: "#155724" },
+  IN_DISPUTE: { bg: "#f8d7da", text: "#721c24" },
   COMPLETED: { bg: "#d4edda", text: "#155724" },
   CANCELLED: { bg: "#f8d7da", text: "#721c24" },
   STALLED: { bg: "#fff3cd", text: "#856404" },
@@ -34,6 +35,8 @@ export default function RescueRequestsTab() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [disputeToast, setDisputeToast] = useState<string | null>(null);
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [settlementPercent, setSettlementPercent] = useState("");
   const knownUnresolvedDisputes = useRef<Set<string>>(new Set());
   const isFirstPoll = useRef(true);
 
@@ -53,6 +56,8 @@ export default function RescueRequestsTab() {
     setSelectedDetail(null);
     setSelectedOperatorId(req.assignedOperator?.id ?? "");
     setActionMsg(null);
+    setResolutionNote("");
+    setSettlementPercent("");
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
       loadAvailableOperators();
     }
@@ -102,12 +107,15 @@ export default function RescueRequestsTab() {
   };
 
   const handleResolveDispute = async () => {
-    if (!selectedRequest) return;
+    if (!selectedRequest || !resolutionNote.trim()) return;
     setActionLoading(true);
     try {
-      await resolveDispute(selectedRequest.id);
-      setActionMsg({ text: "Dispute resolved ✓", ok: true });
+      const percent = settlementPercent.trim() ? Number(settlementPercent) : undefined;
+      await resolveDispute(selectedRequest.id, resolutionNote.trim(), percent);
+      setActionMsg({ text: "Dispute resolved — settlement payment link sent ✓", ok: true });
       setSelectedRequest(prev => prev ? { ...prev, disputeResolvedAt: new Date().toISOString() } : null);
+      setResolutionNote("");
+      setSettlementPercent("");
     } catch (e: unknown) {
       setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve dispute", ok: false });
     } finally { setActionLoading(false); }
@@ -703,13 +711,61 @@ export default function RescueRequestsTab() {
                       style={{ padding: "0.55rem 1.1rem", background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <XCircle size={14} /> Cancel Request
                     </button>
-                    {selectedRequest.disputed && !selectedRequest.disputeResolvedAt && (
-                      <button onClick={handleResolveDispute} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <CheckCircle2 size={14} /> Resolve Dispute
-                      </button>
-                    )}
                   </div>
+                </div>
+              )}
+
+              {selectedRequest.disputed && (
+                <div style={{ marginTop: "1.25rem", padding: "1.25rem", background: "#fdf6f6", borderRadius: 10, border: "1px solid #f5c2c2" }}>
+                  <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", color: "#721c24" }}>Dispute</h3>
+                  <div style={{ display: "grid", gap: "0.6rem", marginBottom: "1rem" }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Customer said</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.customerDisputeStatement || "No response yet"}</p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Operator said</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.operatorDisputeStatement || "No response yet"}</p>
+                    </div>
+                  </div>
+
+                  {selectedRequest.disputeResolvedAt ? (
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Resolution</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.disputeResolutionNote}</p>
+                      {selectedDetail?.disputeOriginalBalanceAmount !== undefined && (
+                        <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#666" }}>
+                          Original balance ₦{(selectedDetail.disputeOriginalBalanceAmount / 100).toLocaleString()} → settled ₦{((selectedDetail.balanceAmount ?? 0) / 100).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      <textarea
+                        placeholder="What happened, and what was decided?"
+                        value={resolutionNote}
+                        onChange={(e) => setResolutionNote(e.target.value)}
+                        rows={3}
+                        style={{ padding: "0.6rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem", fontFamily: "inherit", resize: "vertical" }}
+                      />
+                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="100"
+                          value={settlementPercent}
+                          onChange={(e) => setSettlementPercent(e.target.value)}
+                          style={{ width: 80, padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem" }}
+                        />
+                        <span style={{ fontSize: "0.85rem", color: "#666" }}>% of the original balance (blank = 100%, no change)</span>
+                      </div>
+                      <button onClick={handleResolveDispute} disabled={actionLoading || !resolutionNote.trim()}
+                        style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !resolutionNote.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> Resolve & Send Payment Link
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
