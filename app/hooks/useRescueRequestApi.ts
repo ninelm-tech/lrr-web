@@ -169,12 +169,14 @@ export function useRescueRequestApi() {
     }
   }, [fetchList]);
 
-  const resolveDispute = useCallback(async (id: string) => {
+  const resolveDispute = useCallback(async (id: string, resolutionNote: string, balanceAdjustmentPercent?: number) => {
     setLoading(true);
     setError(null);
     try {
       const res = await apiFetch(`/rescue-requests/${id}/resolve-dispute`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolutionNote, balanceAdjustmentPercent }),
       });
       await fetchList();
       return res;

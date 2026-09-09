@@ -153,6 +153,13 @@ export interface RescueRequestListItem {
   updatedAt: string;
 }
 
+export interface DisputeDetails {
+  customerDisputeStatement?: string;
+  operatorDisputeStatement?: string;
+  disputeResolutionNote?: string;
+  disputeOriginalBalanceAmount?: number;
+}
+
 export interface DispatchOfferAdmin {
   operatorId: string;
   businessName: string;
@@ -163,7 +170,7 @@ export interface DispatchOfferAdmin {
   respondedAt?: string;
 }
 
-export interface RescueRequestDetail extends RescueRequestListItem {
+export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetails {
   description?: string;
   adminNotes?: string;
   vehicleType?: string;
