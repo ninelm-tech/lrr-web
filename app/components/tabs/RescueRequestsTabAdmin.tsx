@@ -36,6 +36,7 @@ export default function RescueRequestsTab() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [disputeToast, setDisputeToast] = useState<string | null>(null);
+  const [activeModalTab, setActiveModalTab] = useState<"details" | "dispute">("details");
   const [resolutionNote, setResolutionNote] = useState("");
   const [settlementPercent, setSettlementPercent] = useState("");
   const knownUnresolvedDisputes = useRef<Set<string>>(new Set());
@@ -57,6 +58,7 @@ export default function RescueRequestsTab() {
     setSelectedDetail(null);
     setSelectedOperatorId(req.assignedOperator?.id ?? "");
     setActionMsg(null);
+    setActiveModalTab("details");
     setResolutionNote("");
     setSettlementPercent("");
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
@@ -536,17 +538,21 @@ export default function RescueRequestsTab() {
         const canMarkArrived = selectedRequest.status === "OPERATOR_ASSIGNED";
         const canMarkComplete = ["OPERATOR_ASSIGNED", "IN_PROGRESS", "ARRIVED"].includes(selectedRequest.status);
         const colors = STATUS_COLORS[selectedRequest.status] || { bg: "#e2e3e5", text: "#383d41" };
+        const settlementPct = settlementPercent.trim() ? Number(settlementPercent) : 100;
+        const settlementAmount = selectedDetail?.balanceAmount != null && Number.isFinite(settlementPct)
+          ? Math.round(selectedDetail.balanceAmount * settlementPct / 100)
+          : null;
         return (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
             onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
           >
             <div
-              style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+              style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 720, maxWidth: "92vw", maxHeight: "90vh", overflow: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                 <div>
                   <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>Rescue Request</h2>
                   <code style={{ fontSize: "0.78rem", color: "#999" }}>{selectedRequest.id}</code>
@@ -567,6 +573,29 @@ export default function RescueRequestsTab() {
                 </div>
               </div>
 
+              {/* Tabs */}
+              <div style={{ display: "flex", gap: 4, marginBottom: "1.5rem", borderBottom: "1px solid #f0f3f8" }}>
+                {([
+                  { key: "details" as const, label: "Details" },
+                  ...(selectedRequest.disputed ? [{ key: "dispute" as const, label: "Dispute" }] : []),
+                ]).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveModalTab(tab.key)}
+                    style={{
+                      padding: "0.6rem 0.25rem", marginRight: 20, background: "none", border: "none",
+                      borderBottom: activeModalTab === tab.key ? "2px solid #003DB4" : "2px solid transparent",
+                      color: activeModalTab === tab.key ? "#003DB4" : "#8892a6",
+                      fontWeight: 600, fontSize: "0.88rem", cursor: "pointer",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {activeModalTab === "details" && (
+              <>
               {/* Info grid */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
                 {[
@@ -730,8 +759,36 @@ export default function RescueRequestsTab() {
                 </div>
               )}
 
-              {selectedRequest.disputed && (
-                <div style={{ marginTop: "1.25rem", padding: "1.25rem", background: "#fdf6f6", borderRadius: 10, border: "1px solid #f5c2c2" }}>
+              {selectedDetail?.ratings?.filter(r => r.flagged).map((rating) => (
+                <div key={rating.id} style={{ marginTop: "1.25rem", padding: "1.25rem", background: rating.flaggedResolvedAt ? "#f4f9f4" : "#fdf6f6", borderRadius: 10, border: `1px solid ${rating.flaggedResolvedAt ? "#c3e6cb" : "#f5c2c2"}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "0.95rem", color: rating.flaggedResolvedAt ? "#155724" : "#721c24" }}>
+                      Low rating — {rating.direction === "MOTORIST_TO_OPERATOR" ? "customer rated operator" : "operator rated customer"} ({rating.score}/5)
+                    </h3>
+                    <span style={{
+                      padding: "0.25rem 0.7rem", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700,
+                      background: rating.flaggedResolvedAt ? "#d4edda" : "#f8d7da",
+                      color: rating.flaggedResolvedAt ? "#155724" : "#721c24",
+                    }}>
+                      {rating.flaggedResolvedAt ? "Reviewed" : "Flagged"}
+                    </span>
+                  </div>
+                  {rating.comment && (
+                    <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#333" }}>&ldquo;{rating.comment}&rdquo;</p>
+                  )}
+                  {!rating.flaggedResolvedAt && (
+                    <button onClick={() => handleResolveRatingFlag(rating.id)} disabled={actionLoading}
+                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle2 size={14} /> Mark Reviewed
+                    </button>
+                  )}
+                </div>
+              ))}
+              </>
+              )}
+
+              {activeModalTab === "dispute" && selectedRequest.disputed && (
+                <div style={{ padding: "1.25rem", background: "#fdf6f6", borderRadius: 10, border: "1px solid #f5c2c2" }}>
                   <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", color: "#721c24" }}>Dispute</h3>
                   <div style={{ display: "grid", gap: "0.6rem", marginBottom: "1rem" }}>
                     <div>
@@ -775,6 +832,11 @@ export default function RescueRequestsTab() {
                         />
                         <span style={{ fontSize: "0.85rem", color: "#666" }}>% of the original balance (blank = 100%, no change)</span>
                       </div>
+                      {settlementAmount !== null && (
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#003DB4" }}>
+                          = ₦{(settlementAmount / 100).toLocaleString()}
+                        </p>
+                      )}
                       <button onClick={handleResolveDispute} disabled={actionLoading || !resolutionNote.trim()}
                         style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !resolutionNote.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
                         <CheckCircle2 size={14} /> Resolve & Send Payment Link
@@ -783,32 +845,6 @@ export default function RescueRequestsTab() {
                   )}
                 </div>
               )}
-
-              {selectedDetail?.ratings?.filter(r => r.flagged).map((rating) => (
-                <div key={rating.id} style={{ marginTop: "1.25rem", padding: "1.25rem", background: rating.flaggedResolvedAt ? "#f4f9f4" : "#fdf6f6", borderRadius: 10, border: `1px solid ${rating.flaggedResolvedAt ? "#c3e6cb" : "#f5c2c2"}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                    <h3 style={{ margin: 0, fontSize: "0.95rem", color: rating.flaggedResolvedAt ? "#155724" : "#721c24" }}>
-                      Low rating — {rating.direction === "MOTORIST_TO_OPERATOR" ? "customer rated operator" : "operator rated customer"} ({rating.score}/5)
-                    </h3>
-                    <span style={{
-                      padding: "0.25rem 0.7rem", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700,
-                      background: rating.flaggedResolvedAt ? "#d4edda" : "#f8d7da",
-                      color: rating.flaggedResolvedAt ? "#155724" : "#721c24",
-                    }}>
-                      {rating.flaggedResolvedAt ? "Reviewed" : "Flagged"}
-                    </span>
-                  </div>
-                  {rating.comment && (
-                    <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#333" }}>&ldquo;{rating.comment}&rdquo;</p>
-                  )}
-                  {!rating.flaggedResolvedAt && (
-                    <button onClick={() => handleResolveRatingFlag(rating.id)} disabled={actionLoading}
-                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <CheckCircle2 size={14} /> Mark Reviewed
-                    </button>
-                  )}
-                </div>
-              ))}
 
               {/* Action result message */}
               {actionMsg && (
