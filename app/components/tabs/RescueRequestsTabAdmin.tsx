@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { CheckCircle2, Flag, RefreshCcw, XCircle } from "lucide-react";
+import { CheckCircle2, Flag, Info, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi, useRatingApi } from "../../hooks";
 import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
 
@@ -113,10 +113,23 @@ export default function RescueRequestsTab() {
     if (!selectedRequest || !resolutionNote.trim()) return;
     setActionLoading(true);
     try {
-      const percent = settlementPercent.trim() ? Number(settlementPercent) : undefined;
-      await resolveDispute(selectedRequest.id, resolutionNote.trim(), percent);
+      const percent = settlementPercent.trim() ? Number(settlementPercent) : 100;
+      const originalBalance = selectedDetail?.balanceAmount ?? undefined;
+      const settledAmount = originalBalance !== undefined ? Math.round(originalBalance * percent / 100) : undefined;
+      const noteEntered = resolutionNote.trim();
+
+      await resolveDispute(selectedRequest.id, noteEntered, percent);
       setActionMsg({ text: "Dispute resolved — settlement payment link sent ✓", ok: true });
       setSelectedRequest(prev => prev ? { ...prev, disputeResolvedAt: new Date().toISOString() } : null);
+      // The server has this now, but re-fetching just to show what was just
+      // entered is wasteful and adds a flash of stale content — apply it
+      // locally so the resolved view reflects it immediately.
+      setSelectedDetail(prev => prev ? {
+        ...prev,
+        disputeResolutionNote: noteEntered,
+        disputeOriginalBalanceAmount: originalBalance,
+        balanceAmount: settledAmount ?? prev.balanceAmount,
+      } : null);
       setResolutionNote("");
       setSettlementPercent("");
     } catch (e: unknown) {
@@ -418,18 +431,16 @@ export default function RescueRequestsTab() {
                       </span>
                       {request.disputed && (
                         <span
+                          title={request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
                           style={{
-                            display: "inline-block",
+                            display: "inline-flex",
                             marginLeft: 8,
-                            padding: "0.4rem 0.8rem",
-                            background: request.disputeResolvedAt ? "#d4edda" : "#f8d7da",
-                            color: request.disputeResolvedAt ? "#155724" : "#721c24",
-                            borderRadius: 4,
-                            fontSize: "0.85rem",
-                            fontWeight: 600,
+                            verticalAlign: "middle",
+                            color: request.disputeResolvedAt ? "#28a745" : "#dc3545",
+                            cursor: "default",
                           }}
                         >
-                          {request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                          <Info size={16} />
                         </span>
                       )}
                     </td>
@@ -548,7 +559,7 @@ export default function RescueRequestsTab() {
             onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
           >
             <div
-              style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 720, maxWidth: "92vw", maxHeight: "90vh", overflow: "auto", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+              style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 720, maxWidth: "92vw", maxHeight: "90vh", minHeight: "50vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
@@ -593,6 +604,8 @@ export default function RescueRequestsTab() {
                   </button>
                 ))}
               </div>
+
+              <div style={{ flex: 1, overflowY: "auto" }}>
 
               {activeModalTab === "details" && (
               <>
@@ -846,19 +859,23 @@ export default function RescueRequestsTab() {
                 </div>
               )}
 
-              {/* Action result message */}
-              {actionMsg && (
-                <div style={{ padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", background: actionMsg.ok ? "#d4edda" : "#f8d7da", color: actionMsg.ok ? "#155724" : "#721c24", fontWeight: 600, fontSize: "0.9rem" }}>
-                  {actionMsg.text}
-                </div>
-              )}
+              </div>
 
-              <button
-                onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
-                style={{ padding: "0.6rem 1.5rem", background: "#dde8f8", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
-              >
-                Close
-              </button>
+              {/* Footer — action result + Close, pinned to the bottom of the modal */}
+              <div style={{ flexShrink: 0, paddingTop: "1rem" }}>
+                {actionMsg && (
+                  <div style={{ padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", background: actionMsg.ok ? "#d4edda" : "#f8d7da", color: actionMsg.ok ? "#155724" : "#721c24", fontWeight: 600, fontSize: "0.9rem" }}>
+                    {actionMsg.text}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
+                  style={{ padding: "0.6rem 1.5rem", background: "#dde8f8", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         );
