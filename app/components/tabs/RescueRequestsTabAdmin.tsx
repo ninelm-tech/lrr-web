@@ -791,8 +791,8 @@ export default function RescueRequestsTab() {
                   )}
                   {!rating.flaggedResolvedAt && (
                     <button onClick={() => handleResolveRatingFlag(rating.id)} disabled={actionLoading}
-                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <CheckCircle2 size={14} /> Mark Reviewed
+                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle2 size={14} /> {actionLoading ? "Marking Reviewed…" : "Mark Reviewed"}
                     </button>
                   )}
                 </div>
@@ -852,7 +852,7 @@ export default function RescueRequestsTab() {
                       )}
                       <button onClick={handleResolveDispute} disabled={actionLoading || !resolutionNote.trim()}
                         style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !resolutionNote.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <CheckCircle2 size={14} /> Resolve & Send Payment Link
+                        <CheckCircle2 size={14} /> {actionLoading ? "Resolving…" : "Resolve & Send Payment Link"}
                       </button>
                     </div>
                   )}
