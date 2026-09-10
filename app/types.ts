@@ -160,6 +160,16 @@ export interface DisputeDetails {
   disputeOriginalBalanceAmount?: number;
 }
 
+export interface RatingSummary {
+  id: string;
+  direction: "MOTORIST_TO_OPERATOR" | "OPERATOR_TO_MOTORIST";
+  score: number;
+  comment?: string;
+  flagged: boolean;
+  flaggedAt?: string;
+  flaggedResolvedAt?: string;
+}
+
 export interface DispatchOfferAdmin {
   operatorId: string;
   businessName: string;
@@ -184,6 +194,7 @@ export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetai
     timestamp: string;
     updatedBy?: string;
   }[];
+  ratings?: RatingSummary[];
 }
 
 // Unified response type for both Admin and Operator

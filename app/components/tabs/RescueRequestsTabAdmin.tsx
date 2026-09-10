@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { CheckCircle2, Flag, RefreshCcw, XCircle } from "lucide-react";
-import { useRescueRequestApi, useOperatorApi } from "../../hooks";
+import { useRescueRequestApi, useOperatorApi, useRatingApi } from "../../hooks";
 import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -24,6 +24,7 @@ export default function RescueRequestsTab() {
     fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel, resolveDispute,
   } = useRescueRequestApi();
   const { fetchAll: fetchAllOperators } = useOperatorApi();
+  const { resolveFlag: resolveRatingFlag } = useRatingApi();
 
   const [filters, setFilters] = useState({ status: "", issueType: "", search: "" });
   const [selectedRequest, setSelectedRequest] = useState<RescueRequestListItem | null>(null);
@@ -118,6 +119,20 @@ export default function RescueRequestsTab() {
       setSettlementPercent("");
     } catch (e: unknown) {
       setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve dispute", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleResolveRatingFlag = async (ratingId: string) => {
+    setActionLoading(true);
+    try {
+      await resolveRatingFlag(ratingId);
+      setActionMsg({ text: "Rating marked reviewed ✓", ok: true });
+      setSelectedDetail(prev => prev ? {
+        ...prev,
+        ratings: prev.ratings?.map(r => r.id === ratingId ? { ...r, flaggedResolvedAt: new Date().toISOString() } : r),
+      } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve flag", ok: false });
     } finally { setActionLoading(false); }
   };
 
@@ -768,6 +783,32 @@ export default function RescueRequestsTab() {
                   )}
                 </div>
               )}
+
+              {selectedDetail?.ratings?.filter(r => r.flagged).map((rating) => (
+                <div key={rating.id} style={{ marginTop: "1.25rem", padding: "1.25rem", background: rating.flaggedResolvedAt ? "#f4f9f4" : "#fdf6f6", borderRadius: 10, border: `1px solid ${rating.flaggedResolvedAt ? "#c3e6cb" : "#f5c2c2"}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "0.95rem", color: rating.flaggedResolvedAt ? "#155724" : "#721c24" }}>
+                      Low rating — {rating.direction === "MOTORIST_TO_OPERATOR" ? "customer rated operator" : "operator rated customer"} ({rating.score}/5)
+                    </h3>
+                    <span style={{
+                      padding: "0.25rem 0.7rem", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700,
+                      background: rating.flaggedResolvedAt ? "#d4edda" : "#f8d7da",
+                      color: rating.flaggedResolvedAt ? "#155724" : "#721c24",
+                    }}>
+                      {rating.flaggedResolvedAt ? "Reviewed" : "Flagged"}
+                    </span>
+                  </div>
+                  {rating.comment && (
+                    <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#333" }}>&ldquo;{rating.comment}&rdquo;</p>
+                  )}
+                  {!rating.flaggedResolvedAt && (
+                    <button onClick={() => handleResolveRatingFlag(rating.id)} disabled={actionLoading}
+                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle2 size={14} /> Mark Reviewed
+                    </button>
+                  )}
+                </div>
+              ))}
 
               {/* Action result message */}
               {actionMsg && (

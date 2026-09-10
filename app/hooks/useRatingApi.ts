@@ -47,5 +47,19 @@ export function useRatingApi() {
     }
   }, []);
 
-  return { rating, loading, error, fetchRating, submitComment };
+  const resolveFlag = useCallback(async (id: string): Promise<{ resolved: boolean }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await apiFetch(`/ratings/${id}/resolve-flag`, { method: "PATCH" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to resolve flag";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { rating, loading, error, fetchRating, submitComment, resolveFlag };
 }
