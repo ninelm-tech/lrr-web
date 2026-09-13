@@ -4,11 +4,19 @@ import { apiFetch } from "./api";
 export interface PayoutListItem {
   id: string;
   amount: number;
-  status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED";
-  blockReason: "NO_BANK_DETAILS" | "INSUFFICIENT_BALANCE" | null;
+  // Payouts are Payment rows now (type PAYOUT), not a dedicated Payout
+  // table — these are PaymentStatus/PaymentBlockReason values, not the old
+  // PayoutStatus/PayoutBlockReason ones.
+  status: "PENDING" | "SUBMITTED" | "BLOCKED" | "SUCCEEDED" | "FAILED" | "REVERSED";
+  blockReason:
+    | "NO_BANK_DETAILS"
+    | "INSUFFICIENT_BALANCE"
+    | "AWAITING_OTP"
+    | "NEEDS_CUSTOMER_DETAILS"
+    | null;
   failureReason: string | null;
   createdAt: string;
-  completedAt: string | null;
+  settledAt: string | null;
   operator: { businessName: string };
   rescueRequest: { id: string; disputed: boolean; disputeResolvedAt: string | null };
 }

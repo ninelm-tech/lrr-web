@@ -4,15 +4,19 @@ import { usePayoutApi } from "../../hooks";
 import type { PayoutListItem } from "../../hooks";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING:    { bg: "#fff3cd", text: "#856404", label: "Pending" },
-  PROCESSING: { bg: "#cfe2ff", text: "#084298", label: "Processing" },
-  SUCCESS:    { bg: "#d4edda", text: "#155724", label: "Success" },
-  FAILED:     { bg: "#f8d7da", text: "#721c24", label: "Failed" },
+  PENDING:   { bg: "#fff3cd", text: "#856404", label: "Pending" },
+  SUBMITTED: { bg: "#cfe2ff", text: "#084298", label: "Processing" },
+  BLOCKED:   { bg: "#ffe5cc", text: "#8a4b00", label: "Blocked" },
+  SUCCEEDED: { bg: "#d4edda", text: "#155724", label: "Success" },
+  FAILED:    { bg: "#f8d7da", text: "#721c24", label: "Failed" },
+  REVERSED:  { bg: "#e5e5f0", text: "#4a4a6a", label: "Reversed" },
 };
 
 const BLOCK_REASON_LABELS: Record<string, string> = {
   NO_BANK_DETAILS: "No bank details on file",
   INSUFFICIENT_BALANCE: "Insufficient platform balance",
+  AWAITING_OTP: "Awaiting OTP at Paystack",
+  NEEDS_CUSTOMER_DETAILS: "Paystack needs more recipient details",
 };
 
 function fmtNaira(kobo: number) {
@@ -47,7 +51,7 @@ export default function PayoutsTab() {
       setPayouts(refreshed);
       setRetryNotice({ text: message, tone: "info" });
     } catch (err) {
-      // The server rejects retries of SUCCESS/PROCESSING payouts (a second
+      // The server rejects retries of SUCCEEDED/SUBMITTED payouts (a second
       // transfer would pay the operator twice). Surface that rather than
       // letting the spinner stop with no explanation.
       setRetryNotice({
@@ -67,9 +71,11 @@ export default function PayoutsTab() {
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8" }}>
           <option value="">All statuses</option>
           <option value="PENDING">Pending</option>
-          <option value="PROCESSING">Processing</option>
-          <option value="SUCCESS">Success</option>
+          <option value="SUBMITTED">Processing</option>
+          <option value="BLOCKED">Blocked</option>
+          <option value="SUCCEEDED">Success</option>
           <option value="FAILED">Failed</option>
+          <option value="REVERSED">Reversed</option>
         </select>
       </div>
       {retryNotice && (
@@ -98,7 +104,9 @@ export default function PayoutsTab() {
             {payouts.map((p) => {
               const st = STATUS_STYLES[p.status];
               const reason = p.blockReason ? BLOCK_REASON_LABELS[p.blockReason] : p.failureReason;
-              const canRetry = p.status === "FAILED" || (p.status === "PENDING" && p.blockReason);
+              // Matches the server's own RETRYABLE_STATUSES — BLOCKED is now
+              // its own status rather than PENDING-plus-a-reason.
+              const canRetry = p.status === "FAILED" || p.status === "BLOCKED";
               return (
                 <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#666" }}>
@@ -125,7 +133,7 @@ export default function PayoutsTab() {
                   </td>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>{reason ?? "—"}</td>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>{fmtDate(p.createdAt)}</td>
-                  <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>{p.completedAt ? fmtDate(p.completedAt) : "—"}</td>
+                  <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>{p.settledAt ? fmtDate(p.settledAt) : "—"}</td>
                   <td style={{ padding: "0.9rem 1rem" }}>
                     {canRetry && (
                       <button
