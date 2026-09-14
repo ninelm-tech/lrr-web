@@ -105,8 +105,14 @@ export default function PayoutsTab() {
               const st = STATUS_STYLES[p.status];
               const reason = p.blockReason ? BLOCK_REASON_LABELS[p.blockReason] : p.failureReason;
               // Matches the server's own RETRYABLE_STATUSES — BLOCKED is now
-              // its own status rather than PENDING-plus-a-reason.
-              const canRetry = p.status === "FAILED" || p.status === "BLOCKED";
+              // its own status rather than PENDING-plus-a-reason. A row
+              // never becomes retryable just because it's individually
+              // FAILED/BLOCKED — if a DIFFERENT row for this same job
+              // already succeeded, retrying would risk a second real
+              // transfer, so the server refuses it and this button never
+              // offers it in the first place.
+              const canRetry = (p.status === "FAILED" || p.status === "BLOCKED") && !p.alreadySucceeded;
+              const paidElsewhere = p.alreadySucceeded && p.status !== "SUCCEEDED";
               return (
                 <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#666" }}>
@@ -143,6 +149,11 @@ export default function PayoutsTab() {
                       >
                         {retrying === p.id ? "Retrying…" : "Retry"}
                       </button>
+                    )}
+                    {paidElsewhere && (
+                      <span style={{ fontSize: "0.78rem", color: "#999", fontStyle: "italic" }}>
+                        Paid via a different attempt
+                      </span>
                     )}
                   </td>
                 </tr>

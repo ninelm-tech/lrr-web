@@ -19,6 +19,11 @@ export interface PayoutListItem {
   settledAt: string | null;
   operator: { businessName: string };
   rescueRequest: { id: string; disputed: boolean; disputeResolvedAt: string | null };
+  // True when a DIFFERENT row for this same job already succeeded (a normal
+  // retry that resolved on a later sibling, or an admin reconciling a
+  // payout paid directly at Paystack). This row's own status says nothing
+  // about that — never offer Retry when this is true.
+  alreadySucceeded: boolean;
 }
 
 export function usePayoutApi() {
