@@ -53,12 +53,12 @@ export default function RescueRequestsTab() {
     } catch { /* silently ignore */ }
   }, [fetchAllOperators]);
 
-  const openModal = useCallback((req: RescueRequestListItem) => {
+  const openModal = useCallback((req: RescueRequestListItem, initialTab: "details" | "dispute" = "details") => {
     setSelectedRequest(req);
     setSelectedDetail(null);
     setSelectedOperatorId(req.assignedOperator?.id ?? "");
     setActionMsg(null);
-    setActiveModalTab("details");
+    setActiveModalTab(initialTab);
     setResolutionNote("");
     setSettlementPercent("");
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
@@ -431,13 +431,17 @@ export default function RescueRequestsTab() {
                       </span>
                       {request.disputed && (
                         <span
-                          title={request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                          role="button"
+                          tabIndex={0}
+                          title={`${request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"} — click to view`}
+                          onClick={() => openModal(request, "dispute")}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openModal(request, "dispute"); }}
                           style={{
                             display: "inline-flex",
                             marginLeft: 8,
                             verticalAlign: "middle",
                             color: request.disputeResolvedAt ? "#28a745" : "#dc3545",
-                            cursor: "default",
+                            cursor: "pointer",
                           }}
                         >
                           <Info size={16} />
