@@ -14,7 +14,8 @@ export type PortalIconName =
   | "users"
   | "user-cog"
   | "credit-card"
-  | "settings";
+  | "settings"
+  | "audit-log";
 
 export interface PortalNavItem {
   label: string;
@@ -40,6 +41,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { label: "Team",         href: "/team",      icon: "user-cog",         section: "Management", roles: OPERATOR },
   { label: "Payments",     href: "/payments",  icon: "credit-card",      section: "Financial",  roles: [...STAFF_VISIBILITY, ...OPERATOR] },
   { label: "Payouts",      href: "/payouts",   icon: "credit-card",      section: "Financial",  roles: SUPER_ADMIN_ONLY },
+  { label: "Audit Log",    href: "/audit-log", icon: "audit-log",        section: "Management", roles: SUPER_ADMIN_ONLY },
   { label: "Settings",     href: "/settings",  icon: "settings",         section: "Account",    roles: ALL },
 ];
 

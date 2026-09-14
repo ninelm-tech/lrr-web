@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  ScrollText,
   Settings,
   Siren,
   User,
@@ -33,6 +34,7 @@ const NAV_ICONS: Record<PortalIconName, React.ComponentType<{ size?: number; str
   "user-cog": UserCog,
   "credit-card": CreditCard,
   "settings": Settings,
+  "audit-log": ScrollText,
 };
 
 export default function PortalShell({ children }: { children: ReactNode }) {
