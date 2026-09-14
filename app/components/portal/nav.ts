@@ -33,16 +33,19 @@ const STAFF_VISIBILITY: UserRole[] = ["ADMIN", "SUPER_ADMIN", "PRODUCT"];
 
 export const PORTAL_NAV: PortalNavItem[] = [
   { label: "Overview",     href: "/dashboard", icon: "layout-dashboard", section: "Main",           roles: ALL },
-  // Same route, two audiences: a customer's own requests are a "Main"
-  // concern; everyone running the platform treats requests as operational,
-  // alongside Dispatch Board. Split rather than one shared section, since
-  // no single section name fits both.
   { label: "Requests",     href: "/requests",  icon: "sirens",           section: "Main",           roles: ["CUSTOMER"] },
-  { label: "Requests",     href: "/requests",  icon: "sirens",           section: "Operations",     roles: [...STAFF_VISIBILITY, ...OPERATOR] },
+  // Dispatch Board leads Operations — it's the live, currently-running
+  // view (polls every 15s); Requests is the broader historical/lookup
+  // list, so it comes after. Same /requests route as the Main entry
+  // above, split rather than shared since no single section fits both
+  // a customer's own requests and everyone-running-the-platform's view.
   { label: "Dispatch Board", href: "/dispatch-board", icon: "sirens",    section: "Operations",     roles: STAFF_VISIBILITY },
-  { label: "Operators",    href: "/operators", icon: "car",              section: "Operations",     roles: STAFF_VISIBILITY },
+  { label: "Requests",     href: "/requests",  icon: "sirens",           section: "Operations",     roles: [...STAFF_VISIBILITY, ...OPERATOR] },
   { label: "Payments",     href: "/payments",  icon: "credit-card",      section: "Financial",      roles: [...STAFF_VISIBILITY, ...OPERATOR] },
   { label: "Payouts",      href: "/payouts",   icon: "credit-card",      section: "Financial",      roles: SUPER_ADMIN_ONLY },
+  // Who's allowed to operate/manage accounts — administration, not the
+  // live work itself (that's Dispatch Board/Requests above).
+  { label: "Operators",    href: "/operators", icon: "car",              section: "Administration", roles: STAFF_VISIBILITY },
   { label: "Manage Users", href: "/users",     icon: "users",            section: "Administration", roles: ADMINS },
   { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Administration", roles: SUPER_ADMIN_ONLY },
   { label: "Audit Log",    href: "/audit-log", icon: "audit-log",        section: "Administration", roles: SUPER_ADMIN_ONLY },
