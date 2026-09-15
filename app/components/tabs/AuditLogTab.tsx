@@ -33,6 +33,58 @@ function fmtDate(d: string) {
   });
 }
 
+type DiffableDetails = Record<string, unknown> & {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+};
+
+// `before`/`after` is a convention some categories opt into, not every
+// entry's shape — only those get the diff table; everything else falls
+// back to the raw JSON view below it.
+function isDiffable(details: Record<string, unknown> | null): details is DiffableDetails {
+  return (
+    !!details &&
+    typeof details.before === "object" &&
+    details.before !== null &&
+    typeof details.after === "object" &&
+    details.after !== null
+  );
+}
+
+function formatDiffValue(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+// A separate component, not inlined — its `before`/`after` props are
+// freshly typed parameters, which keeps them narrowed inside the .map()
+// closure below. Accessing entry.details.before/.after directly inside
+// that closure loses TS's narrowing from the caller's `isDiffable` check.
+function DiffTable({ before, after }: { before: Record<string, unknown>; after: Record<string, unknown> }) {
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0.6rem", fontSize: "0.82rem" }}>
+      <thead>
+        <tr>
+          {["Field", "Before", "After"].map((h) => (
+            <th key={h} style={{ textAlign: "left", padding: "0.3rem 0.5rem", color: "#666", fontWeight: 600 }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {keys.map((key) => (
+          <tr key={key} style={{ borderTop: "1px solid #eef3fa" }}>
+            <td style={{ padding: "0.3rem 0.5rem", fontFamily: "monospace", color: "#333" }}>{key}</td>
+            <td style={{ padding: "0.3rem 0.5rem", color: "#a3372e" }}>{formatDiffValue(before[key])}</td>
+            <td style={{ padding: "0.3rem 0.5rem", color: "#1a7a3d" }}>{formatDiffValue(after[key])}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export default function AuditLogTab() {
   const { fetchAuditLog, markReviewed } = useAuditLogApi();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
@@ -129,8 +181,8 @@ export default function AuditLogTab() {
                         </button>
                       )}
                     </td>
-                    <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#666", fontFamily: "monospace" }}>
-                      {entry.actorId ?? "— system —"}
+                    <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#666" }}>
+                      {entry.actorName ?? "— system —"}
                     </td>
                     <td style={{ padding: "0.9rem 1rem" }}>
                       {entry.reviewedAt ? (
@@ -158,6 +210,9 @@ export default function AuditLogTab() {
                   {isExpanded && entry.details && (
                     <tr>
                       <td colSpan={6} style={{ padding: "0 1rem 0.9rem", background: "#fafcff" }}>
+                        {isDiffable(entry.details) && (
+                          <DiffTable before={entry.details.before} after={entry.details.after} />
+                        )}
                         <pre style={{ margin: 0, padding: "0.75rem", background: "#0f1729", color: "#c9d6ea", borderRadius: 6, fontSize: "0.78rem", overflowX: "auto" }}>
                           {JSON.stringify(entry.details, null, 2)}
                         </pre>

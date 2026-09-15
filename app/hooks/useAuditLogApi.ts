@@ -7,6 +7,7 @@ export interface AuditLogEntry {
   message: string;
   details: Record<string, unknown> | null;
   actorId: string | null;
+  actorName: string | null;
   createdAt: string;
   reviewedAt: string | null;
   reviewedBy: string | null;
