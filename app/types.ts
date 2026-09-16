@@ -108,13 +108,11 @@ export type RescueRequestStatus =
   | "STALLED"
   | "DISPATCHING";
 
-export type IssueType = 
-  | "BREAKDOWN" 
-  | "ACCIDENT" 
-  | "FUEL" 
-  | "TYRE" 
-  | "BATTERY" 
-  | "OTHER";
+export type IssueType =
+  | "BREAKDOWN"
+  | "ACCIDENT"
+  | "FLAT_TYRE"
+  | "FUEL";
 
 export interface Customer {
   id: string;
@@ -139,7 +137,7 @@ export interface PaymentInfo {
 export interface RescueRequestListItem {
   id: string;
   status: RescueRequestStatus;
-  issueType: IssueType;
+  issueType?: IssueType;
   latitude: string;
   longitude: string;
   depositPaid: boolean;

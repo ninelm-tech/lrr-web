@@ -300,10 +300,8 @@ export default function RescueRequestsTab() {
               <option value="">All Types</option>
               <option value="BREAKDOWN">Breakdown</option>
               <option value="ACCIDENT">Accident</option>
+              <option value="FLAT_TYRE">Flat Tyre</option>
               <option value="FUEL">Fuel</option>
-              <option value="TYRE">Tyre</option>
-              <option value="BATTERY">Battery</option>
-              <option value="OTHER">Other</option>
             </select>
           </div>
 
@@ -617,6 +615,7 @@ export default function RescueRequestsTab() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
                 {[
                   ["Vehicle", selectedDetail?.vehicleType ?? "—"],
+                  ["Issue Type", selectedDetail?.issueType ?? "—"],
                   ["Destination", selectedDetail?.destination ?? "—"],
                   ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
                   ["Created", formatTime(selectedRequest.createdAt)],

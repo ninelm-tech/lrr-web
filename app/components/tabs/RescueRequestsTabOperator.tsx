@@ -332,7 +332,7 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                 <strong>Status:</strong> {selectedRequest.status}
               </p>
               <p>
-                <strong>Issue Type:</strong> {selectedRequest.issueType}
+                <strong>Issue Type:</strong> {selectedRequest.issueType ?? "—"}
               </p>
               <p>
                 <strong>Customer Phone:</strong> {formatPhoneNumber(selectedRequest.customer.phoneNumber)}
