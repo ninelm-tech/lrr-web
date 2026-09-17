@@ -68,7 +68,7 @@ export default function FooterCta() {
           style={{ opacity: 0.6 }}
         />
         <p style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.85rem", fontFamily: "var(--font-dm-sans), sans-serif" }}>
-          © {new Date().getFullYear()} LRR: Local Roadside Rescue. A Ninelm product.
+          © {new Date().getFullYear()} LRR: Local Roadside Rescue. A Ninelm Technologies product.
         </p>
       </footer>
     </>
