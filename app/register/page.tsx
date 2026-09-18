@@ -230,8 +230,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formData.email || !formData.password) {
-      setError("Please fill in email and password");
+    if (!formData.password) {
+      setError("Please fill in your password");
       return;
     }
 
@@ -254,14 +254,14 @@ export default function RegisterPage() {
         phoneNumber: formData.phoneNumber,
         businessPhoneNumber: formData.businessPhoneNumber,
         type: formData.operatorType,
-        email: formData.email,
+        email: formData.email || undefined,
         password: formData.password,
         address: address,
         latitude: latLng.lat,
         longitude: latLng.lng,
         truckClasses: formData.truckClasses,
         serviceRadius: Number(formData.serviceRadius),
-        phoneVerificationToken: otpVerified ? otpToken : undefined,
+        phoneVerificationToken: otpToken,
       };
 
       await registerOperator(payload);
@@ -573,17 +573,16 @@ export default function RegisterPage() {
             </div>
           </Step>
 
-          <Step n={3} total={3} title="Create your account" subtitle="You'll use this email and password to log in to your dashboard.">
+          <Step n={3} total={3} title="Create your account" subtitle="You'll use this to log in — add an email too if you'd like a backup way in.">
             <div className="lrr-reg-grid">
               <div style={{ gridColumn: "1 / -1" }}>
-                <FieldLabel tip="Used to log in to your dashboard.">Email *</FieldLabel>
+                <FieldLabel tip="Used to log in to your dashboard.">Email</FieldLabel>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="your@email.com"
-                  required
                   style={inputStyle()}
                 />
               </div>

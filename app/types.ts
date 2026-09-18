@@ -66,7 +66,7 @@ export interface RegisterOperatorRequest {
   contactName: string;
   phoneNumber: string;
   businessPhoneNumber: string;
-  email: string;
+  email?: string;
   password: string;
   type: OperatorType;
   address: string;
@@ -74,7 +74,7 @@ export interface RegisterOperatorRequest {
   longitude: number;
   truckClasses: TruckClass[];
   serviceRadius: number;
-  phoneVerificationToken?: string;
+  phoneVerificationToken: string; // was optional — see Task 5, now mandatory for every signup
 }
 
 export interface OperatorResponse {
