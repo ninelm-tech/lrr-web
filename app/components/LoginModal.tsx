@@ -16,9 +16,13 @@ interface LoginModalProps {
 
 export default function LoginModal({ open, onClose, next }: LoginModalProps) {
   const router = useRouter();
-  const { login } = useAuthApi();
+  const { login, sendLoginCode, loginWithOtp } = useAuthApi();
+  const [mode, setMode] = useState<"password" | "otp">("password");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -28,6 +32,10 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
   useEffect(() => {
     if (open) {
       setError("");
+      setMode("password");
+      setOtpSent(false);
+      setOtpCode("");
+      setPhone("");
       setTimeout(() => emailRef.current?.focus(), 80);
     }
   }, [open]);
@@ -125,68 +133,188 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-            <input
-              ref={emailRef}
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={{
-                padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
-                border: "1px solid #e2e8f0", background: "#f7f9fc",
-                color: "#07152f", outline: "none", fontFamily: dm,
-              }}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              style={{
-                padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
-                border: "1px solid #e2e8f0", background: "#f7f9fc",
-                color: "#07152f", outline: "none", fontFamily: dm,
-              }}
-            />
-
+          {/* Mode toggle */}
+          <div style={{ display: "flex", gap: 8, marginBottom: "0.5rem" }}>
             <button
               type="button"
-              onClick={() => setForgotOpen(true)}
+              onClick={() => setMode("password")}
               style={{
-                alignSelf: "flex-end",
-                background: "none", border: "none", padding: 0,
-                fontFamily: dm, fontSize: "0.85rem", fontWeight: 600,
-                color: "#003DB4", cursor: "pointer",
+                flex: 1, padding: "0.5rem", borderRadius: 8, border: "1px solid #e2e8f0",
+                background: mode === "password" ? "#003DB4" : "#f7f9fc",
+                color: mode === "password" ? "#fff" : "#07152f",
+                fontFamily: dm, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
               }}
             >
-              Forgot password?
+              Password
             </button>
-
-            {error && (
-              <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
-            )}
-
             <button
-              type="submit"
-              disabled={loading}
+              type="button"
+              onClick={() => setMode("otp")}
               style={{
-                marginTop: "0.25rem",
-                padding: "0.95rem",
-                borderRadius: 10, border: "none",
-                background: "#003DB4", color: "#fff",
-                fontFamily: dm, fontWeight: 700, fontSize: "0.95rem",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.7 : 1,
-                transition: "opacity .2s",
+                flex: 1, padding: "0.5rem", borderRadius: 8, border: "1px solid #e2e8f0",
+                background: mode === "otp" ? "#003DB4" : "#f7f9fc",
+                color: mode === "otp" ? "#fff" : "#07152f",
+                fontFamily: dm, fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
               }}
             >
-              {loading ? "Signing in…" : "Sign in"}
+              Phone code
             </button>
-          </form>
+          </div>
+
+          {/* Form */}
+          {mode === "password" && (
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <input
+                ref={emailRef}
+                type="text"
+                placeholder="Email or phone"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                style={{
+                  padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
+                  border: "1px solid #e2e8f0", background: "#f7f9fc",
+                  color: "#07152f", outline: "none", fontFamily: dm,
+                }}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{
+                  padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
+                  border: "1px solid #e2e8f0", background: "#f7f9fc",
+                  color: "#07152f", outline: "none", fontFamily: dm,
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => setForgotOpen(true)}
+                style={{
+                  alignSelf: "flex-end",
+                  background: "none", border: "none", padding: 0,
+                  fontFamily: dm, fontSize: "0.85rem", fontWeight: 600,
+                  color: "#003DB4", cursor: "pointer",
+                }}
+              >
+                Forgot password?
+              </button>
+
+              {error && (
+                <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  marginTop: "0.25rem",
+                  padding: "0.95rem",
+                  borderRadius: 10, border: "none",
+                  background: "#003DB4", color: "#fff",
+                  fontFamily: dm, fontWeight: 700, fontSize: "0.95rem",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.7 : 1,
+                  transition: "opacity .2s",
+                }}
+              >
+                {loading ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          )}
+
+          {mode === "otp" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <input
+                type="tel"
+                placeholder="Phone number"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                disabled={otpSent}
+                style={{
+                  padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
+                  border: "1px solid #e2e8f0", background: "#f7f9fc",
+                  color: "#07152f", outline: "none", fontFamily: dm,
+                }}
+              />
+              {!otpSent ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setError("");
+                    try {
+                      await sendLoginCode(phone);
+                      setOtpSent(true);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "Failed to send code");
+                    }
+                  }}
+                  style={{
+                    marginTop: "0.25rem",
+                    padding: "0.95rem",
+                    borderRadius: 10, border: "none",
+                    background: "#003DB4", color: "#fff",
+                    fontFamily: dm, fontWeight: 700, fontSize: "0.95rem",
+                    cursor: "pointer",
+                    transition: "opacity .2s",
+                  }}
+                >
+                  Send code
+                </button>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="6-digit code"
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value)}
+                    maxLength={6}
+                    style={{
+                      padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
+                      border: "1px solid #e2e8f0", background: "#f7f9fc",
+                      color: "#07152f", outline: "none", fontFamily: dm,
+                    }}
+                  />
+                  {error && (
+                    <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={async () => {
+                      setLoading(true);
+                      setError("");
+                      try {
+                        await loginWithOtp(phone, otpCode);
+                        const destination = next || "/dashboard";
+                        onClose();
+                        router.push(destination);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : "Invalid or expired code");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    style={{
+                      marginTop: "0.25rem",
+                      padding: "0.95rem",
+                      borderRadius: 10, border: "none",
+                      background: "#003DB4", color: "#fff",
+                      fontFamily: dm, fontWeight: 700, fontSize: "0.95rem",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      opacity: loading ? 0.7 : 1,
+                      transition: "opacity .2s",
+                    }}
+                  >
+                    {loading ? "Verifying…" : "Verify & sign in"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
           <div style={{ marginTop: "1.5rem", textAlign: "center", fontSize: "0.88rem", color: "#6c7890" }}>

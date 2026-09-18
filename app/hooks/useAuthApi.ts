@@ -68,14 +68,14 @@ export function useAuthApi() {
 
   // ── Auth ─────────────────────────────────────────────────────────────────
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (identifier: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
       const data = await apiFetch("/auth/login", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, password }),
+        body:    JSON.stringify({ identifier, password }),
       });
       if (data.accessToken && data.user) {
         writeSession(
@@ -87,6 +87,47 @@ export function useAuthApi() {
       return data as { accessToken: string; user: User };
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const sendLoginCode = useCallback(async (phoneNumber: string) => {
+    setError(null);
+    try {
+      return await apiFetch("/auth/login/otp/send", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ phoneNumber }),
+      }) as { required: boolean };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send code";
+      setError(msg);
+      throw err;
+    }
+  }, []);
+
+  const loginWithOtp = useCallback(async (phoneNumber: string, code: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch("/auth/login/otp/verify", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ phoneNumber, code }),
+      });
+      if (data.accessToken && data.user) {
+        writeSession(
+          data.accessToken,
+          data.user.role,
+          resolveDisplayName(data.user, "User"),
+        );
+      }
+      return data as { accessToken: string; user: User };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid or expired code";
       setError(msg);
       throw err;
     } finally {
@@ -326,6 +367,8 @@ export function useAuthApi() {
     error,
     // Auth
     login,
+    sendLoginCode,
+    loginWithOtp,
     logout,
     forgotPassword,
     resetPassword,
