@@ -240,6 +240,9 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
                   color: "#07152f", outline: "none", fontFamily: dm,
                 }}
               />
+              {error && (
+                <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
+              )}
               {!otpSent ? (
                 <button
                   type="button"
@@ -278,9 +281,6 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
                       color: "#07152f", outline: "none", fontFamily: dm,
                     }}
                   />
-                  {error && (
-                    <p style={{ margin: 0, color: "#e53e3e", fontSize: "0.88rem" }}>{error}</p>
-                  )}
                   <button
                     type="button"
                     disabled={loading}
