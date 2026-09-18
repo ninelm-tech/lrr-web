@@ -99,7 +99,6 @@ export default function RegisterPage() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpToken, setOtpToken] = useState("");
   const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [phoneUnavailable, setPhoneUnavailable] = useState(false);
 
@@ -158,15 +157,20 @@ export default function RegisterPage() {
     setOtpRequired(false);
     setOtpVerified(false);
     setPhoneUnavailable(false);
+    setOtpError("");
     try {
       const result = await sendCode(formData.phoneNumber);
       if (result.available === false) {
         setPhoneUnavailable(true);
       } else if (result.required) {
+        // sendCode already dispatched the code by this point, so the OTP
+        // box below shows the verify UI immediately — no separate "Send
+        // code" click needed (and none would succeed anyway inside the
+        // resend cooldown).
         setOtpRequired(true);
       }
-    } catch {
-      // sendCode already sets its own error state; nothing else to do here
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to send verification code");
     }
   }
 
@@ -368,46 +372,47 @@ export default function RegisterPage() {
                 {otpRequired && !otpVerified && (
                   <div style={{ marginTop: 10, padding: 12, background: "#F6FAFF", borderRadius: 8 }}>
                     <p style={{ fontSize: "0.85rem", color: "#333", margin: "0 0 8px" }}>
-                      This number has an existing customer account. Enter the code we sent via WhatsApp to continue.
+                      Enter the code we texted you to verify this number.
                     </p>
-                    {!otpSent ? (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="text"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="6-digit code"
+                        style={{ ...inputStyle(Boolean(otpError)), maxWidth: 160 }}
+                      />
                       <button
                         type="button"
                         onClick={async () => {
-                          await sendCode(formData.phoneNumber);
-                          setOtpSent(true);
+                          setOtpError("");
+                          try {
+                            const result = await verifyCode(formData.phoneNumber, otpCode);
+                            setOtpToken(result.token);
+                            setOtpVerified(true);
+                          } catch (err) {
+                            setOtpError(err instanceof Error ? err.message : "Verification failed");
+                          }
                         }}
-                        style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "1px solid #003DB4", background: "#fff", color: "#003DB4", cursor: "pointer" }}
+                        style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "none", background: "#003DB4", color: "#fff", cursor: "pointer" }}
                       >
-                        Send code
+                        Verify
                       </button>
-                    ) : (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <input
-                          type="text"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value)}
-                          placeholder="6-digit code"
-                          style={{ ...inputStyle(Boolean(otpError)), maxWidth: 160 }}
-                        />
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setOtpError("");
-                            try {
-                              const result = await verifyCode(formData.phoneNumber, otpCode);
-                              setOtpToken(result.token);
-                              setOtpVerified(true);
-                            } catch (err) {
-                              setOtpError(err instanceof Error ? err.message : "Verification failed");
-                            }
-                          }}
-                          style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "none", background: "#003DB4", color: "#fff", cursor: "pointer" }}
-                        >
-                          Verify
-                        </button>
-                      </div>
-                    )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setOtpError("");
+                        try {
+                          await sendCode(formData.phoneNumber);
+                        } catch (err) {
+                          setOtpError(err instanceof Error ? err.message : "Failed to resend code");
+                        }
+                      }}
+                      style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Resend code
+                    </button>
                     {otpError && <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "8px 0 0" }}>{otpError}</p>}
                   </div>
                 )}
