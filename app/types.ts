@@ -178,12 +178,22 @@ export interface DispatchOfferAdmin {
   respondedAt?: string;
 }
 
+export interface RequestMediaItem {
+  id: string;
+  url: string;
+  mediaType: "IMAGE" | "VIDEO" | "AUDIO";
+  context: "INITIAL" | "COMPLETION" | "DISPUTE";
+  uploadedByRole: "CUSTOMER" | "OPERATOR";
+  createdAt: string;
+}
+
 export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetails {
   description?: string;
   adminNotes?: string;
   vehicleType?: string;
   destination?: string;
   mediaLinks: string[];
+  media?: RequestMediaItem[];
   offers?: DispatchOfferAdmin[];
   depositAmount?: number;
   balanceAmount?: number;
