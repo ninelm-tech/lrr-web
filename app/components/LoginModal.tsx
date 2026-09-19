@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuthApi } from "../hooks";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
@@ -20,6 +21,7 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
   const [mode, setMode] = useState<"password" | "otp">("password");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -177,18 +179,33 @@ export default function LoginModal({ open, onClose, next }: LoginModalProps) {
                   color: "#07152f", outline: "none", fontFamily: dm,
                 }}
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                style={{
-                  padding: "0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
-                  border: "1px solid #e2e8f0", background: "#f7f9fc",
-                  color: "#07152f", outline: "none", fontFamily: dm,
-                }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "0.875rem 2.6rem 0.875rem 1rem", borderRadius: 10, fontSize: "0.95rem",
+                    border: "1px solid #e2e8f0", background: "#f7f9fc",
+                    color: "#07152f", outline: "none", fontFamily: dm,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  style={{
+                    position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                    background: "none", border: "none", padding: 4, cursor: "pointer",
+                    color: "#8892a6", display: "flex", alignItems: "center",
+                  }}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
 
               <button
                 type="button"
