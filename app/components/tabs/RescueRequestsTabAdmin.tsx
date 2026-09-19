@@ -642,19 +642,50 @@ export default function RescueRequestsTab() {
                 </a>
               )}
 
-              {/* ── Media links ── */}
-              {selectedDetail && selectedDetail.mediaLinks.length > 0 && (
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Media</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                    {selectedDetail.mediaLinks.map((link, i) => (
-                      <a key={link} href={link} target="_blank" rel="noreferrer"
-                        style={{ padding: "0.4rem 0.9rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, color: "#003DB4", textDecoration: "none" }}>
-                        Photo {i + 1}
-                      </a>
-                    ))}
+              {/* ── Media, grouped by context ── */}
+              {selectedDetail?.media && selectedDetail.media.length > 0 ? (
+                <>
+                  {(["INITIAL", "COMPLETION"] as const).map((ctx) => {
+                    const items = selectedDetail.media!.filter((m) => m.context === ctx);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={ctx} style={{ marginBottom: "1.5rem" }}>
+                        <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                          {ctx === "INITIAL" ? "Breakdown Photos" : "Completion Evidence"}
+                        </p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                          {items.map((m) => (
+                            <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+                              {m.mediaType === "VIDEO" ? (
+                                <video src={m.url} style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #dde8f8" }} />
+                              ) : m.mediaType === "IMAGE" ? (
+                                <img src={m.url} alt="" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #dde8f8" }} />
+                              ) : (
+                                <div style={{ width: 96, height: 96, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid #dde8f8", background: "#F6FAFF", fontSize: "0.78rem", color: "#8892a6" }}>
+                                  🎤 Audio
+                                </div>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                selectedDetail && selectedDetail.mediaLinks.length > 0 && (
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Media</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      {selectedDetail.mediaLinks.map((link, i) => (
+                        <a key={link} href={link} target="_blank" rel="noreferrer"
+                          style={{ padding: "0.4rem 0.9rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, color: "#003DB4", textDecoration: "none" }}>
+                          Photo {i + 1}
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )
               )}
 
               {/* ── Quotes (admin-only, read-only) ── */}
