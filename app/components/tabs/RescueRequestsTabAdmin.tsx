@@ -848,6 +848,30 @@ export default function RescueRequestsTab() {
                     </div>
                   </div>
 
+                  {selectedDetail?.media && selectedDetail.media.some((m) => m.context === "DISPUTE") && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Dispute Evidence</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                        {selectedDetail.media.filter((m) => m.context === "DISPUTE").map((m) => (
+                          <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                            {m.mediaType === "VIDEO" ? (
+                              <video src={m.url} style={{ width: 88, height: 88, objectFit: "cover", borderRadius: 8, border: "1px solid #f5c2c2" }} />
+                            ) : m.mediaType === "IMAGE" ? (
+                              <img src={m.url} alt="" style={{ width: 88, height: 88, objectFit: "cover", borderRadius: 8, border: "1px solid #f5c2c2" }} />
+                            ) : (
+                              <div style={{ width: 88, height: 88, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid #f5c2c2", background: "#fdf6f6", fontSize: "0.75rem", color: "#8892a6" }}>
+                                🎤 Audio
+                              </div>
+                            )}
+                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: m.uploadedByRole === "CUSTOMER" ? "#003DB4" : "#721c24" }}>
+                              {m.uploadedByRole === "CUSTOMER" ? "From customer" : "From operator"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {selectedRequest.disputeResolvedAt ? (
                     <div>
                       <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Resolution</p>
