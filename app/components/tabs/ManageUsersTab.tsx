@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useAuthApi, useAuthState } from "../../hooks";
+import { useAuthApi, useAuthState, useAccountDeletionApi } from "../../hooks";
 
 const navy = "#07152f";
 const blue = "#003DB4";
@@ -22,6 +22,7 @@ const ROLE_STYLE: Record<string, { bg: string; color: string }> = {
 
 export default function ManageUsersTab() {
   const { listUsers, createStaff } = useAuthApi();
+  const { deleteUser } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
 
   const [users, setUsers]       = useState<any[]>([]);
@@ -39,6 +40,9 @@ export default function ManageUsersTab() {
   const [staffPassword, setStaffPassword] = useState("");
   const [creating, setCreating]         = useState(false);
   const [createMsg, setCreateMsg]       = useState<string | null>(null);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteMsg, setDeleteMsg]   = useState<string | null>(null);
 
   const load = useCallback(async (p = 1, q = search, r = roleFilter) => {
     setLoading(true);
@@ -88,6 +92,20 @@ export default function ManageUsersTab() {
       setCreateMsg(err instanceof Error ? err.message : "Failed to create staff account");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDeleteUser(id: string) {
+    if (!confirm("Delete this account? This anonymizes their personal details and cannot be undone.")) return;
+    setDeletingId(id);
+    setDeleteMsg(null);
+    try {
+      await deleteUser(id);
+      load(page, search, roleFilter);
+    } catch (err) {
+      setDeleteMsg(err instanceof Error ? err.message : "Failed to delete account");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -216,22 +234,28 @@ export default function ManageUsersTab() {
         </div>
       )}
 
+      {deleteMsg && (
+        <div style={{ fontSize: "0.85rem", color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "0.6rem 0.85rem" }}>
+          {deleteMsg}
+        </div>
+      )}
+
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8edf5", overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 540 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #f0f3f8" }}>
-                {["Name", "Email", "Phone", "Role", "Joined"].map(h => (
+                {["Name", "Email", "Phone", "Role", "Joined", "Actions"].map(h => (
                   <th key={h} style={{ padding: "0.6rem 1rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} style={{ padding: "1.5rem 1rem", color: "#9ca3af", fontSize: "0.9rem" }}>Loading…</td></tr>
+                <tr><td colSpan={6} style={{ padding: "1.5rem 1rem", color: "#9ca3af", fontSize: "0.9rem" }}>Loading…</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: "1.5rem 1rem", color: "#9ca3af", fontSize: "0.9rem" }}>No users found.</td></tr>
+                <tr><td colSpan={6} style={{ padding: "1.5rem 1rem", color: "#9ca3af", fontSize: "0.9rem" }}>No users found.</td></tr>
               ) : users.map((u: any) => {
                 const rs = ROLE_STYLE[u.role] ?? ROLE_STYLE.CUSTOMER;
                 return (
@@ -253,6 +277,26 @@ export default function ManageUsersTab() {
                     </td>
                     <td style={{ padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#9ca3af" }}>
                       {new Date(u.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                    </td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      {myRole === "SUPER_ADMIN" && !u.deletedAt && (
+                        <button
+                          onClick={() => handleDeleteUser(u.id)}
+                          disabled={deletingId === u.id}
+                          style={{
+                            padding: "0.3rem 0.7rem", background: "#dc2626", color: "#fff",
+                            border: "none", borderRadius: 4, cursor: deletingId === u.id ? "not-allowed" : "pointer",
+                            fontSize: "0.8rem", fontWeight: 600,
+                          }}
+                        >
+                          {deletingId === u.id ? "Deleting…" : "Delete"}
+                        </button>
+                      )}
+                      {u.deletedAt && (
+                        <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: "#f8d7da", color: "#721c24", borderRadius: 4, fontSize: "0.82rem", fontWeight: 600 }}>
+                          Deleted
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

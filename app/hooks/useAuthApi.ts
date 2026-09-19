@@ -31,6 +31,7 @@ export interface UserListItem {
   role: UserRole;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface UserListResult {
