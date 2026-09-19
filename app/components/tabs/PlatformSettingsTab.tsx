@@ -48,7 +48,7 @@ export default function PlatformSettingsTab() {
       <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Service fee (%)
+            Service fee (%) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 10)</span>
           </label>
           <input
             type="number"
@@ -62,7 +62,7 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Deposit (%)
+            Deposit (%) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 10)</span>
           </label>
           <input
             type="number"
@@ -76,7 +76,7 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Operator response window (minutes)
+            Operator response window (minutes) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 10)</span>
           </label>
           <input
             type="number"
@@ -94,7 +94,7 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Quote collection window (minutes)
+            Quote collection window (minutes) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 5)</span>
           </label>
           <input
             type="number"
@@ -113,7 +113,7 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Operators per batch
+            Operators per batch <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 3)</span>
           </label>
           <input
             type="number"
@@ -130,7 +130,7 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Dispute alert number
+            Dispute alert number <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: none — alerts disabled)</span>
           </label>
           <input
             type="tel"
