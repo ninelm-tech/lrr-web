@@ -217,6 +217,9 @@ export default function RescueRequestsTab() {
       : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount / 100)
   );
 
+  // Keep this aligned with the Job ID shown in WhatsApp messages.
+  const formatJobRef = (id: string) => `Job #${id.slice(-6).toUpperCase()}`;
+
   const formatPhoneNumber = (phone: string) => {
     return phone;
   };
@@ -317,7 +320,7 @@ export default function RescueRequestsTab() {
             </label>
             <input
               type="text"
-              placeholder="Phone, operator name..."
+              placeholder="Job ID, phone, operator..."
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
               style={{
@@ -378,6 +381,9 @@ export default function RescueRequestsTab() {
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Job ID
+                </th>
+                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Time
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
@@ -418,6 +424,11 @@ export default function RescueRequestsTab() {
                 const primaryAmount = request.acceptedQuoteAmount ?? request.totalAmount;
                 return (
                   <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
+                    <td style={{ padding: "1rem" }}>
+                      <code style={{ fontSize: "0.85rem", fontWeight: 700, color: "#003DB4" }}>
+                        {formatJobRef(request.id)}
+                      </code>
+                    </td>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>{formatTime(request.createdAt)}</span>
                     </td>
@@ -597,7 +608,9 @@ export default function RescueRequestsTab() {
               {/* Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                 <div>
-                  <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>Rescue Request</h2>
+                  <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>
+                    Rescue Request | {formatJobRef(selectedRequest.id)}
+                  </h2>
                   <code style={{ fontSize: "0.78rem", color: "#999" }}>{selectedRequest.id}</code>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
