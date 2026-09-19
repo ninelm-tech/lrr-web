@@ -128,7 +128,9 @@ export interface AssignedOperator {
 
 export interface PaymentInfo {
   depositPaid: boolean;
+  depositReference?: string;
   balancePaid: boolean;
+  balanceReference?: string;
   depositAmount?: number;
   balanceAmount?: number;
   totalAmount?: number;
@@ -141,7 +143,13 @@ export interface RescueRequestListItem {
   latitude: string;
   longitude: string;
   depositPaid: boolean;
+  depositReference?: string;
   balancePaid: boolean;
+  balanceReference?: string;
+  depositAmount?: number;
+  balanceAmount?: number;
+  totalAmount?: number;
+  acceptedQuoteAmount?: number;
   customer: Customer;
   assignedOperator?: AssignedOperator;
   disputed: boolean;
@@ -195,8 +203,6 @@ export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetai
   mediaLinks: string[];
   media?: RequestMediaItem[];
   offers?: DispatchOfferAdmin[];
-  depositAmount?: number;
-  balanceAmount?: number;
   timeline?: {
     status: RescueRequestStatus;
     timestamp: string;

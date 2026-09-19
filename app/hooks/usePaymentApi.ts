@@ -21,6 +21,7 @@ import type { RescueRequestListItem } from "../types";
 export interface PaymentRecord extends RescueRequestListItem {
   depositAmount?: number;
   balanceAmount?: number;
+  totalAmount?: number;
 }
 
 export interface PaymentSummary {
@@ -84,7 +85,8 @@ export function usePaymentApi() {
   // ── Summary totals (larger batch, no UI pagination) ───────────────────────
   /**
    * Fetches a large page of rescue requests and computes aggregate totals.
-   * Uses conservative defaults for amounts when the API doesn't return them.
+   * Rows without persisted amounts are excluded from money totals rather than
+   * guessed; unassigned/unpriced jobs do not have a real payment split yet.
    */
   const fetchSummary = useCallback(async (): Promise<PaymentSummary> => {
     try {
@@ -97,8 +99,8 @@ export function usePaymentApi() {
       let balancePending   = 0;
 
       for (const r of all) {
-        const dep = r.depositAmount ?? 500000;   // ₦5,000 default in kobo
-        const bal = r.balanceAmount ?? 4500000;  // ₦45,000 default in kobo
+        const dep = r.depositAmount ?? 0;
+        const bal = r.balanceAmount ?? 0;
 
         if (r.depositPaid)  depositCollected += dep;
         else                depositPending   += dep;

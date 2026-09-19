@@ -211,6 +211,12 @@ export default function RescueRequestsTab() {
     return `${latitude}, ${longitude}`;
   };
 
+  const formatMoney = (amount?: number) => (
+    amount === undefined
+      ? "—"
+      : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount / 100)
+  );
+
   const formatPhoneNumber = (phone: string) => {
     return phone;
   };
@@ -368,7 +374,7 @@ export default function RescueRequestsTab() {
         }}
       >
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: 1400, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
@@ -378,7 +384,13 @@ export default function RescueRequestsTab() {
                   Customer Phone
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Issue Type
+                </th>
+                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Status
+                </th>
+                <th style={{ padding: "1rem", textAlign: "right", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Amount
                 </th>
                 <th style={{ padding: "1rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Deposit
@@ -403,6 +415,7 @@ export default function RescueRequestsTab() {
             <tbody>
               {requests.map((request: RescueRequestListItem) => {
                 const colors = STATUS_COLORS[request.status] || { bg: "#e2e3e5", text: "#383d41" };
+                const primaryAmount = request.acceptedQuoteAmount ?? request.totalAmount;
                 return (
                   <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
                     <td style={{ padding: "1rem" }}>
@@ -411,6 +424,11 @@ export default function RescueRequestsTab() {
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>
                         {formatPhoneNumber(request.customer.phoneNumber)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "1rem" }}>
+                      <span style={{ fontSize: "0.9rem", color: request.issueType ? "#333" : "#aaa" }}>
+                        {request.issueType?.replace(/_/g, " ") ?? "—"}
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
@@ -443,6 +461,16 @@ export default function RescueRequestsTab() {
                           }}
                         >
                           <Info size={16} />
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: "1rem", textAlign: "right" }}>
+                      <span style={{ display: "block", fontSize: "0.9rem", color: primaryAmount === undefined ? "#aaa" : "#333", fontWeight: 700 }}>
+                        {formatMoney(primaryAmount)}
+                      </span>
+                      {request.acceptedQuoteAmount !== undefined && request.totalAmount !== undefined && request.totalAmount !== request.acceptedQuoteAmount && (
+                        <span style={{ display: "block", marginTop: 2, fontSize: "0.74rem", color: "#8892a6" }}>
+                          {formatMoney(request.totalAmount)} total
                         </span>
                       )}
                     </td>
@@ -555,6 +583,8 @@ export default function RescueRequestsTab() {
         const settlementAmount = selectedDetail?.balanceAmount != null && Number.isFinite(settlementPct)
           ? Math.round(selectedDetail.balanceAmount * settlementPct / 100)
           : null;
+        const acceptedQuoteAmount = selectedDetail?.acceptedQuoteAmount ?? selectedRequest.acceptedQuoteAmount;
+        const customerTotalAmount = selectedDetail?.totalAmount ?? selectedRequest.totalAmount;
         return (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
@@ -617,6 +647,8 @@ export default function RescueRequestsTab() {
                   ["Vehicle", selectedDetail?.vehicleType ?? "—"],
                   ["Issue Type", selectedDetail?.issueType ?? "—"],
                   ["Destination", selectedDetail?.destination ?? "—"],
+                  ["Accepted Quote", formatMoney(acceptedQuoteAmount)],
+                  ["Customer Total", formatMoney(customerTotalAmount)],
                   ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
                   ["Created", formatTime(selectedRequest.createdAt)],
                   ["Updated", formatTime(selectedRequest.updatedAt)],

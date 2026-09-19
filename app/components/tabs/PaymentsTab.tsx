@@ -11,6 +11,10 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n / 100);
 }
 
+function fmtMaybe(n: number | undefined) {
+  return n === undefined ? "—" : fmt(n);
+}
+
 function fmtDate(d: string) {
   return new Date(d).toLocaleString("en-NG", {
     month: "short", day: "numeric", year: "numeric",
@@ -146,10 +150,10 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Date", "Customer", "Issue", "Operator", "Deposit", "Balance", "Total", "Status"].map((h) => (
+                {["Date", "Customer", "Paystack Reference", "Operator", "Deposit", "Balance", "Total", "Status"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -166,10 +170,12 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                   <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
                 </tr>
               ) : (
-                requests.map((r: RescueRequestListItem & { depositAmount?: number; balanceAmount?: number }) => {
-                  const depositAmt = r.depositAmount ?? 500000;
-                  const balanceAmt = r.balanceAmount ?? 4500000;
-                  const totalAmt   = (r.depositPaid ? depositAmt : 0) + (r.balancePaid ? balanceAmt : 0);
+                requests.map((r: RescueRequestListItem) => {
+                  const depositAmt = r.depositAmount;
+                  const balanceAmt = r.balanceAmount;
+                  const totalAmt   = r.totalAmount ?? (
+                    depositAmt !== undefined && balanceAmt !== undefined ? depositAmt + balanceAmt : undefined
+                  );
                   const fullyPaid  = r.depositPaid && r.balancePaid;
                   return (
                     <tr key={r.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
@@ -179,28 +185,37 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {r.customer.phoneNumber}
                       </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {r.issueType ?? "—"}
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333" }}>
+                        {r.depositReference || r.balanceReference ? (
+                          <div style={{ display: "grid", gap: 4 }}>
+                            {r.depositReference && (
+                              <code style={{ whiteSpace: "nowrap" }}>Deposit: {r.depositReference}</code>
+                            )}
+                            {r.balanceReference && (
+                              <code style={{ whiteSpace: "nowrap" }}>Balance: {r.balanceReference}</code>
+                            )}
+                          </div>
+                        ) : "—"}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {r.assignedOperator?.businessName ?? <span style={{ color: "#aaa" }}>Unassigned</span>}
                       </td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <div style={{ fontSize: "0.9rem", fontWeight: 600, color: r.depositPaid ? "#155724" : "#721c24" }}>
-                          {r.depositPaid ? "✓" : "✗"} {fmt(depositAmt)}
+                          {r.depositPaid ? "✓" : "✗"} {fmtMaybe(depositAmt)}
                         </div>
                       </td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         {r.status === "COMPLETED" || r.balancePaid ? (
                           <div style={{ fontSize: "0.9rem", fontWeight: 600, color: r.balancePaid ? "#155724" : "#721c24" }}>
-                            {r.balancePaid ? "✓" : "✗"} {fmt(balanceAmt)}
+                            {r.balancePaid ? "✓" : "✗"} {fmtMaybe(balanceAmt)}
                           </div>
                         ) : (
                           <span style={{ fontSize: "0.85rem", color: "#aaa" }}>Not due</span>
                         )}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333" }}>
-                        {fmt(totalAmt)}
+                        {fmtMaybe(totalAmt)}
                       </td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <span
