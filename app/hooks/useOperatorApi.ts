@@ -54,6 +54,7 @@ export interface Operator {
   accountName:           string | null;
   accountNumberLast4:    string | null;
   paystackRecipientCode: string | null;
+  deletedAt:             string | null;
   members?: OperatorMember[];
 }
 

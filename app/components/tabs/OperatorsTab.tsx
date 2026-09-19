@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, MapPin, Pencil, Trash2, X, XCircle } from "lucide-react";
-import { useOperatorApi, useAuthState } from "../../hooks";
+import { useOperatorApi, useAuthState, useAccountDeletionApi } from "../../hooks";
 import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
 import ServiceRadiusMap from "../ServiceRadiusMap";
 import type { Operator, OperatorStats } from "../../hooks";
@@ -605,6 +605,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
 
 export default function OperatorsTab() {
   const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails, clearBankDetails, updateOperator } = useOperatorApi();
+  const { deleteOperator } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
@@ -649,6 +650,20 @@ export default function OperatorsTab() {
       showToast(`${op.businessName} marked ${!op.isAvailable ? "Available" : "Unavailable"}`);
     } catch {
       showToast("Failed to update availability", false);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteOperator = async (op: Operator) => {
+    if (!confirm("Delete this operator's account? This anonymizes their business details and cannot be undone.")) return;
+    setActionLoading(op.id + "delete");
+    try {
+      await deleteOperator(op.id);
+      showToast(`${op.businessName} deleted`);
+      await fetchAll();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to delete operator", false);
     } finally {
       setActionLoading(null);
     }
@@ -816,6 +831,11 @@ export default function OperatorsTab() {
                         <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: st.bg, color: st.text, borderRadius: 4, fontSize: "0.82rem", fontWeight: 600 }}>
                           {st.label}
                         </span>
+                        {op.deletedAt && (
+                          <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: "#f8d7da", color: "#721c24", borderRadius: 4, fontSize: "0.82rem", fontWeight: 600, marginLeft: 6 }}>
+                            Deleted
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", textAlign: "center" }}>
                         {myRole === "PRODUCT" ? (
@@ -908,6 +928,19 @@ export default function OperatorsTab() {
                               }}
                             >
                               Reinstate
+                            </button>
+                          )}
+                          {myRole === "SUPER_ADMIN" && (
+                            <button
+                              onClick={() => handleDeleteOperator(op)}
+                              disabled={actionLoading === op.id + "delete"}
+                              style={{
+                                padding: "0.3rem 0.7rem", background: "#dc2626", color: "#fff",
+                                border: "none", borderRadius: 4, cursor: actionLoading === op.id + "delete" ? "not-allowed" : "pointer",
+                                fontSize: "0.82rem", fontWeight: 600,
+                              }}
+                            >
+                              {actionLoading === op.id + "delete" ? "Deleting…" : "Delete"}
                             </button>
                           )}
                         </div>
