@@ -21,6 +21,7 @@ export { useRatingApi }       from "./useRatingApi";
 export { usePayoutApi }       from "./usePayoutApi";
 export { useDispatchBoardApi } from "./useDispatchBoardApi";
 export { useAuditLogApi }     from "./useAuditLogApi";
+export { useAccountDeletionApi } from "./useAccountDeletionApi";
 
 // Re-export types that components commonly need
 export type { UserListItem, UserListResult, ListUsersOptions }    from "./useAuthApi";
