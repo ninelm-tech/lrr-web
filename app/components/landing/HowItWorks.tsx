@@ -33,7 +33,7 @@ const steps = [
       </svg>
     ),
     title: "Stay updated automatically",
-    copy: "Get your operator's location link when they're dispatched, plus automatic WhatsApp updates when they arrive and when the job's done.",
+    copy: "Get a WhatsApp message the moment an operator is dispatched, when they arrive, and when the job's done.",
   },
 ];
 
