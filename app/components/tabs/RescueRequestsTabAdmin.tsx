@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { CheckCircle2, Eye, Flag, Info, MapPin, RefreshCcw, Truck, UserRound, XCircle } from "lucide-react";
+import { CheckCircle2, Eye, Flag, Info, MapPin, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi, useRatingApi } from "../../hooks";
 import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
 
@@ -396,27 +396,31 @@ export default function RescueRequestsTab() {
         }}
       >
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: 1050, borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <table style={{ width: "100%", minWidth: 1140, borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup>
-              <col style={{ width: "42%" }} />
+              <col style={{ width: 170 }} />
+              <col style={{ width: 290 }} />
+              <col style={{ width: 224 }} />
               <col style={{ width: 160 }} />
               <col style={{ width: 220 }} />
-              <col style={{ width: "24%" }} />
               <col style={{ width: 76 }} />
             </colgroup>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "0.9rem 1.25rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Request details
+                  Job ID
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Request
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Location
                 </th>
                 <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Status
                 </th>
                 <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Financials
-                </th>
-                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Location
                 </th>
                 <th style={{ padding: "0.9rem 0.75rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Action
@@ -431,39 +435,59 @@ export default function RescueRequestsTab() {
                 const hasLocation = request.latitude !== undefined && request.longitude !== undefined;
                 return (
                   <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
-                    <td style={{ padding: "0.9rem 1.25rem", verticalAlign: "middle" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 9 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                          <code style={{ fontSize: "0.88rem", fontWeight: 700, color: "#003DB4", whiteSpace: "nowrap" }}>
-                            {formatJobId(request.id)}
-                          </code>
-                          <span style={{ padding: "0.2rem 0.45rem", background: "#eef3f9", color: "#49566a", borderRadius: 4, fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                            {request.issueType?.replace(/_/g, " ") ?? "NO ISSUE TYPE"}
-                          </span>
-                        </div>
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <span style={{ display: "block", fontSize: "0.78rem", color: "#49566a", whiteSpace: "nowrap" }}>
-                            {formatTime(request.createdAt)}
-                          </span>
-                          <span style={{ display: "block", marginTop: 2, fontSize: "0.7rem", color: "#8892a6", whiteSpace: "nowrap" }}>
-                            Updated {formatActivityUpdate(request.createdAt, request.updatedAt)}
-                          </span>
-                        </div>
+                    <td style={{ padding: "0.9rem 1.25rem", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <code style={{ display: "block", fontSize: "0.88rem", fontWeight: 700, color: "#003DB4" }}>
+                        {formatJobId(request.id)}
+                      </code>
+                      <span style={{ display: "block", marginTop: 5, fontSize: "0.8rem", color: "#49566a" }}>
+                        {formatTime(request.createdAt)}
+                      </span>
+                      <span style={{ display: "block", marginTop: 2, fontSize: "0.71rem", color: "#8892a6" }}>
+                        Updated {formatActivityUpdate(request.createdAt, request.updatedAt)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "62px minmax(0, 1fr)", gap: "6px 8px", alignItems: "center", fontSize: "0.78rem" }}>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Operator</span>
+                        <span title={request.assignedOperator?.businessName || "Unassigned"} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#333" }}>
+                          {request.assignedOperator?.businessName || "Unassigned"}
+                        </span>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Customer</span>
+                        <span title={formatCustomer(request.customer)} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: request.customer.deleted ? "#777" : "#333" }}>
+                          {formatCustomer(request.customer)}
+                        </span>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Issue</span>
+                        <span style={{ color: "#49566a", fontWeight: 600 }}>
+                          {request.issueType?.replace(/_/g, " ") ?? "Not provided"}
+                        </span>
                       </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", columnGap: 20, rowGap: 7 }}>
-                        <span title={formatCustomer(request.customer)} style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, fontSize: "0.8rem", color: request.customer.deleted ? "#777" : "#333" }}>
-                          <UserRound size={14} color="#7b8798" style={{ flexShrink: 0 }} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {formatCustomer(request.customer)}
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <div style={{ display: "grid", gap: 8, fontSize: "0.78rem" }}>
+                        {hasLocation ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`${request.latitude}, ${request.longitude}`}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: "#003DB4", textDecoration: "none", fontWeight: 600 }}
+                          >
+                            <MapPin size={14} style={{ flexShrink: 0 }} /> View pickup
+                          </a>
+                        ) : (
+                          <span title={request.customer.deleted ? "Removed after account deletion" : "Pickup location was not provided"} style={{ color: "#667085" }}>
+                            {request.customer.deleted ? "Pickup removed" : "Pickup not provided"}
                           </span>
-                        </span>
-                        <span title={request.assignedOperator?.businessName || "Unassigned"} style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, fontSize: "0.8rem", color: "#333" }}>
-                          <Truck size={14} color="#7b8798" style={{ flexShrink: 0 }} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {request.assignedOperator?.businessName || "Unassigned"}
+                        )}
+                        <div style={{ display: "grid", gridTemplateColumns: "72px minmax(0, 1fr)", gap: 6, minWidth: 0 }}>
+                          <span style={{ color: "#8892a6", fontWeight: 600 }}>Destination</span>
+                          <span
+                            title={request.destination || (request.customer.deleted ? "Removed after account deletion" : "Destination was not provided")}
+                            style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#49566a" }}
+                          >
+                            {request.destination || (request.customer.deleted ? "Removed" : "Not provided")}
                           </span>
-                        </span>
+                        </div>
                       </div>
                     </td>
                     <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
@@ -522,33 +546,6 @@ export default function RescueRequestsTab() {
                           </span>
                         </div>
                       )}
-                    </td>
-                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: "7px 8px", alignItems: "center", fontSize: "0.78rem" }}>
-                        <span style={{ color: "#8892a6", fontWeight: 600 }}>From</span>
-                        {hasLocation ? (
-                          <a
-                            href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={`${request.latitude}, ${request.longitude}`}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: "#003DB4", textDecoration: "none", fontWeight: 600 }}
-                          >
-                            <MapPin size={14} style={{ flexShrink: 0 }} /> View pickup
-                          </a>
-                        ) : (
-                          <span title={request.customer.deleted ? "Removed after account deletion" : "Pickup location was not provided"} style={{ color: "#667085" }}>
-                            {request.customer.deleted ? "Removed" : "Not provided"}
-                          </span>
-                        )}
-                        <span style={{ color: "#8892a6", fontWeight: 600 }}>To</span>
-                        <span
-                          title={request.destination || (request.customer.deleted ? "Removed after account deletion" : "Destination was not provided")}
-                          style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#49566a" }}
-                        >
-                          {request.destination || (request.customer.deleted ? "Removed" : "Not provided")}
-                        </span>
-                      </div>
                     </td>
                     <td style={{ padding: "0.9rem 0.75rem", textAlign: "center", verticalAlign: "middle" }}>
                       <button
