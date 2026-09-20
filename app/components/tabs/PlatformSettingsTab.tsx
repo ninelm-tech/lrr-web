@@ -11,6 +11,7 @@ export default function PlatformSettingsTab() {
   const [quoteCollectionMinutes, setQuoteCollectionMinutes] = useState("");
   const [dispatchBatchSize, setDispatchBatchSize] = useState("");
   const [disputeAlertPhoneNumber, setDisputeAlertPhoneNumber] = useState("");
+  const [testCustomerPhoneNumbers, setTestCustomerPhoneNumbers] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function PlatformSettingsTab() {
       setQuoteCollectionMinutes(String(settings.quoteCollectionMinutes));
       setDispatchBatchSize(String(settings.dispatchBatchSize));
       setDisputeAlertPhoneNumber(settings.disputeAlertPhoneNumber ?? "");
+      setTestCustomerPhoneNumbers(settings.testCustomerPhoneNumbers.join("\n"));
     }
   }, [settings]);
 
@@ -39,6 +41,10 @@ export default function PlatformSettingsTab() {
       quoteCollectionMinutes: Number(quoteCollectionMinutes),
       dispatchBatchSize: Number(dispatchBatchSize),
       disputeAlertPhoneNumber: disputeAlertPhoneNumber || null,
+      testCustomerPhoneNumbers: testCustomerPhoneNumbers
+        .split("\n")
+        .map((n) => n.trim())
+        .filter(Boolean),
     });
     setSaved(true);
   }
@@ -141,6 +147,23 @@ export default function PlatformSettingsTab() {
           />
           <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
             WhatsApp number alerted the moment a customer raises a dispute. Leave blank to disable staff alerts.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            Test customer numbers <span style={{ fontWeight: 400, color: "#8892a6" }}>(one per line)</span>
+          </label>
+          <textarea
+            placeholder={"+2348012345678\n+2348023456789"}
+            value={testCustomerPhoneNumbers}
+            onChange={(e) => setTestCustomerPhoneNumbers(e.target.value)}
+            rows={3}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            SOS requests from these numbers are routed to isTest operators only, never real ones — and real
+            customers never reach an isTest operator. Used to exercise the full live flow (real Paystack, real
+            payout) without touching real traffic.
           </p>
         </div>
         {error && <p style={{ color: "#c00" }}>{error}</p>}
