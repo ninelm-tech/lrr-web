@@ -99,6 +99,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
     switch (role) {
       case "SUPER_ADMIN": return "Super Admin";
       case "ADMIN":       return "Operations";
+      case "PRODUCT":     return "Product";
       case "OPERATOR":    return "Operator";
       case "CUSTOMER":    return "Member";
       default:            return "User";
