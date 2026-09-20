@@ -50,12 +50,20 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
     });
   };
 
-  const formatLocation = (latitude: string, longitude: string) => {
-    return `${latitude}, ${longitude}`;
+  const formatLocation = (
+    latitude: number | undefined,
+    longitude: number | undefined,
+    customerDeleted = false,
+  ) => {
+    if (latitude !== undefined && longitude !== undefined) {
+      return `${latitude}, ${longitude}`;
+    }
+    return customerDeleted ? "Removed after account deletion" : "Not provided";
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    return phone;
+  const formatCustomer = (customer: RescueRequestListItem["customer"]) => {
+    if (customer.deleted) return "Deleted customer";
+    return customer.phoneNumber || "Not provided";
   };
 
   if (loading && requests.length === 0) {
@@ -204,12 +212,12 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                        {formatLocation(request.latitude, request.longitude)}
+                        {formatLocation(request.latitude, request.longitude, request.customer.deleted)}
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.9rem", color: "#333" }}>
-                        {formatPhoneNumber(request.customer.phoneNumber)}
+                        {formatCustomer(request.customer)}
                       </span>
                     </td>
                     <td style={{ padding: "1rem", textAlign: "center" }}>
@@ -335,10 +343,10 @@ export default function RescueRequestsTabOperator({ role }: RescueRequestsTabPro
                 <strong>Issue Type:</strong> {selectedRequest.issueType ?? "—"}
               </p>
               <p>
-                <strong>Customer Phone:</strong> {formatPhoneNumber(selectedRequest.customer.phoneNumber)}
+                <strong>Customer:</strong> {formatCustomer(selectedRequest.customer)}
               </p>
               <p>
-                <strong>Location:</strong> {formatLocation(selectedRequest.latitude, selectedRequest.longitude)}
+                <strong>Location:</strong> {formatLocation(selectedRequest.latitude, selectedRequest.longitude, selectedRequest.customer.deleted)}
               </p>
               <p>
                 <strong>Deposit Paid:</strong> {selectedRequest.depositPaid ? "Yes" : "No"}

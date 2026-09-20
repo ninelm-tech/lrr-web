@@ -207,8 +207,15 @@ export default function RescueRequestsTab() {
     });
   };
 
-  const formatLocation = (latitude: string, longitude: string) => {
-    return `${latitude}, ${longitude}`;
+  const formatLocation = (
+    latitude: number | undefined,
+    longitude: number | undefined,
+    customerDeleted = false,
+  ) => {
+    if (latitude !== undefined && longitude !== undefined) {
+      return `${latitude}, ${longitude}`;
+    }
+    return customerDeleted ? "Removed after account deletion" : "Not provided";
   };
 
   const formatMoney = (amount?: number) => (
@@ -220,8 +227,9 @@ export default function RescueRequestsTab() {
   // Keep this aligned with the Job ID shown in WhatsApp messages.
   const formatJobRef = (id: string) => `Job #${id.slice(-6).toUpperCase()}`;
 
-  const formatPhoneNumber = (phone: string) => {
-    return phone;
+  const formatCustomer = (customer: RescueRequestListItem["customer"]) => {
+    if (customer.deleted) return "Deleted customer";
+    return customer.phoneNumber || "Not provided";
   };
 
   if (loading && requests.length === 0) {
@@ -377,17 +385,17 @@ export default function RescueRequestsTab() {
         }}
       >
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: 1400, borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: 1200, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Job ID
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Time
+                  Activity
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Customer Phone
+                  Customer
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Issue Type
@@ -398,20 +406,14 @@ export default function RescueRequestsTab() {
                 <th style={{ padding: "1rem", textAlign: "right", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Amount
                 </th>
-                <th style={{ padding: "1rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Deposit
-                </th>
-                <th style={{ padding: "1rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Balance
+                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Payment
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Operator
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Location
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Last Updated
                 </th>
                 <th style={{ padding: "1rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Actions
@@ -430,11 +432,16 @@ export default function RescueRequestsTab() {
                       </code>
                     </td>
                     <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: "0.9rem", color: "#333" }}>{formatTime(request.createdAt)}</span>
+                      <span style={{ display: "block", fontSize: "0.9rem", color: "#333" }}>
+                        {formatTime(request.createdAt)}
+                      </span>
+                      <span style={{ display: "block", marginTop: 3, fontSize: "0.74rem", color: "#8892a6" }}>
+                        Updated {formatTime(request.updatedAt)}
+                      </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: "0.9rem", color: "#333" }}>
-                        {formatPhoneNumber(request.customer.phoneNumber)}
+                      <span style={{ fontSize: "0.9rem", color: request.customer.deleted ? "#777" : "#333", fontWeight: request.customer.deleted ? 600 : 400 }}>
+                        {formatCustomer(request.customer)}
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
@@ -485,14 +492,12 @@ export default function RescueRequestsTab() {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: "1rem", textAlign: "center" }}>
-                      <span style={{ fontSize: "0.9rem", color: request.depositPaid ? "#155724" : "#721c24" }}>
-                        {request.depositPaid ? "✓ Paid" : "✗ Pending"}
+                    <td style={{ padding: "1rem" }}>
+                      <span style={{ display: "block", fontSize: "0.85rem", color: request.depositPaid ? "#155724" : "#721c24" }}>
+                        Deposit: {request.depositPaid ? "✓ Paid" : "✗ Pending"}
                       </span>
-                    </td>
-                    <td style={{ padding: "1rem", textAlign: "center" }}>
-                      <span style={{ fontSize: "0.9rem", color: request.balancePaid ? "#155724" : "#721c24" }}>
-                        {request.balancePaid ? "✓ Paid" : "✗ Pending"}
+                      <span style={{ display: "block", marginTop: 4, fontSize: "0.85rem", color: request.balancePaid ? "#155724" : "#721c24" }}>
+                        Balance: {request.balancePaid ? "✓ Paid" : "✗ Pending"}
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
@@ -502,11 +507,8 @@ export default function RescueRequestsTab() {
                     </td>
                     <td style={{ padding: "1rem" }}>
                       <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                        {formatLocation(request.latitude, request.longitude)}
+                        {formatLocation(request.latitude, request.longitude, request.customer.deleted)}
                       </span>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{ fontSize: "0.9rem", color: "#666" }}>{formatTime(request.updatedAt)}</span>
                     </td>
                     <td style={{ padding: "1rem", textAlign: "center" }}>
                       <button
@@ -662,7 +664,8 @@ export default function RescueRequestsTab() {
                   ["Destination", selectedDetail?.destination ?? "—"],
                   ["Accepted Quote", formatMoney(acceptedQuoteAmount)],
                   ["Customer Total", formatMoney(customerTotalAmount)],
-                  ["Customer", formatPhoneNumber(selectedRequest.customer?.phoneNumber ?? "")],
+                  ["Customer", formatCustomer(selectedRequest.customer)],
+                  ["Location", formatLocation(selectedRequest.latitude, selectedRequest.longitude, selectedRequest.customer.deleted)],
                   ["Created", formatTime(selectedRequest.createdAt)],
                   ["Updated", formatTime(selectedRequest.updatedAt)],
                   ["Deposit", selectedRequest.depositPaid ? "✓ Paid" : "✗ Pending"],
@@ -676,7 +679,7 @@ export default function RescueRequestsTab() {
               </div>
 
               {/* Map link */}
-              {selectedRequest.latitude && selectedRequest.longitude && (
+              {selectedRequest.latitude !== undefined && selectedRequest.longitude !== undefined && (
                 <a
                   href={`https://maps.google.com/?q=${selectedRequest.latitude},${selectedRequest.longitude}`}
                   target="_blank"

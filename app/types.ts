@@ -116,7 +116,8 @@ export type IssueType =
 
 export interface Customer {
   id: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
+  deleted: boolean;
   name?: string;
 }
 
@@ -140,8 +141,8 @@ export interface RescueRequestListItem {
   id: string;
   status: RescueRequestStatus;
   issueType?: IssueType;
-  latitude: string;
-  longitude: string;
+  latitude?: number;
+  longitude?: number;
   depositPaid: boolean;
   depositReference?: string;
   balancePaid: boolean;

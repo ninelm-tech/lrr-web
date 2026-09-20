@@ -183,7 +183,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                         {fmtDate(r.createdAt)}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {r.customer.phoneNumber}
+                        {r.customer.deleted ? "Deleted customer" : r.customer.phoneNumber || "Not provided"}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333" }}>
                         {r.depositReference || r.balanceReference ? (
