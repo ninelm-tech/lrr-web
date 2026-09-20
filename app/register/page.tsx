@@ -178,11 +178,19 @@ export default function RegisterPage() {
     }
   }
 
-  // Fires automatically on blur (good default when it works), but the
-  // "Send verification code" button next to the field covers the same
-  // action explicitly — needed because a failed send used to leave the
-  // page showing nothing at all, with no visible retry.
-  const handlePersonalPhoneBlur = triggerSendCode;
+  // Resets everything OTP-related and unlocks the phone field — the only
+  // way back to editing it once a send has happened. Editing silently
+  // out from under a pending/verified code used to fire a fresh send on
+  // blur with no clear signal anything had changed; locking the field
+  // once a session exists removes that ambiguity entirely.
+  function handleChangeNumber() {
+    setOtpRequired(false);
+    setOtpVerified(false);
+    setOtpCode("");
+    setOtpError("");
+    setOtpToken("");
+    setPhoneUnavailable(false);
+  }
 
   function handleTruckClassToggle(truckClass: TruckClass) {
     setFormData((prev) => {
@@ -359,17 +367,26 @@ export default function RegisterPage() {
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  onBlur={handlePersonalPhoneBlur}
                   placeholder="e.g., 08012345678"
                   required
-                  style={inputStyle(Boolean(phoneError))}
+                  disabled={otpRequired || otpVerified}
+                  style={{ ...inputStyle(Boolean(phoneError)), ...((otpRequired || otpVerified) && { background: "#F0F2F5", color: "#6c7890", cursor: "not-allowed" }) }}
                 />
+                {(otpRequired || otpVerified) && (
+                  <button
+                    type="button"
+                    onClick={handleChangeNumber}
+                    style={{ marginTop: 6, padding: 0, border: "none", background: "none", color: "#6c7890", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Change number
+                  </button>
+                )}
                 {phoneError && (
                   <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
                     {phoneError}
                   </p>
                 )}
-                {formData.phoneNumber && !phoneError && (
+                {formData.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
                   <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
                     ✓ Valid number
                   </p>
@@ -379,14 +396,14 @@ export default function RegisterPage() {
                     This number is already registered to an operator account. If this is you, please log in instead.
                   </p>
                 )}
-                {formData.phoneNumber && !phoneError && !phoneUnavailable && !otpRequired && !otpVerified && (
+                {formData.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
                   <button
                     type="button"
                     onClick={triggerSendCode}
                     disabled={sendingCode}
                     style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.85rem", fontWeight: 600, cursor: sendingCode ? "default" : "pointer", textDecoration: "underline", opacity: sendingCode ? 0.6 : 1 }}
                   >
-                    {sendingCode ? "Sending…" : "Send verification code"}
+                    {sendingCode ? "Sending…" : phoneUnavailable ? "Retry" : "Send verification code"}
                   </button>
                 )}
                 {otpError && !otpRequired && (
