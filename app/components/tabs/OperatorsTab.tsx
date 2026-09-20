@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, MapPin, Pencil, Trash2, X, XCircle } from "lucide-react";
+import { CheckCircle2, EllipsisVertical, Eye, MapPin, Pencil, RotateCcw, Trash2, X, XCircle } from "lucide-react";
 import { useOperatorApi, useAuthState, useAccountDeletionApi } from "../../hooks";
 import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
 import ServiceRadiusMap from "../ServiceRadiusMap";
@@ -36,6 +36,186 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString("en-NG", {
     year: "numeric", month: "short", day: "numeric",
   });
+}
+
+interface OperatorActionsMenuProps {
+  operator: Operator;
+  viewerRole: string | null;
+  actionLoading: string | null;
+  onDetails: () => void;
+  onStatusChange: (status: "ACTIVE" | "SUSPENDED") => void;
+  onDelete: () => void;
+}
+
+function OperatorActionsMenu({
+  operator,
+  viewerRole,
+  actionLoading,
+  onDetails,
+  onStatusChange,
+  onDelete,
+}: OperatorActionsMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const canManage = viewerRole !== "PRODUCT" && !operator.deletedAt;
+  const canDelete = viewerRole === "SUPER_ADMIN" && !operator.deletedAt;
+
+  useEffect(() => {
+    if (!open) return;
+
+    const close = () => setOpen(false);
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        buttonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  const toggleMenu = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const actionCount = 1 + (canManage ? 1 : 0) + (canDelete ? 1 : 0);
+    const menuHeight = actionCount * 40 + 8;
+    const top = rect.bottom + 4 + menuHeight <= window.innerHeight
+      ? rect.bottom + 4
+      : Math.max(8, rect.top - menuHeight - 4);
+    setPosition({
+      top,
+      left: Math.max(8, Math.min(rect.right - 184, window.innerWidth - 192)),
+    });
+    setOpen(true);
+  };
+
+  const runAction = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
+
+  const menuItemStyle = {
+    width: "100%",
+    minHeight: 40,
+    padding: "0.55rem 0.75rem",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    background: "#fff",
+    color: "#333",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: 600,
+    textAlign: "left" as const,
+  };
+
+  const statusAction = operator.status === "PENDING"
+    ? { label: "Approve", loadingLabel: "Approving...", status: "ACTIVE" as const, icon: CheckCircle2 }
+    : operator.status === "ACTIVE"
+      ? { label: "Suspend", loadingLabel: "Suspending...", status: "SUSPENDED" as const, icon: XCircle }
+      : { label: "Reinstate", loadingLabel: "Reinstating...", status: "ACTIVE" as const, icon: RotateCcw };
+  const StatusIcon = statusAction.icon;
+  const statusBusy = actionLoading === operator.id + statusAction.status;
+  const deleteBusy = actionLoading === operator.id + "delete";
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={`Actions for ${operator.businessName}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Operator actions"
+        onClick={toggleMenu}
+        style={{
+          width: 32,
+          height: 32,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: open ? "#dde8f8" : "#fff",
+          color: "#003DB4",
+          border: "1px solid #b8cae8",
+          borderRadius: 4,
+          cursor: "pointer",
+        }}
+      >
+        <EllipsisVertical size={18} />
+      </button>
+
+      {open && position && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={`Actions for ${operator.businessName}`}
+          style={{
+            position: "fixed",
+            top: position.top,
+            left: position.left,
+            zIndex: 1000,
+            width: 184,
+            padding: 4,
+            background: "#fff",
+            border: "1px solid #dde8f8",
+            borderRadius: 6,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.16)",
+          }}
+        >
+          <button role="menuitem" type="button" onClick={() => runAction(onDetails)} style={menuItemStyle}>
+            <Eye size={16} /> Details
+          </button>
+          {canManage && (
+            <button
+              role="menuitem"
+              type="button"
+              disabled={statusBusy}
+              onClick={() => runAction(() => onStatusChange(statusAction.status))}
+              style={{ ...menuItemStyle, color: statusAction.status === "SUSPENDED" ? "#856404" : "#155724", cursor: statusBusy ? "not-allowed" : "pointer" }}
+            >
+              <StatusIcon size={16} /> {statusBusy ? statusAction.loadingLabel : statusAction.label}
+            </button>
+          )}
+          {canDelete && (
+            <button
+              role="menuitem"
+              type="button"
+              disabled={deleteBusy}
+              onClick={() => runAction(onDelete)}
+              style={{ ...menuItemStyle, color: "#b42318", cursor: deleteBusy ? "not-allowed" : "pointer" }}
+            >
+              <Trash2 size={16} /> {deleteBusy ? "Deleting..." : "Delete"}
+            </button>
+          )}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 interface StatsModalProps {
@@ -272,7 +452,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                       zIndex: 1000, background: "#fff", border: "1px solid #dde8f8", borderRadius: 8,
                       maxHeight: 200, overflowY: "auto", boxShadow: "0 8px 20px rgba(7,21,47,0.16)",
                     }}>
-                      {addressSuggestions.map((s: any) => (
+                      {addressSuggestions.map((s) => (
                         <div
                           key={s.place_id}
                           onMouseDown={() => selectSuggestion(s)}
@@ -801,13 +981,13 @@ export default function OperatorsTab() {
             <tbody>
               {loading && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>
+                  <td colSpan={10} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>
                     Loading operators...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
+                  <td colSpan={10} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
                     No operators found
                   </td>
                 </tr>
@@ -879,71 +1059,15 @@ export default function OperatorsTab() {
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#999" }}>
                         {fmtDate(op.createdAt)}
                       </td>
-                      <td style={{ padding: "0.9rem 1rem" }}>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          <button
-                            onClick={() => setSelectedOp(op)}
-                            style={{
-                              padding: "0.3rem 0.7rem", background: "#dde8f8", color: "#003DB4",
-                              border: "1px solid #003DB4", borderRadius: 4, cursor: "pointer",
-                              fontSize: "0.82rem", fontWeight: 600,
-                            }}
-                          >
-                            Details
-                          </button>
-                          {myRole !== "PRODUCT" && op.status === "PENDING" && (
-                            <button
-                              onClick={() => handleStatusChange(op, "ACTIVE")}
-                              disabled={actionLoading === op.id + "ACTIVE"}
-                              style={{
-                                padding: "0.3rem 0.7rem", background: "#d4edda", color: "#155724",
-                                border: "1px solid #c3e6cb", borderRadius: 4, cursor: "pointer",
-                                fontSize: "0.82rem", fontWeight: 600,
-                              }}
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {myRole !== "PRODUCT" && op.status === "ACTIVE" && (
-                            <button
-                              onClick={() => handleStatusChange(op, "SUSPENDED")}
-                              disabled={actionLoading === op.id + "SUSPENDED"}
-                              style={{
-                                padding: "0.3rem 0.7rem", background: "#fff3cd", color: "#856404",
-                                border: "1px solid #ffc107", borderRadius: 4, cursor: "pointer",
-                                fontSize: "0.82rem", fontWeight: 600,
-                              }}
-                            >
-                              Suspend
-                            </button>
-                          )}
-                          {myRole !== "PRODUCT" && (op.status === "INACTIVE" || op.status === "SUSPENDED") && (
-                            <button
-                              onClick={() => handleStatusChange(op, "ACTIVE")}
-                              disabled={actionLoading === op.id + "ACTIVE"}
-                              style={{
-                                padding: "0.3rem 0.7rem", background: "#d4edda", color: "#155724",
-                                border: "1px solid #c3e6cb", borderRadius: 4, cursor: "pointer",
-                                fontSize: "0.82rem", fontWeight: 600,
-                              }}
-                            >
-                              Reinstate
-                            </button>
-                          )}
-                          {myRole === "SUPER_ADMIN" && (
-                            <button
-                              onClick={() => handleDeleteOperator(op)}
-                              disabled={actionLoading === op.id + "delete"}
-                              style={{
-                                padding: "0.3rem 0.7rem", background: "#dc2626", color: "#fff",
-                                border: "none", borderRadius: 4, cursor: actionLoading === op.id + "delete" ? "not-allowed" : "pointer",
-                                fontSize: "0.82rem", fontWeight: 600,
-                              }}
-                            >
-                              {actionLoading === op.id + "delete" ? "Deleting…" : "Delete"}
-                            </button>
-                          )}
-                        </div>
+                      <td style={{ padding: "0.9rem 1rem", textAlign: "center" }}>
+                        <OperatorActionsMenu
+                          operator={op}
+                          viewerRole={myRole}
+                          actionLoading={actionLoading}
+                          onDetails={() => setSelectedOp(op)}
+                          onStatusChange={(status) => { void handleStatusChange(op, status); }}
+                          onDelete={() => { void handleDeleteOperator(op); }}
+                        />
                       </td>
                     </tr>
                   );

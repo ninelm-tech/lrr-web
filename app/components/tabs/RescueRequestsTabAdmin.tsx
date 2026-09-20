@@ -226,6 +226,17 @@ export default function RescueRequestsTab() {
 
   // Keep this aligned with the Job ID shown in WhatsApp messages.
   const formatJobRef = (id: string) => `Job #${id.slice(-6).toUpperCase()}`;
+  const formatJobId = (id: string) => `#${id.slice(-6).toUpperCase()}`;
+
+  const formatActivityUpdate = (createdAt: string, updatedAt: string) => {
+    const created = new Date(createdAt);
+    const updated = new Date(updatedAt);
+    const sameDay = created.toDateString() === updated.toDateString();
+
+    return updated.toLocaleString("en-NG", sameDay
+      ? { hour: "2-digit", minute: "2-digit", hour12: false }
+      : { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  };
 
   const formatCustomer = (customer: RescueRequestListItem["customer"]) => {
     if (customer.deleted) return "Deleted customer";
@@ -385,14 +396,11 @@ export default function RescueRequestsTab() {
         }}
       >
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: 1200, borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: 1120, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Job ID
-                </th>
-                <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
-                  Activity
+                <th style={{ width: 170, padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Request
                 </th>
                 <th style={{ padding: "1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
                   Customer
@@ -426,17 +434,15 @@ export default function RescueRequestsTab() {
                 const primaryAmount = request.acceptedQuoteAmount ?? request.totalAmount;
                 return (
                   <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
-                    <td style={{ padding: "1rem" }}>
-                      <code style={{ fontSize: "0.85rem", fontWeight: 700, color: "#003DB4" }}>
-                        {formatJobRef(request.id)}
+                    <td style={{ padding: "0.85rem 1rem", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <code style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#003DB4" }}>
+                        {formatJobId(request.id)}
                       </code>
-                    </td>
-                    <td style={{ padding: "1rem" }}>
-                      <span style={{ display: "block", fontSize: "0.9rem", color: "#333" }}>
+                      <span style={{ display: "block", marginTop: 5, fontSize: "0.82rem", color: "#333" }}>
                         {formatTime(request.createdAt)}
                       </span>
-                      <span style={{ display: "block", marginTop: 3, fontSize: "0.74rem", color: "#8892a6" }}>
-                        Updated {formatTime(request.updatedAt)}
+                      <span style={{ display: "block", marginTop: 2, fontSize: "0.73rem", color: "#8892a6" }}>
+                        Updated {formatActivityUpdate(request.createdAt, request.updatedAt)}
                       </span>
                     </td>
                     <td style={{ padding: "1rem" }}>
