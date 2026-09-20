@@ -101,6 +101,7 @@ export default function RegisterPage() {
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState("");
   const [phoneUnavailable, setPhoneUnavailable] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -152,12 +153,13 @@ export default function RegisterPage() {
     }
   }
 
-  async function handlePersonalPhoneBlur() {
-    if (!formData.phoneNumber || phoneError) return;
+  async function triggerSendCode() {
+    if (!formData.phoneNumber || phoneError || sendingCode) return;
     setOtpRequired(false);
     setOtpVerified(false);
     setPhoneUnavailable(false);
     setOtpError("");
+    setSendingCode(true);
     try {
       const result = await sendCode(formData.phoneNumber);
       if (result.available === false) {
@@ -171,7 +173,23 @@ export default function RegisterPage() {
       }
     } catch (err) {
       setOtpError(err instanceof Error ? err.message : "Failed to send verification code");
+    } finally {
+      setSendingCode(false);
     }
+  }
+
+  // Resets everything OTP-related and unlocks the phone field — the only
+  // way back to editing it once a send has happened. Editing silently
+  // out from under a pending/verified code used to fire a fresh send on
+  // blur with no clear signal anything had changed; locking the field
+  // once a session exists removes that ambiguity entirely.
+  function handleChangeNumber() {
+    setOtpRequired(false);
+    setOtpVerified(false);
+    setOtpCode("");
+    setOtpError("");
+    setOtpToken("");
+    setPhoneUnavailable(false);
   }
 
   function handleTruckClassToggle(truckClass: TruckClass) {
@@ -349,17 +367,26 @@ export default function RegisterPage() {
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
-                  onBlur={handlePersonalPhoneBlur}
                   placeholder="e.g., 08012345678"
                   required
-                  style={inputStyle(Boolean(phoneError))}
+                  disabled={otpRequired || otpVerified}
+                  style={{ ...inputStyle(Boolean(phoneError)), ...((otpRequired || otpVerified) && { background: "#F0F2F5", color: "#6c7890", cursor: "not-allowed" }) }}
                 />
+                {(otpRequired || otpVerified) && (
+                  <button
+                    type="button"
+                    onClick={handleChangeNumber}
+                    style={{ marginTop: 6, padding: 0, border: "none", background: "none", color: "#6c7890", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Change number
+                  </button>
+                )}
                 {phoneError && (
                   <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
                     {phoneError}
                   </p>
                 )}
-                {formData.phoneNumber && !phoneError && (
+                {formData.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
                   <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>
                     ✓ Valid number
                   </p>
@@ -367,6 +394,21 @@ export default function RegisterPage() {
                 {phoneUnavailable && (
                   <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
                     This number is already registered to an operator account. If this is you, please log in instead.
+                  </p>
+                )}
+                {formData.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
+                  <button
+                    type="button"
+                    onClick={triggerSendCode}
+                    disabled={sendingCode}
+                    style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.85rem", fontWeight: 600, cursor: sendingCode ? "default" : "pointer", textDecoration: "underline", opacity: sendingCode ? 0.6 : 1 }}
+                  >
+                    {sendingCode ? "Sending…" : phoneUnavailable ? "Retry" : "Send verification code"}
+                  </button>
+                )}
+                {otpError && !otpRequired && (
+                  <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
+                    {otpError}
                   </p>
                 )}
                 {otpRequired && !otpVerified && (
@@ -764,18 +806,18 @@ export default function RegisterPage() {
         .info-tip-icon {
           width: 16px; height: 16px; border-radius: 50%;
           background: #dde8f8; color: #6c7890;
-          font-size: 11px; font-weight: 700; font-style: italic;
+          font-size: 11px; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
           cursor: help; user-select: none;
         }
         .info-tip-text {
           display: none;
           position: absolute; bottom: 130%; left: 0;
-          background: #07152f; color: #fff;
+          color: #333;
           font-size: 0.78rem; font-weight: 500; line-height: 1.4;
           padding: 8px 10px; border-radius: 6px;
           width: 220px; z-index: 20;
-          box-shadow: 0 8px 24px rgba(7,21,47,0.25);
+          border: 1px solid #dde8f8;
         }
         .info-tip:hover .info-tip-text, .info-tip:focus .info-tip-text, .info-tip:focus-within .info-tip-text { display: block; }
         .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
