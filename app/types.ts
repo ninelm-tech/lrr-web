@@ -143,6 +143,7 @@ export interface RescueRequestListItem {
   issueType?: IssueType;
   latitude?: number;
   longitude?: number;
+  destination?: string;
   depositPaid: boolean;
   depositReference?: string;
   balancePaid: boolean;
