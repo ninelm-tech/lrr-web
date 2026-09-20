@@ -101,6 +101,7 @@ export default function RegisterPage() {
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState("");
   const [phoneUnavailable, setPhoneUnavailable] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -152,12 +153,13 @@ export default function RegisterPage() {
     }
   }
 
-  async function handlePersonalPhoneBlur() {
-    if (!formData.phoneNumber || phoneError) return;
+  async function triggerSendCode() {
+    if (!formData.phoneNumber || phoneError || sendingCode) return;
     setOtpRequired(false);
     setOtpVerified(false);
     setPhoneUnavailable(false);
     setOtpError("");
+    setSendingCode(true);
     try {
       const result = await sendCode(formData.phoneNumber);
       if (result.available === false) {
@@ -171,8 +173,16 @@ export default function RegisterPage() {
       }
     } catch (err) {
       setOtpError(err instanceof Error ? err.message : "Failed to send verification code");
+    } finally {
+      setSendingCode(false);
     }
   }
+
+  // Fires automatically on blur (good default when it works), but the
+  // "Send verification code" button next to the field covers the same
+  // action explicitly — needed because a failed send used to leave the
+  // page showing nothing at all, with no visible retry.
+  const handlePersonalPhoneBlur = triggerSendCode;
 
   function handleTruckClassToggle(truckClass: TruckClass) {
     setFormData((prev) => {
@@ -367,6 +377,21 @@ export default function RegisterPage() {
                 {phoneUnavailable && (
                   <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
                     This number is already registered to an operator account. If this is you, please log in instead.
+                  </p>
+                )}
+                {formData.phoneNumber && !phoneError && !phoneUnavailable && !otpRequired && !otpVerified && (
+                  <button
+                    type="button"
+                    onClick={triggerSendCode}
+                    disabled={sendingCode}
+                    style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.85rem", fontWeight: 600, cursor: sendingCode ? "default" : "pointer", textDecoration: "underline", opacity: sendingCode ? 0.6 : 1 }}
+                  >
+                    {sendingCode ? "Sending…" : "Send verification code"}
+                  </button>
+                )}
+                {otpError && !otpRequired && (
+                  <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>
+                    {otpError}
                   </p>
                 )}
                 {otpRequired && !otpVerified && (
@@ -764,18 +789,18 @@ export default function RegisterPage() {
         .info-tip-icon {
           width: 16px; height: 16px; border-radius: 50%;
           background: #dde8f8; color: #6c7890;
-          font-size: 11px; font-weight: 700; font-style: italic;
+          font-size: 11px; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
           cursor: help; user-select: none;
         }
         .info-tip-text {
           display: none;
           position: absolute; bottom: 130%; left: 0;
-          background: #07152f; color: #fff;
+          color: #333;
           font-size: 0.78rem; font-weight: 500; line-height: 1.4;
           padding: 8px 10px; border-radius: 6px;
           width: 220px; z-index: 20;
-          box-shadow: 0 8px 24px rgba(7,21,47,0.25);
+          border: 1px solid #dde8f8;
         }
         .info-tip:hover .info-tip-text, .info-tip:focus .info-tip-text, .info-tip:focus-within .info-tip-text { display: block; }
         .lrr-reg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
