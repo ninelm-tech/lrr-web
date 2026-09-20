@@ -15,7 +15,7 @@ export default function RequestsPage() {
   const { ready, role } = useAuthState();
   if (!ready) return null;
 
-  if (role === "ADMIN" || role === "SUPER_ADMIN") {
+  if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "PRODUCT") {
     return (
       <div>
         <RescueRequestsTabAdmin />

@@ -36,7 +36,7 @@ function DashboardContent() {
 
   if (!ready) return null;
 
-  if (role === "ADMIN" || role === "SUPER_ADMIN") return <OverviewTabAdmin role={role} />;
+  if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "PRODUCT") return <OverviewTabAdmin role={role} />;
   if (role === "OPERATOR") return <OverviewTabOperator />;
   return <CustomerOverviewContent />;
 }

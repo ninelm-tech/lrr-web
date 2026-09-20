@@ -49,11 +49,16 @@ export default function OverviewTabAdmin({ role }: { role: UserRole | null }) {
   const [recentSignups,  setRecentSignups]  = useState<any[]>([]);
 
   useEffect(() => {
+    // PRODUCT can't see user listing (backend correctly 403s GET /auth/users
+    // for it, per the roles design) — skip that call entirely rather than
+    // letting Promise.all's all-or-nothing failure sink the whole overview.
+    const canListUsers = role === "ADMIN" || role === "SUPER_ADMIN";
+
     Promise.all([
       fetchAdminOverviewStats(),
       fetchAllOperators(),
       fetchList({ limit: 8 }),
-      listUsers({ limit: 5, page: 1 }),
+      canListUsers ? listUsers({ limit: 5, page: 1 }) : Promise.resolve({ data: [] }),
     ])
       .then(([overview, operators, recent, signups]) => {
         const availableOps    = operators.filter((o) => o.isAvailable && o.status === "ACTIVE").length;
