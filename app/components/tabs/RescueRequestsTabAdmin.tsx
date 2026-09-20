@@ -1,0 +1,1033 @@
+import { useEffect, useState, useCallback, useRef } from "react";
+import { CheckCircle2, Eye, Flag, Info, MapPin, RefreshCcw, XCircle } from "lucide-react";
+import { useRescueRequestApi, useOperatorApi, useRatingApi } from "../../hooks";
+import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
+
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  PENDING: { bg: "#fff3cd", text: "#856404" },
+  WAITING_FOR_DEPOSIT: { bg: "#cfe2ff", text: "#084298" },
+  OPERATOR_ASSIGNED: { bg: "#d1ecf1", text: "#0c5460" },
+  IN_PROGRESS: { bg: "#cce5ff", text: "#004085" },
+  ARRIVED: { bg: "#d4edda", text: "#155724" },
+  IN_DISPUTE: { bg: "#f8d7da", text: "#721c24" },
+  COMPLETED: { bg: "#d4edda", text: "#155724" },
+  CANCELLED: { bg: "#f8d7da", text: "#721c24" },
+  STALLED: { bg: "#fff3cd", text: "#856404" },
+  DISPATCHING: { bg: "#e2e3e5", text: "#383d41" },
+};
+
+interface AvailableOperator { id: string; businessName: string; phoneNumber: string; }
+
+export default function RescueRequestsTab() {
+  const {
+    requests, loading, error, total, page, limit,
+    fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel, resolveDispute,
+  } = useRescueRequestApi();
+  const { fetchAll: fetchAllOperators } = useOperatorApi();
+  const { resolveFlag: resolveRatingFlag } = useRatingApi();
+
+  const [filters, setFilters] = useState({ status: "", issueType: "", search: "" });
+  const [selectedRequest, setSelectedRequest] = useState<RescueRequestListItem | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<RescueRequestDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [availableOperators, setAvailableOperators] = useState<AvailableOperator[]>([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState("");
+  const [assignPriceNaira, setAssignPriceNaira] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [disputeToast, setDisputeToast] = useState<string | null>(null);
+  const [activeModalTab, setActiveModalTab] = useState<"details" | "dispute">("details");
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [settlementPercent, setSettlementPercent] = useState("");
+  const knownUnresolvedDisputes = useRef<Set<string>>(new Set());
+  const isFirstPoll = useRef(true);
+
+  const loadAvailableOperators = useCallback(async () => {
+    try {
+      const ops = await fetchAllOperators();
+      setAvailableOperators(
+        ops.filter(o => o.status === "ACTIVE").map(o => ({
+          id: o.id, businessName: o.businessName, phoneNumber: o.phoneNumber,
+        }))
+      );
+    } catch { /* silently ignore */ }
+  }, [fetchAllOperators]);
+
+  const openModal = useCallback((req: RescueRequestListItem, initialTab: "details" | "dispute" = "details") => {
+    setSelectedRequest(req);
+    setSelectedDetail(null);
+    setSelectedOperatorId(req.assignedOperator?.id ?? "");
+    setActionMsg(null);
+    setActiveModalTab(initialTab);
+    setResolutionNote("");
+    setSettlementPercent("");
+    if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
+      loadAvailableOperators();
+    }
+    setDetailLoading(true);
+    fetchDetail(req.id)
+      .then(setSelectedDetail)
+      .catch(() => { /* modal still works with list-item data if detail fetch fails */ })
+      .finally(() => setDetailLoading(false));
+  }, [loadAvailableOperators, fetchDetail]);
+
+  const handleAssign = async () => {
+    const priceNaira = Number(assignPriceNaira);
+    if (!selectedRequest || !selectedOperatorId || !priceNaira || priceNaira <= 0) return;
+    setActionLoading(true);
+    try {
+      await assignOperator(selectedRequest.id, selectedOperatorId, Math.round(priceNaira * 100));
+      setActionMsg({ text: "Operator assigned — customer sent a deposit payment link ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, status: "WAITING_FOR_DEPOSIT" as RescueRequestStatus } : null);
+      setAssignPriceNaira("");
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to assign", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleStatusUpdate = async (status: string) => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      await updateStatus(selectedRequest.id, status);
+      setActionMsg({ text: `Status updated to ${status} ✓`, ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, status: status as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to update status", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleCancel = async () => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      await cancel(selectedRequest.id, "Cancelled by admin");
+      setActionMsg({ text: "Request cancelled and customer notified ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, status: "CANCELLED" as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to cancel", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleResolveDispute = async () => {
+    if (!selectedRequest || !resolutionNote.trim()) return;
+    setActionLoading(true);
+    try {
+      const percent = settlementPercent.trim() ? Number(settlementPercent) : 100;
+      const originalBalance = selectedDetail?.balanceAmount ?? undefined;
+      const settledAmount = originalBalance !== undefined ? Math.round(originalBalance * percent / 100) : undefined;
+      const noteEntered = resolutionNote.trim();
+
+      await resolveDispute(selectedRequest.id, noteEntered, percent);
+      setActionMsg({ text: "Dispute resolved — settlement payment link sent ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, disputeResolvedAt: new Date().toISOString() } : null);
+      // The server has this now, but re-fetching just to show what was just
+      // entered is wasteful and adds a flash of stale content — apply it
+      // locally so the resolved view reflects it immediately.
+      setSelectedDetail(prev => prev ? {
+        ...prev,
+        disputeResolutionNote: noteEntered,
+        disputeOriginalBalanceAmount: originalBalance,
+        balanceAmount: settledAmount ?? prev.balanceAmount,
+      } : null);
+      setResolutionNote("");
+      setSettlementPercent("");
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve dispute", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleResolveRatingFlag = async (ratingId: string) => {
+    setActionLoading(true);
+    try {
+      await resolveRatingFlag(ratingId);
+      setActionMsg({ text: "Rating marked reviewed ✓", ok: true });
+      setSelectedDetail(prev => prev ? {
+        ...prev,
+        ratings: prev.ratings?.map(r => r.id === ratingId ? { ...r, flaggedResolvedAt: new Date().toISOString() } : r),
+      } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve flag", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchList({ page: 1, limit: 20 });
+    const interval = setInterval(() => fetchList({ page: 1, limit: 20 }), 15_000);
+    return () => clearInterval(interval);
+  }, [fetchList]);
+
+  // Detects TRANSITION INTO unresolved dispute — not "disputed now vs. before."
+  // `disputed` stays true forever once set, so a reopen (disputeResolvedAt
+  // going from a timestamp back to null) would be missed by a plain
+  // wasn't-disputed-now-is check. The initial poll only establishes the
+  // baseline — no toast for disputes that already existed on page load.
+  useEffect(() => {
+    const currentlyUnresolved = new Set(
+      requests.filter((r) => r.disputed && !r.disputeResolvedAt).map((r) => r.id)
+    );
+
+    if (isFirstPoll.current) {
+      isFirstPoll.current = false;
+      knownUnresolvedDisputes.current = currentlyUnresolved;
+      return;
+    }
+
+    const newlyUnresolved = [...currentlyUnresolved].filter(
+      (id) => !knownUnresolvedDisputes.current.has(id)
+    );
+    if (newlyUnresolved.length > 0) {
+      setDisputeToast(`⚠️ ${newlyUnresolved.length} new dispute${newlyUnresolved.length === 1 ? '' : 's'} raised`);
+      setTimeout(() => setDisputeToast(null), 6000);
+    }
+    knownUnresolvedDisputes.current = currentlyUnresolved;
+  }, [requests]);
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const applyFilters = () => {
+    fetchList({
+      status: filters.status || undefined,
+      issueType: filters.issueType || undefined,
+      search: filters.search || undefined,
+      page: 1,
+      limit: 20,
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-NG", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatLocation = (
+    latitude: number | undefined,
+    longitude: number | undefined,
+    customerDeleted = false,
+  ) => {
+    if (latitude !== undefined && longitude !== undefined) {
+      return `${latitude}, ${longitude}`;
+    }
+    return customerDeleted ? "Removed after account deletion" : "Not provided";
+  };
+
+  const formatMoney = (amount?: number) => (
+    amount === undefined
+      ? "—"
+      : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount / 100)
+  );
+
+  // Keep this aligned with the Job ID shown in WhatsApp messages.
+  const formatJobRef = (id: string) => `Job #${id.slice(-6).toUpperCase()}`;
+  const formatJobId = (id: string) => `#${id.slice(-6).toUpperCase()}`;
+
+  const formatActivityUpdate = (createdAt: string, updatedAt: string) => {
+    const created = new Date(createdAt);
+    const updated = new Date(updatedAt);
+    const sameDay = created.toDateString() === updated.toDateString();
+
+    return updated.toLocaleString("en-NG", sameDay
+      ? { hour: "2-digit", minute: "2-digit", hour12: false }
+      : { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  };
+
+  const formatCustomer = (customer: RescueRequestListItem["customer"]) => {
+    if (customer.deleted) return "Deleted customer";
+    return customer.phoneNumber || "Not provided";
+  };
+
+  if (loading && requests.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "2rem" }}>
+        <p style={{ color: "#003DB4" }}>Loading rescue requests...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {disputeToast && (
+        <div style={{
+          position: "fixed", top: 20, right: 20, zIndex: 1000,
+          background: "#f8d7da", color: "#721c24",
+          padding: "0.9rem 1.4rem", borderRadius: 8,
+          fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+        }}>
+          {disputeToast}
+        </div>
+      )}
+      {/* Filters Section */}
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: "1.5rem",
+          marginBottom: "2rem",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
+        }}
+      >
+        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.05rem", fontWeight: 600, color: "#333" }}>
+          Filters
+        </h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr 1fr",
+            gap: 16,
+            alignItems: "flex-end",
+          }}
+        >
+          <div>
+            <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 600, marginBottom: 6, color: "#666" }}>
+              Status
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange("status", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem",
+                border: "1px solid #dde8f8",
+                borderRadius: 6,
+                fontSize: "0.9rem",
+              }}
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="OPERATOR_ASSIGNED">Assigned</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="ARRIVED">Arrived</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="STALLED">Stalled</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 600, marginBottom: 6, color: "#666" }}>
+              Issue Type
+            </label>
+            <select
+              value={filters.issueType}
+              onChange={(e) => handleFilterChange("issueType", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem",
+                border: "1px solid #dde8f8",
+                borderRadius: 6,
+                fontSize: "0.9rem",
+              }}
+            >
+              <option value="">All Types</option>
+              <option value="BREAKDOWN">Breakdown</option>
+              <option value="ACCIDENT">Accident</option>
+              <option value="FLAT_TYRE">Flat Tyre</option>
+              <option value="FUEL">Fuel</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 600, marginBottom: 6, color: "#666" }}>
+              Search
+            </label>
+            <input
+              type="text"
+              placeholder="Job ID, phone, operator..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange("search", e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.6rem",
+                border: "1px solid #dde8f8",
+                borderRadius: 6,
+                fontSize: "0.9rem",
+              }}
+            />
+          </div>
+
+          <button
+            onClick={applyFilters}
+            style={{
+              padding: "0.6rem 1.5rem",
+              background: "#003DB4",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+            }}
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div
+          style={{
+            background: "#f8d7da",
+            color: "#721c24",
+            padding: "1rem",
+            borderRadius: 8,
+            marginBottom: "1rem",
+            border: "1px solid #f5c6cb",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Table Section */}
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          overflow: "hidden",
+          boxShadow: "0 1px 4px rgba(0,61,180,0.08)",
+        }}
+      >
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 1140, borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: 170 }} />
+              <col style={{ width: 290 }} />
+              <col style={{ width: 224 }} />
+              <col style={{ width: 160 }} />
+              <col style={{ width: 220 }} />
+              <col style={{ width: 76 }} />
+            </colgroup>
+            <thead>
+              <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
+                <th style={{ padding: "0.9rem 1.25rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Job ID
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Request
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Location
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Status
+                </th>
+                <th style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Financials
+                </th>
+                <th style={{ padding: "0.9rem 0.75rem", textAlign: "center", fontWeight: 600, fontSize: "0.9rem", color: "#666" }}>
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((request: RescueRequestListItem) => {
+                const colors = STATUS_COLORS[request.status] || { bg: "#e2e3e5", text: "#383d41" };
+                const primaryAmount = request.acceptedQuoteAmount ?? request.totalAmount;
+                const noPayment = request.status === "CANCELLED" && !request.depositPaid && !request.balancePaid;
+                const hasLocation = request.latitude !== undefined && request.longitude !== undefined;
+                return (
+                  <tr key={request.id} style={{ borderBottom: "1px solid #dde8f8" }}>
+                    <td style={{ padding: "0.9rem 1.25rem", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <code style={{ display: "block", fontSize: "0.88rem", fontWeight: 700, color: "#003DB4" }}>
+                        {formatJobId(request.id)}
+                      </code>
+                      <span style={{ display: "block", marginTop: 5, fontSize: "0.8rem", color: "#49566a" }}>
+                        {formatTime(request.createdAt)}
+                      </span>
+                      <span style={{ display: "block", marginTop: 2, fontSize: "0.71rem", color: "#8892a6" }}>
+                        Updated {formatActivityUpdate(request.createdAt, request.updatedAt)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "62px minmax(0, 1fr)", gap: "6px 8px", alignItems: "center", fontSize: "0.78rem" }}>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Operator</span>
+                        <span title={request.assignedOperator?.businessName || "Unassigned"} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#333" }}>
+                          {request.assignedOperator?.businessName || "Unassigned"}
+                        </span>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Customer</span>
+                        <span title={formatCustomer(request.customer)} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: request.customer.deleted ? "#777" : "#333" }}>
+                          {formatCustomer(request.customer)}
+                        </span>
+                        <span style={{ color: "#8892a6", fontWeight: 600 }}>Issue</span>
+                        <span style={{ color: "#49566a", fontWeight: 600 }}>
+                          {request.issueType?.replace(/_/g, " ") ?? "Not provided"}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <div style={{ display: "grid", gap: 8, fontSize: "0.78rem" }}>
+                        {hasLocation ? (
+                          <a
+                            href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`${request.latitude}, ${request.longitude}`}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: "#003DB4", textDecoration: "none", fontWeight: 600 }}
+                          >
+                            <MapPin size={14} style={{ flexShrink: 0 }} /> View pickup
+                          </a>
+                        ) : (
+                          <span title={request.customer.deleted ? "Removed after account deletion" : "Pickup location was not provided"} style={{ color: "#667085" }}>
+                            {request.customer.deleted ? "Pickup removed" : "Pickup not provided"}
+                          </span>
+                        )}
+                        <div style={{ display: "grid", gridTemplateColumns: "72px minmax(0, 1fr)", gap: 6, minWidth: 0 }}>
+                          <span style={{ color: "#8892a6", fontWeight: 600 }}>Destination</span>
+                          <span
+                            title={request.destination || (request.customer.deleted ? "Removed after account deletion" : "Destination was not provided")}
+                            style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#49566a" }}
+                          >
+                            {request.destination || (request.customer.deleted ? "Removed" : "Not provided")}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "0.4rem 0.8rem",
+                          background: colors.bg,
+                          color: colors.text,
+                          borderRadius: 4,
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {request.status}
+                      </span>
+                      {request.disputed && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title={`${request.disputeResolvedAt ? "Dispute Resolved" : "Disputed"} — click to view`}
+                          onClick={() => openModal(request, "dispute")}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openModal(request, "dispute"); }}
+                          style={{
+                            display: "inline-flex",
+                            marginLeft: 8,
+                            verticalAlign: "middle",
+                            color: request.disputeResolvedAt ? "#28a745" : "#dc3545",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Info size={16} />
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
+                      <span style={{ display: "block", fontSize: "0.9rem", color: primaryAmount === undefined ? "#aaa" : "#333", fontWeight: 700 }}>
+                        {formatMoney(primaryAmount)}
+                      </span>
+                      {request.acceptedQuoteAmount !== undefined && request.totalAmount !== undefined && request.totalAmount !== request.acceptedQuoteAmount && (
+                        <span style={{ display: "block", marginTop: 2, fontSize: "0.74rem", color: "#8892a6" }}>
+                          {formatMoney(request.totalAmount)} charged
+                        </span>
+                      )}
+                      {noPayment ? (
+                        <span style={{ display: "block", marginTop: 8, fontSize: "0.78rem", color: "#8892a6" }}>No payment</span>
+                      ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "68px 1fr", gap: "4px 8px", marginTop: 8, fontSize: "0.76rem" }}>
+                          <span style={{ color: "#667085" }}>Deposit</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: request.depositPaid ? "#155724" : "#856404", fontWeight: 600 }}>
+                            {request.depositPaid ? <CheckCircle2 size={13} /> : <XCircle size={13} />} {request.depositPaid ? "Paid" : "Pending"}
+                          </span>
+                          <span style={{ color: "#667085" }}>Balance</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: request.balancePaid ? "#155724" : "#856404", fontWeight: 600 }}>
+                            {request.balancePaid ? <CheckCircle2 size={13} /> : <XCircle size={13} />} {request.balancePaid ? "Paid" : "Pending"}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: "0.9rem 0.75rem", textAlign: "center", verticalAlign: "middle" }}>
+                      <button
+                        type="button"
+                        onClick={() => openModal(request)}
+                        aria-label={`View ${formatJobRef(request.id)}`}
+                        title={`View ${formatJobRef(request.id)}`}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "#003DB4",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Eye size={17} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {requests.length === 0 && !loading && (
+          <div style={{ padding: "2rem", textAlign: "center", color: "#999" }}>
+            <p>No rescue requests found</p>
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      <div
+        style={{
+          marginTop: "2rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <span style={{ fontSize: "0.9rem", color: "#666" }}>
+          Page {page} of {Math.ceil(total / limit)} ({total} total)
+        </span>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            disabled={page === 1}
+            onClick={() => fetchList({ page: page - 1, limit })}
+            style={{
+              padding: "0.6rem 1.2rem",
+              background: page === 1 ? "#e0e0e0" : "#003DB4",
+              color: page === 1 ? "#999" : "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: page === 1 ? "not-allowed" : "pointer",
+            }}
+          >
+            Previous
+          </button>
+          <button
+            disabled={page >= Math.ceil(total / limit)}
+            onClick={() => fetchList({ page: page + 1, limit })}
+            style={{
+              padding: "0.6rem 1.2rem",
+              background: page >= Math.ceil(total / limit) ? "#e0e0e0" : "#003DB4",
+              color: page >= Math.ceil(total / limit) ? "#999" : "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: page >= Math.ceil(total / limit) ? "not-allowed" : "pointer",
+            }}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* ── Detail & Actions Modal ── */}
+      {selectedRequest && (() => {
+        const isActive = !["COMPLETED", "CANCELLED"].includes(selectedRequest.status);
+        const canAssign = ["DISPATCHING", "WAITING_FOR_DEPOSIT", "OPERATOR_ASSIGNED"].includes(selectedRequest.status);
+        const canMarkArrived = selectedRequest.status === "OPERATOR_ASSIGNED";
+        const canMarkComplete = ["OPERATOR_ASSIGNED", "IN_PROGRESS", "ARRIVED"].includes(selectedRequest.status);
+        const colors = STATUS_COLORS[selectedRequest.status] || { bg: "#e2e3e5", text: "#383d41" };
+        const settlementPct = settlementPercent.trim() ? Number(settlementPercent) : 100;
+        const settlementAmount = selectedDetail?.balanceAmount != null && Number.isFinite(settlementPct)
+          ? Math.round(selectedDetail.balanceAmount * settlementPct / 100)
+          : null;
+        const acceptedQuoteAmount = selectedDetail?.acceptedQuoteAmount ?? selectedRequest.acceptedQuoteAmount;
+        const customerTotalAmount = selectedDetail?.totalAmount ?? selectedRequest.totalAmount;
+        return (
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
+            onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
+          >
+            <div
+              style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 720, maxWidth: "92vw", maxHeight: "90vh", minHeight: "50vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                <div>
+                  <h2 style={{ margin: "0 0 6px 0", color: "#003DB4", fontSize: "1.25rem" }}>
+                    Rescue Request | {formatJobRef(selectedRequest.id)}
+                  </h2>
+                  <code style={{ fontSize: "0.78rem", color: "#999" }}>{selectedRequest.id}</code>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ padding: "0.35rem 0.9rem", background: colors.bg, color: colors.text, borderRadius: 20, fontSize: "0.82rem", fontWeight: 700 }}>
+                    {selectedRequest.status}
+                  </span>
+                  {selectedRequest.disputed && (
+                    <span style={{
+                      padding: "0.35rem 0.9rem", borderRadius: 20, fontSize: "0.82rem", fontWeight: 700,
+                      background: selectedRequest.disputeResolvedAt ? "#d4edda" : "#f8d7da",
+                      color: selectedRequest.disputeResolvedAt ? "#155724" : "#721c24",
+                    }}>
+                      {selectedRequest.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div style={{ display: "flex", gap: 4, marginBottom: "1.5rem", borderBottom: "1px solid #f0f3f8" }}>
+                {([
+                  { key: "details" as const, label: "Details" },
+                  ...(selectedRequest.disputed ? [{ key: "dispute" as const, label: "Dispute" }] : []),
+                ]).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveModalTab(tab.key)}
+                    style={{
+                      padding: "0.6rem 0.25rem", marginRight: 20, background: "none", border: "none",
+                      borderBottom: activeModalTab === tab.key ? "2px solid #003DB4" : "2px solid transparent",
+                      color: activeModalTab === tab.key ? "#003DB4" : "#8892a6",
+                      fontWeight: 600, fontSize: "0.88rem", cursor: "pointer",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto" }}>
+
+              {activeModalTab === "details" && (
+              <>
+              {/* Info grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1.5rem", padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
+                {[
+                  ["Vehicle", selectedDetail?.vehicleType ?? "—"],
+                  ["Issue Type", selectedDetail?.issueType ?? "—"],
+                  ["Destination", selectedDetail?.destination ?? "—"],
+                  ["Accepted Quote", formatMoney(acceptedQuoteAmount)],
+                  ["Customer Total", formatMoney(customerTotalAmount)],
+                  ["Customer", formatCustomer(selectedRequest.customer)],
+                  ["Location", formatLocation(selectedRequest.latitude, selectedRequest.longitude, selectedRequest.customer.deleted)],
+                  ["Created", formatTime(selectedRequest.createdAt)],
+                  ["Updated", formatTime(selectedRequest.updatedAt)],
+                  ["Deposit", selectedRequest.depositPaid ? "✓ Paid" : "✗ Pending"],
+                  ["Balance", selectedRequest.balancePaid ? "✓ Paid" : "✗ Pending"],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>{label}</p>
+                    <p style={{ margin: "2px 0 0 0", fontWeight: 600, color: "#333", fontSize: "0.92rem" }}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Map link */}
+              {selectedRequest.latitude !== undefined && selectedRequest.longitude !== undefined && (
+                <a
+                  href={`https://maps.google.com/?q=${selectedRequest.latitude},${selectedRequest.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.7rem 1rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.9rem", fontWeight: 600, color: "#003DB4", textDecoration: "none", marginBottom: "1.5rem" }}
+                >
+                  📍 Open in Google Maps — {selectedRequest.latitude}, {selectedRequest.longitude}
+                </a>
+              )}
+
+              {/* ── Media, grouped by context ── */}
+              {selectedDetail?.media && selectedDetail.media.length > 0 ? (
+                <>
+                  {(["INITIAL", "COMPLETION"] as const).map((ctx) => {
+                    const items = selectedDetail.media!.filter((m) => m.context === ctx);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={ctx} style={{ marginBottom: "1.5rem" }}>
+                        <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                          {ctx === "INITIAL" ? "Breakdown Photos" : "Completion Evidence"}
+                        </p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                          {items.map((m) => (
+                            <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+                              {m.mediaType === "VIDEO" ? (
+                                <video src={m.url} style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #dde8f8" }} />
+                              ) : m.mediaType === "IMAGE" ? (
+                                <img src={m.url} alt="" style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 8, border: "1px solid #dde8f8" }} />
+                              ) : (
+                                <div style={{ width: 96, height: 96, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid #dde8f8", background: "#F6FAFF", fontSize: "0.78rem", color: "#8892a6" }}>
+                                  🎤 Audio
+                                </div>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                selectedDetail && selectedDetail.mediaLinks.length > 0 && (
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Media</p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      {selectedDetail.mediaLinks.map((link, i) => (
+                        <a key={link} href={link} target="_blank" rel="noreferrer"
+                          style={{ padding: "0.4rem 0.9rem", background: "#dde8f8", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, color: "#003DB4", textDecoration: "none" }}>
+                          Photo {i + 1}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* ── Quotes (admin-only, read-only) ── */}
+              {detailLoading && (
+                <p style={{ color: "#999", fontSize: "0.88rem", marginBottom: "1.5rem" }}>Loading quotes…</p>
+              )}
+              {selectedDetail?.offers && selectedDetail.offers.length > 0 && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                    Quotes ({selectedDetail.offers.length})
+                  </p>
+                  <div style={{ border: "1px solid #dde8f8", borderRadius: 10, overflow: "hidden" }}>
+                    {selectedDetail.offers.map((offer, i) => (
+                      <div key={offer.operatorId + offer.offeredAt} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "0.75rem 1rem", fontSize: "0.88rem",
+                        borderTop: i === 0 ? "none" : "1px solid #f0f2f5",
+                      }}>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 600, color: "#333" }}>{offer.businessName}</p>
+                          <p style={{ margin: "2px 0 0 0", color: "#999", fontSize: "0.78rem" }}>
+                            Offered {formatTime(offer.offeredAt)}
+                            {offer.respondedAt ? ` · Responded ${formatTime(offer.respondedAt)}` : ""}
+                          </p>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ margin: 0, fontWeight: 700, color: "#003DB4" }}>
+                            {offer.quotedPrice ? `₦${(offer.quotedPrice / 100).toLocaleString()}` : "—"}
+                          </p>
+                          {offer.motoristFacingTotal && (
+                            <p style={{ margin: "2px 0 0 0", color: "#999", fontSize: "0.78rem" }}>
+                              ₦{(offer.motoristFacingTotal / 100).toLocaleString()} to motorist
+                            </p>
+                          )}
+                          <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", fontWeight: 700, color: "#6c7890" }}>
+                            {offer.status}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Manual Assign ── */}
+              {canAssign && (
+                <div style={{ marginBottom: "1.5rem", padding: "1.25rem", background: selectedRequest.assignedOperator ? "#f0fff4" : "#fff8e1", border: `1px solid ${selectedRequest.assignedOperator ? "#c8e6c9" : "#ffe082"}`, borderRadius: 10 }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                    {selectedRequest.assignedOperator ? `✏️ Reassign operator` : `⚡ Manually assign operator`}
+                  </p>
+                  {selectedRequest.assignedOperator && (
+                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.88rem", color: "#555" }}>
+                      Current: <strong>{selectedRequest.assignedOperator.businessName}</strong>
+                    </p>
+                  )}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    <select
+                      value={selectedOperatorId}
+                      onChange={e => setSelectedOperatorId(e.target.value)}
+                      style={{ flex: "1 1 200px", minWidth: 0, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
+                    >
+                      <option value="">— Select operator —</option>
+                      {availableOperators.map(op => (
+                        <option key={op.id} value={op.id}>{op.businessName} ({op.phoneNumber})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Agreed price (₦)"
+                      value={assignPriceNaira}
+                      onChange={e => setAssignPriceNaira(e.target.value)}
+                      style={{ flex: "1 1 140px", minWidth: 0, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
+                    />
+                    <button
+                      onClick={handleAssign}
+                      disabled={!selectedOperatorId || !assignPriceNaira || Number(assignPriceNaira) <= 0 || actionLoading}
+                      style={{ flex: "0 0 auto", padding: "0.6rem 1.2rem", background: (selectedOperatorId && assignPriceNaira) ? "#003DB4" : "#ccc", color: "#fff", border: "none", borderRadius: 6, cursor: (selectedOperatorId && assignPriceNaira) ? "pointer" : "not-allowed", fontWeight: 700, fontSize: "0.9rem" }}
+                    >
+                      {actionLoading ? "…" : "Assign"}
+                    </button>
+                  </div>
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "#8892a6" }}>
+                    Customer gets a deposit payment link for this price — same fee split as a normal quote.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Status Actions ── */}
+              {isActive && (
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <p style={{ margin: "0 0 0.75rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Actions</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {canMarkArrived && (
+                      <button onClick={() => handleStatusUpdate("ARRIVED")} disabled={actionLoading}
+                        style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> Mark Arrived
+                      </button>
+                    )}
+                    {canMarkComplete && (
+                      <button onClick={() => handleStatusUpdate("COMPLETED")} disabled={actionLoading}
+                        style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <Flag size={14} /> Mark Complete
+                      </button>
+                    )}
+                    {selectedRequest.status === "DISPATCHING" && (
+                      <button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={actionLoading}
+                        style={{ padding: "0.55rem 1.1rem", background: "#6f42c1", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <RefreshCcw size={14} /> Force In-Progress
+                      </button>
+                    )}
+                    <button onClick={handleCancel} disabled={actionLoading}
+                      style={{ padding: "0.55rem 1.1rem", background: "#dc3545", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <XCircle size={14} /> Cancel Request
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedDetail?.ratings?.filter(r => r.flagged).map((rating) => (
+                <div key={rating.id} style={{ marginTop: "1.25rem", padding: "1.25rem", background: rating.flaggedResolvedAt ? "#f4f9f4" : "#fdf6f6", borderRadius: 10, border: `1px solid ${rating.flaggedResolvedAt ? "#c3e6cb" : "#f5c2c2"}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <h3 style={{ margin: 0, fontSize: "0.95rem", color: rating.flaggedResolvedAt ? "#155724" : "#721c24" }}>
+                      Low rating — {rating.direction === "MOTORIST_TO_OPERATOR" ? "customer rated operator" : "operator rated customer"} ({rating.score}/5)
+                    </h3>
+                    <span style={{
+                      padding: "0.25rem 0.7rem", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700,
+                      background: rating.flaggedResolvedAt ? "#d4edda" : "#f8d7da",
+                      color: rating.flaggedResolvedAt ? "#155724" : "#721c24",
+                    }}>
+                      {rating.flaggedResolvedAt ? "Reviewed" : "Flagged"}
+                    </span>
+                  </div>
+                  {rating.comment && (
+                    <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#333" }}>&ldquo;{rating.comment}&rdquo;</p>
+                  )}
+                  {!rating.flaggedResolvedAt && (
+                    <button onClick={() => handleResolveRatingFlag(rating.id)} disabled={actionLoading}
+                      style={{ padding: "0.5rem 1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle2 size={14} /> {actionLoading ? "Marking Reviewed…" : "Mark Reviewed"}
+                    </button>
+                  )}
+                </div>
+              ))}
+              </>
+              )}
+
+              {activeModalTab === "dispute" && selectedRequest.disputed && (
+                <div style={{ padding: "1.25rem", background: "#fdf6f6", borderRadius: 10, border: "1px solid #f5c2c2" }}>
+                  <h3 style={{ margin: "0 0 0.75rem", fontSize: "0.95rem", color: "#721c24" }}>Dispute</h3>
+                  <div style={{ display: "grid", gap: "0.6rem", marginBottom: "1rem" }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Customer said</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.customerDisputeStatement || "No response yet"}</p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Operator said</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.operatorDisputeStatement || "No response yet"}</p>
+                    </div>
+                  </div>
+
+                  {selectedDetail?.media && selectedDetail.media.some((m) => m.context === "DISPUTE") && (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Dispute Evidence</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                        {selectedDetail.media.filter((m) => m.context === "DISPUTE").map((m) => (
+                          <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                            {m.mediaType === "VIDEO" ? (
+                              <video src={m.url} style={{ width: 88, height: 88, objectFit: "cover", borderRadius: 8, border: "1px solid #f5c2c2" }} />
+                            ) : m.mediaType === "IMAGE" ? (
+                              <img src={m.url} alt="" style={{ width: 88, height: 88, objectFit: "cover", borderRadius: 8, border: "1px solid #f5c2c2" }} />
+                            ) : (
+                              <div style={{ width: 88, height: 88, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid #f5c2c2", background: "#fdf6f6", fontSize: "0.75rem", color: "#8892a6" }}>
+                                🎤 Audio
+                              </div>
+                            )}
+                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: m.uploadedByRole === "CUSTOMER" ? "#003DB4" : "#721c24" }}>
+                              {m.uploadedByRole === "CUSTOMER" ? "From customer" : "From operator"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedRequest.disputeResolvedAt ? (
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Resolution</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail?.disputeResolutionNote}</p>
+                      {selectedDetail?.disputeOriginalBalanceAmount !== undefined && (
+                        <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#666" }}>
+                          Original balance ₦{(selectedDetail.disputeOriginalBalanceAmount / 100).toLocaleString()} → settled ₦{((selectedDetail.balanceAmount ?? 0) / 100).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      <textarea
+                        placeholder="What happened, and what was decided?"
+                        value={resolutionNote}
+                        onChange={(e) => setResolutionNote(e.target.value)}
+                        rows={3}
+                        style={{ padding: "0.6rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem", fontFamily: "inherit", resize: "vertical" }}
+                      />
+                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="100"
+                          value={settlementPercent}
+                          onChange={(e) => setSettlementPercent(e.target.value)}
+                          style={{ width: 80, padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem" }}
+                        />
+                        <span style={{ fontSize: "0.85rem", color: "#666" }}>% of the original balance (blank = 100%, no change)</span>
+                      </div>
+                      {settlementAmount !== null && (
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#003DB4" }}>
+                          = ₦{(settlementAmount / 100).toLocaleString()}
+                        </p>
+                      )}
+                      <button onClick={handleResolveDispute} disabled={actionLoading || !resolutionNote.trim()}
+                        style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !resolutionNote.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> {actionLoading ? "Resolving…" : "Resolve & Send Payment Link"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              </div>
+
+              {/* Footer — action result + Close, pinned to the bottom of the modal */}
+              <div style={{ flexShrink: 0, paddingTop: "1rem" }}>
+                {actionMsg && (
+                  <div style={{ padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", background: actionMsg.ok ? "#d4edda" : "#f8d7da", color: actionMsg.ok ? "#155724" : "#721c24", fontWeight: 600, fontSize: "0.9rem" }}>
+                    {actionMsg.text}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => { setSelectedRequest(null); setSelectedDetail(null); }}
+                  style={{ padding: "0.6rem 1.5rem", background: "#dde8f8", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
