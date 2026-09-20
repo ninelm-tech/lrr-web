@@ -8,6 +8,7 @@ export interface PlatformSettings {
   quoteCollectionMinutes: number;
   dispatchBatchSize: number;
   disputeAlertPhoneNumber: string | null;
+  testCustomerPhoneNumbers: string[];
 }
 
 export function useSettingsApi() {
