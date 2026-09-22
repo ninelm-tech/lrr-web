@@ -22,6 +22,7 @@ export default function RescueRequestsTab() {
   const {
     requests, loading, error, total, page, limit,
     fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel, resolveDispute,
+    resolveCancellationSettlement,
   } = useRescueRequestApi();
   const { fetchAll: fetchAllOperators } = useOperatorApi();
   const { resolveFlag: resolveRatingFlag } = useRatingApi();
@@ -36,9 +37,11 @@ export default function RescueRequestsTab() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [disputeToast, setDisputeToast] = useState<string | null>(null);
-  const [activeModalTab, setActiveModalTab] = useState<"details" | "dispute">("details");
+  const [activeModalTab, setActiveModalTab] = useState<"details" | "dispute" | "cancellation">("details");
   const [resolutionNote, setResolutionNote] = useState("");
   const [settlementPercent, setSettlementPercent] = useState("");
+  const [cancellationNote, setCancellationNote] = useState("");
+  const [cancellationRefundPercent, setCancellationRefundPercent] = useState("");
   const knownUnresolvedDisputes = useRef<Set<string>>(new Set());
   const isFirstPoll = useRef(true);
 
@@ -53,7 +56,7 @@ export default function RescueRequestsTab() {
     } catch { /* silently ignore */ }
   }, [fetchAllOperators]);
 
-  const openModal = useCallback((req: RescueRequestListItem, initialTab: "details" | "dispute" = "details") => {
+  const openModal = useCallback((req: RescueRequestListItem, initialTab: "details" | "dispute" | "cancellation" = "details") => {
     setSelectedRequest(req);
     setSelectedDetail(null);
     setSelectedOperatorId(req.assignedOperator?.id ?? "");
@@ -61,6 +64,8 @@ export default function RescueRequestsTab() {
     setActiveModalTab(initialTab);
     setResolutionNote("");
     setSettlementPercent("");
+    setCancellationNote("");
+    setCancellationRefundPercent("");
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
       loadAvailableOperators();
     }
@@ -134,6 +139,36 @@ export default function RescueRequestsTab() {
       setSettlementPercent("");
     } catch (e: unknown) {
       setActionMsg({ text: e instanceof Error ? e.message : "Failed to resolve dispute", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleResolveCancellationSettlement = async () => {
+    if (!selectedRequest || !cancellationNote.trim()) return;
+    const percent = cancellationRefundPercent.trim() ? Number(cancellationRefundPercent) : NaN;
+    // No blank-defaults-to-100 here, unlike dispute settlement — 0% and 100%
+    // are both real, deliberate choices for this feature, not a fallback.
+    if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
+      setActionMsg({ text: "Enter a whole number between 0 and 100 for the customer's share", ok: false });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const noteEntered = cancellationNote.trim();
+      const result = await resolveCancellationSettlement(selectedRequest.id, noteEntered, percent);
+      setActionMsg({
+        text: `Settled — ₦${(result.refundAmount / 100).toLocaleString()} refunded to customer, ₦${(result.payoutAmount / 100).toLocaleString()} paid to operator, ₦${(result.feeKeptOut / 100).toLocaleString()} kept as platform fee ✓`,
+        ok: true,
+      });
+      setSelectedDetail(prev => prev ? {
+        ...prev,
+        cancellationSettledAt: new Date().toISOString(),
+        cancellationSettlementNote: noteEntered,
+        cancellationSettlementPercent: percent,
+      } : null);
+      setCancellationNote("");
+      setCancellationRefundPercent("");
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to settle cancellation", ok: false });
     } finally { setActionLoading(false); }
   };
 
@@ -640,6 +675,37 @@ export default function RescueRequestsTab() {
           : null;
         const acceptedQuoteAmount = selectedDetail?.acceptedQuoteAmount ?? selectedRequest.acceptedQuoteAmount;
         const customerTotalAmount = selectedDetail?.totalAmount ?? selectedRequest.totalAmount;
+
+        // Cancellation-after-dispatch settlement — only once an operator was
+        // actually assigned (there's someone to pay) and the deposit's paid.
+        // Mirrors AuthService... RescueRequestAdminService's own
+        // deriveCancellationSettlementEligibility, minus the concurrency
+        // claim (that's the backend's job, not a client-side concern).
+        const canSettleCancellation = selectedRequest.status === "CANCELLED"
+          && !!selectedRequest.assignedOperator
+          && !!selectedDetail?.depositPaid;
+        // Client-side preview only — a live "what would this do" readout as
+        // the admin types a percentage, computed the same way
+        // computeCancellationSettlement does server-side. The backend
+        // recomputes independently on submit; this never drives the actual
+        // money movement.
+        const cancellationRefundPct = cancellationRefundPercent.trim() ? Number(cancellationRefundPercent) : null;
+        const cancellationPreview = (() => {
+          const deposit = selectedDetail?.depositAmount;
+          if (
+            cancellationRefundPct === null
+            || !Number.isInteger(cancellationRefundPct)
+            || cancellationRefundPct < 0
+            || cancellationRefundPct > 100
+            || deposit == null
+          ) return null;
+          const fee = selectedDetail?.serviceFeeAmount ?? 0;
+          const total = deposit + (selectedDetail?.balanceAmount ?? 0);
+          const feeKeptOut = total > 0 ? Math.round((deposit * fee) / total) : 0;
+          const splittable = deposit - feeKeptOut;
+          const refundAmount = Math.round((splittable * cancellationRefundPct) / 100);
+          return { feeKeptOut, refundAmount, payoutAmount: splittable - refundAmount };
+        })();
         return (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
@@ -670,6 +736,15 @@ export default function RescueRequestsTab() {
                       {selectedRequest.disputeResolvedAt ? "Dispute Resolved" : "Disputed"}
                     </span>
                   )}
+                  {canSettleCancellation && (
+                    <span style={{
+                      padding: "0.35rem 0.9rem", borderRadius: 20, fontSize: "0.82rem", fontWeight: 700,
+                      background: selectedDetail?.cancellationSettledAt ? "#d4edda" : "#fff3cd",
+                      color: selectedDetail?.cancellationSettledAt ? "#155724" : "#856404",
+                    }}>
+                      {selectedDetail?.cancellationSettledAt ? "Cancellation Settled" : "Settlement Pending"}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -678,6 +753,7 @@ export default function RescueRequestsTab() {
                 {([
                   { key: "details" as const, label: "Details" },
                   ...(selectedRequest.disputed ? [{ key: "dispute" as const, label: "Dispute" }] : []),
+                  ...(canSettleCancellation ? [{ key: "cancellation" as const, label: "Cancellation Settlement" }] : []),
                 ]).map((tab) => (
                   <button
                     key={tab.key}
@@ -1001,6 +1077,60 @@ export default function RescueRequestsTab() {
                       <button onClick={handleResolveDispute} disabled={actionLoading || !resolutionNote.trim()}
                         style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !resolutionNote.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
                         <CheckCircle2 size={14} /> {actionLoading ? "Resolving…" : "Resolve & Send Payment Link"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeModalTab === "cancellation" && canSettleCancellation && (
+                <div style={{ padding: "1.25rem", background: "#F6FAFF", borderRadius: 10, border: "1px solid #dde8f8" }}>
+                  <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem", color: "#07152f" }}>Cancellation Settlement</h3>
+                  <p style={{ margin: "0 0 1rem 0", fontSize: "0.85rem", color: "#666" }}>
+                    An operator was already assigned when this request was cancelled. Ninelm&apos;s service fee is always kept out first; decide how the rest of the deposit splits between a customer refund and an operator payout.
+                  </p>
+
+                  {selectedDetail?.cancellationSettledAt ? (
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#999", fontWeight: 600, textTransform: "uppercase" }}>Resolution</p>
+                      <p style={{ margin: "2px 0 0 0", fontSize: "0.9rem", color: "#333" }}>{selectedDetail.cancellationSettlementNote}</p>
+                      {selectedDetail.cancellationSettlementPercent !== undefined && (
+                        <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#666" }}>
+                          Customer got {selectedDetail.cancellationSettlementPercent}% of the splittable deposit; the operator got the rest.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      <textarea
+                        placeholder="What happened, and what was decided?"
+                        value={cancellationNote}
+                        onChange={(e) => setCancellationNote(e.target.value)}
+                        rows={3}
+                        style={{ padding: "0.6rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem", fontFamily: "inherit", resize: "vertical" }}
+                      />
+                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="e.g. 70"
+                          value={cancellationRefundPercent}
+                          onChange={(e) => setCancellationRefundPercent(e.target.value)}
+                          style={{ width: 80, padding: "0.5rem", borderRadius: 6, border: "1px solid #dde8f8", fontSize: "0.88rem" }}
+                        />
+                        <span style={{ fontSize: "0.85rem", color: "#666" }}>% of the deposit (after the platform fee) refunded to the customer — the operator gets the rest</span>
+                      </div>
+                      {cancellationPreview && (
+                        <div style={{ padding: "0.75rem", background: "#fff", borderRadius: 6, border: "1px solid #dde8f8", display: "grid", gap: 4 }}>
+                          <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>Platform fee kept: <strong style={{ color: "#333" }}>₦{(cancellationPreview.feeKeptOut / 100).toLocaleString()}</strong></p>
+                          <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>Customer refund: <strong style={{ color: "#003DB4" }}>₦{(cancellationPreview.refundAmount / 100).toLocaleString()}</strong></p>
+                          <p style={{ margin: 0, fontSize: "0.85rem", color: "#666" }}>Operator payout: <strong style={{ color: "#003DB4" }}>₦{(cancellationPreview.payoutAmount / 100).toLocaleString()}</strong></p>
+                        </div>
+                      )}
+                      <button onClick={handleResolveCancellationSettlement} disabled={actionLoading || !cancellationNote.trim() || !cancellationRefundPercent.trim()}
+                        style={{ alignSelf: "flex-start", padding: "0.55rem 1.1rem", background: "#07152f", color: "#fff", border: "none", borderRadius: 6, cursor: actionLoading || !cancellationNote.trim() || !cancellationRefundPercent.trim() ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <CheckCircle2 size={14} /> {actionLoading ? "Settling…" : "Settle & Process Payments"}
                       </button>
                     </div>
                   )}
