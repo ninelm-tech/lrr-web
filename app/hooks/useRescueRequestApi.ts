@@ -189,6 +189,31 @@ export function useRescueRequestApi() {
     }
   }, [fetchList]);
 
+  /**
+   * Cancellation-after-dispatch settlement — splits an already-paid deposit
+   * between a customer refund and an operator payout. Returns
+   * { feeKeptOut, refundAmount, payoutAmount } in kobo.
+   */
+  const resolveCancellationSettlement = useCallback(async (id: string, resolutionNote: string, customerRefundPercent: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/rescue-requests/${id}/resolve-cancellation-settlement`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolutionNote, customerRefundPercent }),
+      });
+      await fetchList();
+      return res as { feeKeptOut: number; refundAmount: number; payoutAmount: number };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to resolve cancellation settlement";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchList]);
+
   // ── Admin overview stats ──────────────────────────────────────────────────
   /**
    * Fires several lightweight count-only queries in parallel and returns
@@ -274,5 +299,6 @@ export function useRescueRequestApi() {
     updateStatus,
     cancelRequest,
     resolveDispute,
+    resolveCancellationSettlement,
   };
 }

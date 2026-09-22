@@ -168,6 +168,13 @@ export interface DisputeDetails {
   disputeOriginalBalanceAmount?: number;
 }
 
+export interface CancellationSettlementDetails {
+  serviceFeeAmount?: number;
+  cancellationSettledAt?: string;
+  cancellationSettlementNote?: string;
+  cancellationSettlementPercent?: number;
+}
+
 export interface RatingSummary {
   id: string;
   direction: "MOTORIST_TO_OPERATOR" | "OPERATOR_TO_MOTORIST";
@@ -197,7 +204,7 @@ export interface RequestMediaItem {
   createdAt: string;
 }
 
-export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetails {
+export interface RescueRequestDetail extends RescueRequestListItem, DisputeDetails, CancellationSettlementDetails {
   description?: string;
   adminNotes?: string;
   vehicleType?: string;
