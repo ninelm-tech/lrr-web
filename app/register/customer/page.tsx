@@ -1,13 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthApi } from "../../hooks";
+import { Eye, EyeOff } from "lucide-react";
+import { useAuthApi, useOtpApi } from "../../hooks";
 import { getToken } from "../../lib/session";
 import { isValidNigerianPhoneNumber, getPhoneNumberErrorMessage, toNigerianDisplayPhoneNumber } from "../../utils/phoneValidation";
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
   const { registerCustomer } = useAuthApi();
+  const { sendCode, verifyCode } = useOtpApi();
 
   const [form, setForm] = useState({
     name: "",
@@ -19,6 +21,19 @@ export default function CustomerRegisterPage() {
   const [phoneError, setPhoneError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Phone ownership must be verified before the account is created — see
+  // AuthService.registerCustomer. Mirrors the same flow on the operator
+  // registration page.
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpToken, setOtpToken] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [phoneUnavailable, setPhoneUnavailable] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   useEffect(() => {
     if (getToken()) {
@@ -39,12 +54,54 @@ export default function CustomerRegisterPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  async function triggerSendCode() {
+    if (!form.phoneNumber || phoneError || sendingCode) return;
+    setOtpRequired(false);
+    setOtpVerified(false);
+    setPhoneUnavailable(false);
+    setOtpError("");
+    setSendingCode(true);
+    try {
+      const result = await sendCode(form.phoneNumber);
+      if (result.available === false) {
+        setPhoneUnavailable(true);
+      } else if (result.required) {
+        // sendCode already dispatched the code by this point, so the OTP
+        // box below shows the verify UI immediately.
+        setOtpRequired(true);
+      }
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to send verification code");
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  // Resets everything OTP-related and unlocks the phone field — the only
+  // way back to editing it once a send has happened.
+  function handleChangeNumber() {
+    setOtpRequired(false);
+    setOtpVerified(false);
+    setOtpCode("");
+    setOtpError("");
+    setOtpToken("");
+    setPhoneUnavailable(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (!isValidNigerianPhoneNumber(form.phoneNumber)) {
       setError(getPhoneNumberErrorMessage(form.phoneNumber));
+      return;
+    }
+    if (phoneUnavailable) {
+      setError("This phone number is already registered to a different account type.");
+      return;
+    }
+    if (!otpVerified) {
+      setError("Please verify your phone number before continuing.");
       return;
     }
     if (form.password.length < 6) {
@@ -63,6 +120,7 @@ export default function CustomerRegisterPage() {
         phoneNumber: form.phoneNumber,
         email: form.email,
         password: form.password,
+        phoneVerificationToken: otpToken,
       });
       // Registered + auto-logged-in → go to customer dashboard to activate membership
       router.push("/dashboard?welcome=1");
@@ -152,15 +210,93 @@ export default function CustomerRegisterPage() {
               value={form.phoneNumber}
               onChange={handleChange}
               required
-              style={inputStyle(!!phoneError)}
+              disabled={otpRequired || otpVerified}
+              style={{ ...inputStyle(!!phoneError), ...((otpRequired || otpVerified) && { background: "#F0F2F5", color: "#6c7890", cursor: "not-allowed" }) }}
             />
+            {(otpRequired || otpVerified) && (
+              <button
+                type="button"
+                onClick={handleChangeNumber}
+                style={{ marginTop: 6, padding: 0, border: "none", background: "none", color: "#6c7890", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Change number
+              </button>
+            )}
             {phoneError && <p style={{ margin: "5px 0 0 0", fontSize: "0.83rem", color: "#d63031" }}>{phoneError}</p>}
-            {form.phoneNumber && !phoneError && (
+            {form.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
               <p style={{ margin: "5px 0 0 0", fontSize: "0.83rem", color: "#27ae60" }}>✓ Valid number</p>
+            )}
+            {phoneUnavailable && (
+              <p style={{ margin: "5px 0 0 0", fontSize: "0.83rem", color: "#d63031" }}>
+                This number is already registered to a different account type. If this is you, please log in instead.
+              </p>
             )}
             <p style={{ margin: "5px 0 0 0", fontSize: "0.8rem", color: "#999" }}>
               This is the number you'll use to request rescue via WhatsApp
             </p>
+            {form.phoneNumber && !phoneError && !otpRequired && !otpVerified && (
+              <button
+                type="button"
+                onClick={triggerSendCode}
+                disabled={sendingCode}
+                style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.85rem", fontWeight: 600, cursor: sendingCode ? "default" : "pointer", textDecoration: "underline", opacity: sendingCode ? 0.6 : 1 }}
+              >
+                {sendingCode ? "Sending…" : phoneUnavailable ? "Retry" : "Send verification code"}
+              </button>
+            )}
+            {otpError && !otpRequired && (
+              <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "6px 0 0" }}>{otpError}</p>
+            )}
+            {otpRequired && !otpVerified && (
+              <div style={{ marginTop: 10, padding: 12, background: "#F6FAFF", borderRadius: 8 }}>
+                <p style={{ fontSize: "0.85rem", color: "#333", margin: "0 0 8px" }}>
+                  Enter the code we texted you to verify this number.
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="6-digit code"
+                    style={{ ...inputStyle(Boolean(otpError)), maxWidth: 160 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setOtpError("");
+                      try {
+                        const result = await verifyCode(form.phoneNumber, otpCode);
+                        setOtpToken(result.token);
+                        setOtpVerified(true);
+                      } catch (err) {
+                        setOtpError(err instanceof Error ? err.message : "Verification failed");
+                      }
+                    }}
+                    style={{ padding: "0.5rem 1rem", borderRadius: 6, border: "none", background: "#003DB4", color: "#fff", cursor: "pointer" }}
+                  >
+                    Verify
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setOtpError("");
+                    try {
+                      await sendCode(form.phoneNumber);
+                    } catch (err) {
+                      setOtpError(err instanceof Error ? err.message : "Failed to resend code");
+                    }
+                  }}
+                  style={{ marginTop: 8, padding: 0, border: "none", background: "none", color: "#003DB4", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Resend code
+                </button>
+                {otpError && <p style={{ fontSize: "0.85rem", color: "#d63031", margin: "8px 0 0" }}>{otpError}</p>}
+              </div>
+            )}
+            {otpVerified && (
+              <p style={{ fontSize: "0.85rem", color: "#003DB4", margin: "6px 0 0" }}>✓ Number verified</p>
+            )}
           </div>
 
           {/* Email */}
@@ -184,15 +320,29 @@ export default function CustomerRegisterPage() {
             <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>
               Password *
             </label>
-            <input
-              name="password"
-              type="password"
-              placeholder="At least 6 characters"
-              value={form.password}
-              onChange={handleChange}
-              required
-              style={inputStyle()}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="At least 6 characters"
+                value={form.password}
+                onChange={handleChange}
+                required
+                style={{ ...inputStyle(), paddingRight: "2.6rem" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", padding: 4, cursor: "pointer",
+                  color: "#8892a6", display: "flex", alignItems: "center",
+                }}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
           </div>
 
           {/* Confirm Password */}
@@ -200,15 +350,29 @@ export default function CustomerRegisterPage() {
             <label style={{ display: "block", fontWeight: 600, fontSize: "0.9rem", color: "#444", marginBottom: 6 }}>
               Confirm Password *
             </label>
-            <input
-              name="confirmPassword"
-              type="password"
-              placeholder="Repeat your password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              required
-              style={inputStyle(!!form.confirmPassword && form.password !== form.confirmPassword)}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Repeat your password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                required
+                style={{ ...inputStyle(!!form.confirmPassword && form.password !== form.confirmPassword), paddingRight: "2.6rem" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                style={{
+                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", padding: 4, cursor: "pointer",
+                  color: "#8892a6", display: "flex", alignItems: "center",
+                }}
+              >
+                {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
             {form.confirmPassword && form.password !== form.confirmPassword && (
               <p style={{ margin: "5px 0 0 0", fontSize: "0.83rem", color: "#d63031" }}>Passwords do not match</p>
             )}

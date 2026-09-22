@@ -265,9 +265,15 @@ export function useAuthApi() {
 
   // ── Registration ─────────────────────────────────────────────────────────
 
-  /** Customer self-registration — phone required, email+password optional. */
+  /**
+   * Customer self-registration — phone required, email+password optional.
+   * phoneVerificationToken proves ownership of the phone number (from
+   * POST /otp/send-code + /otp/verify-code, same flow the operator page
+   * uses) — the backend rejects the request without a valid one.
+   */
   const registerCustomer = useCallback(async (data: {
     phoneNumber: string;
+    phoneVerificationToken: string;
     name?: string;
     email?: string;
     password?: string;
