@@ -12,9 +12,14 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n / 100);
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleString("en-NG", {
+function fmtPaymentDate(d: string) {
+  return new Date(d).toLocaleDateString("en-NG", {
     month: "short", day: "numeric", year: "numeric",
+  });
+}
+
+function fmtPaymentTime(d: string) {
+  return new Date(d).toLocaleTimeString("en-NG", {
     hour: "2-digit", minute: "2-digit",
   });
 }
@@ -173,10 +178,10 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
           a failed retry followed by a successful one shows both rows. */}
       <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1440 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1280 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Date", "Type", "Amount", "Paystack Reference", "Rescue ID", "Customer", "Operator", "Status", "Detail"].map((h) => (
+                {["Payment time", "Type", "Amount", "References", "Customer", "Operator", "Status", "Detail"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -186,11 +191,11 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <tbody>
               {loading && records.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
+                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
+                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
                 </tr>
               ) : (
                 records.map((p: PaymentRecord) => {
@@ -199,8 +204,13 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                   const paystackReference = paystackReferenceFor(p);
                   return (
                     <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.88rem", color: "#666" }}>
-                        {fmtDate(p.createdAt)}
+                      <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "block", fontSize: "1rem", fontWeight: 700, color: "#17213a" }}>
+                          {fmtPaymentTime(p.createdAt)}
+                        </span>
+                        <span style={{ display: "block", marginTop: 3, fontSize: "0.78rem", color: "#7b8496" }}>
+                          {fmtPaymentDate(p.createdAt)}
+                        </span>
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {TYPE_LABELS[p.type]}
@@ -208,11 +218,16 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333" }}>
                         {fmt(p.amount)}
                       </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333", fontFamily: "monospace", whiteSpace: "nowrap" }}>
-                        {paystackReference ?? <span style={{ color: "#aaa", fontFamily: "inherit" }}>—</span>}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333", fontFamily: "monospace", whiteSpace: "nowrap" }}>
-                        {p.rescueRequestId}
+                      <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
+                        <code title={p.rescueRequestId} style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#003DB4" }}>
+                          #{p.rescueRequestId.slice(-6).toUpperCase()}
+                        </code>
+                        <span
+                          title={paystackReference ?? "No Paystack reference"}
+                          style={{ display: "block", marginTop: 5, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: "0.72rem", color: "#7b8496" }}
+                        >
+                          {paystackReference ?? "No Paystack reference"}
+                        </span>
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {p.customer.phoneNumber || "Not provided"}
