@@ -1,46 +1,87 @@
 /**
  * usePaymentApi
  * -------------
- * Financial / payment summary API calls.
- *
- * Payments in LRR live on RescueRequest rows (depositPaid, balancePaid,
- * depositAmount, balanceAmount).  This hook fetches rescue requests for
- * financial reporting and surfaces pre-computed summary totals.
+ * Real payment-ledger reads for the admin/operator Payments page — backed by
+ * GET /payments and /payments/summary (PaymentAdminService), which query the
+ * Payment table directly. One row here is one attempt (see
+ * docs/superpowers/specs/2026-09-12-payment-model-design.md), not one
+ * rescue request — a request can have a FAILED attempt followed by a
+ * SUCCEEDED one, and both show up.
  *
  * Covers:
- *  - Paginated payment list (filtered view of rescue requests)
- *  - Running summary totals across all records
+ *  - Paginated payment list
+ *  - Server-computed summary totals across all records this caller can see
  */
 
 import { useState, useCallback } from "react";
 import { apiFetch } from "./api";
-import type { RescueRequestListItem } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface PaymentRecord extends RescueRequestListItem {
-  depositAmount?: number;
-  balanceAmount?: number;
-  totalAmount?: number;
+export type PaymentType = "DEPOSIT" | "BALANCE" | "REFUND" | "PAYOUT";
+export type PaymentStatus =
+  | "PENDING"
+  | "SUBMITTED"
+  | "BLOCKED"
+  | "SUCCEEDED"
+  | "DUPLICATE_SUCCEEDED"
+  | "FAILED"
+  | "REVERSED";
+
+export interface PaymentRecordParty {
+  id: string;
+  phoneNumber?: string | null;
+  businessName?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  type: PaymentType;
+  status: PaymentStatus;
+  amount: number;
+  currency: string;
+  providerFee: number | null;
+  netAmount: number | null;
+  failureReason: string | null;
+  blockReason: string | null;
+  checkoutUrl: string | null;
+  verifyAttempts: number;
+  createdAt: string;
+  settledAt: string | null;
+  rescueRequestId: string;
+  customer: PaymentRecordParty;
+  assignedOperator: PaymentRecordParty | null;
+  payoutOperator: PaymentRecordParty | null;
 }
 
 export interface PaymentSummary {
-  depositCollected:  number;  // kobo
-  balanceCollected:  number;  // kobo
-  totalCollected:    number;  // kobo
-  depositPending:    number;  // kobo
-  balancePending:    number;  // kobo
-  totalOutstanding:  number;  // kobo
+  depositCollected: number;
+  balanceCollected: number;
+  totalCollected: number;
+  depositPending: number;
+  balancePending: number;
+  totalOutstanding: number;
 }
 
 export interface PaymentListOptions {
-  depositPaid?: boolean;
-  balancePaid?: boolean;
+  type?: PaymentType;
+  status?: PaymentStatus;
+  operatorId?: string;
+  rescueRequestId?: string;
   from?: string;
   to?: string;
   page?: number;
   limit?: number;
 }
+
+const EMPTY_SUMMARY: PaymentSummary = {
+  depositCollected: 0,
+  balanceCollected: 0,
+  totalCollected: 0,
+  depositPending: 0,
+  balancePending: 0,
+  totalOutstanding: 0,
+};
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
@@ -52,21 +93,26 @@ export function usePaymentApi() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
-  // ── Paginated list for the payments table ─────────────────────────────────
+  const buildParams = (opts: PaymentListOptions) => {
+    const params = new URLSearchParams();
+    if (opts.type)            params.append("type",            opts.type);
+    if (opts.status)          params.append("status",          opts.status);
+    if (opts.operatorId)      params.append("operatorId",      opts.operatorId);
+    if (opts.rescueRequestId) params.append("rescueRequestId", opts.rescueRequestId);
+    if (opts.from)            params.append("from",            opts.from);
+    if (opts.to)               params.append("to",              opts.to);
+    return params;
+  };
 
   const fetchPaymentList = useCallback(async (opts: PaymentListOptions = {}): Promise<PaymentRecord[]> => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (opts.depositPaid !== undefined) params.append("depositPaid", String(opts.depositPaid));
-      if (opts.balancePaid !== undefined) params.append("balancePaid", String(opts.balancePaid));
-      if (opts.from)  params.append("from",  opts.from);
-      if (opts.to)    params.append("to",    opts.to);
+      const params = buildParams(opts);
       params.append("page",  String(opts.page  ?? 1));
       params.append("limit", String(opts.limit ?? 20));
 
-      const res = await apiFetch(`/rescue-requests?${params.toString()}`);
+      const res = await apiFetch(`/payments?${params.toString()}`);
       const data = (res.data ?? []) as PaymentRecord[];
       setRecords(data);
       setTotal(res.meta?.total ?? 0);
@@ -82,46 +128,13 @@ export function usePaymentApi() {
     }
   }, []);
 
-  // ── Summary totals (larger batch, no UI pagination) ───────────────────────
-  /**
-   * Fetches a large page of rescue requests and computes aggregate totals.
-   * Rows without persisted amounts are excluded from money totals rather than
-   * guessed; unassigned/unpriced jobs do not have a real payment split yet.
-   */
-  const fetchSummary = useCallback(async (): Promise<PaymentSummary> => {
+  const fetchSummary = useCallback(async (opts: PaymentListOptions = {}): Promise<PaymentSummary> => {
     try {
-      const res = await apiFetch("/rescue-requests?limit=500&page=1");
-      const all = (res.data ?? []) as PaymentRecord[];
-
-      let depositCollected = 0;
-      let balanceCollected = 0;
-      let depositPending   = 0;
-      let balancePending   = 0;
-
-      for (const r of all) {
-        const dep = r.depositAmount ?? 0;
-        const bal = r.balanceAmount ?? 0;
-
-        if (r.depositPaid)  depositCollected += dep;
-        else                depositPending   += dep;
-
-        if (r.balancePaid)            balanceCollected += bal;
-        else if (r.depositPaid)       balancePending   += bal;
-      }
-
-      return {
-        depositCollected,
-        balanceCollected,
-        totalCollected:   depositCollected + balanceCollected,
-        depositPending,
-        balancePending,
-        totalOutstanding: depositPending   + balancePending,
-      };
+      const params = buildParams(opts);
+      const res = await apiFetch(`/payments/summary?${params.toString()}`);
+      return res ?? EMPTY_SUMMARY;
     } catch {
-      return {
-        depositCollected: 0, balanceCollected: 0, totalCollected:   0,
-        depositPending:   0, balancePending:   0, totalOutstanding: 0,
-      };
+      return EMPTY_SUMMARY;
     }
   }, []);
 

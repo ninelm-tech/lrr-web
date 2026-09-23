@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePaymentApi } from "../../hooks";
-import type { UserRole, RescueRequestListItem } from "../../types";
+import type { UserRole } from "../../types";
+import type { PaymentRecord, PaymentType, PaymentStatus } from "../../hooks/usePaymentApi";
 
 interface PaymentsTabProps {
   role: UserRole | null;
@@ -11,10 +12,6 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(n / 100);
 }
 
-function fmtMaybe(n: number | undefined) {
-  return n === undefined ? "—" : fmt(n);
-}
-
 function fmtDate(d: string) {
   return new Date(d).toLocaleString("en-NG", {
     month: "short", day: "numeric", year: "numeric",
@@ -22,58 +19,72 @@ function fmtDate(d: string) {
   });
 }
 
+const STATUS_STYLES: Record<PaymentStatus, { label: string; bg: string; color: string }> = {
+  PENDING:             { label: "Pending",    bg: "#fff3cd", color: "#856404" },
+  SUBMITTED:           { label: "Submitted",  bg: "#dde8f8", color: "#003DB4" },
+  BLOCKED:             { label: "Blocked",    bg: "#fff3cd", color: "#856404" },
+  SUCCEEDED:           { label: "Succeeded",  bg: "#d4edda", color: "#155724" },
+  DUPLICATE_SUCCEEDED: { label: "Duplicate",  bg: "#f8d7da", color: "#721c24" },
+  FAILED:              { label: "Failed",     bg: "#f8d7da", color: "#721c24" },
+  REVERSED:            { label: "Reversed",   bg: "#f8d7da", color: "#721c24" },
+};
+
+const TYPE_LABELS: Record<PaymentType, string> = {
+  DEPOSIT: "Deposit",
+  BALANCE: "Balance",
+  REFUND:  "Refund",
+  PAYOUT:  "Payout",
+};
+
 export default function PaymentsTab({ role }: PaymentsTabProps) {
   const {
-    records: requests, loading, error, total, page, limit,
+    records, loading, error, total, page, limit,
     fetchPaymentList: fetchList, fetchSummary,
   } = usePaymentApi();
 
-  const [summaryDepositPaid,    setSummaryDepositPaid]    = useState(0);
-  const [summaryBalancePaid,    setSummaryBalancePaid]    = useState(0);
-  const [summaryDepositPending, setSummaryDepositPending] = useState(0);
-  const [summaryBalancePending, setSummaryBalancePending] = useState(0);
+  const [summary, setSummary] = useState({
+    depositCollected: 0, balanceCollected: 0, totalCollected: 0,
+    depositPending: 0, balancePending: 0, totalOutstanding: 0,
+  });
   const [summaryLoaded, setSummaryLoaded] = useState(false);
 
   // Filters
-  const [filterDeposit, setFilterDeposit] = useState<"" | "paid" | "unpaid">("");
-  const [filterBalance, setFilterBalance] = useState<"" | "paid" | "unpaid">("");
-  const [filterFrom, setFilterFrom] = useState("");
-  const [filterTo,   setFilterTo]   = useState("");
+  const [filterType,   setFilterType]   = useState<"" | PaymentType>("");
+  const [filterStatus, setFilterStatus] = useState<"" | PaymentStatus>("");
+  const [filterFrom,   setFilterFrom]   = useState("");
+  const [filterTo,     setFilterTo]     = useState("");
 
   useEffect(() => {
     fetchList({ page: 1, limit: 20 });
     fetchSummary().then((s) => {
-      setSummaryDepositPaid(s.depositCollected);
-      setSummaryBalancePaid(s.balanceCollected);
-      setSummaryDepositPending(s.depositPending);
-      setSummaryBalancePending(s.balancePending);
+      setSummary(s);
       setSummaryLoaded(true);
     });
   }, []);
 
   const applyFilters = () => {
-    fetchList({
-      depositPaid: filterDeposit === "paid" ? true : filterDeposit === "unpaid" ? false : undefined,
-      balancePaid: filterBalance === "paid" ? true : filterBalance === "unpaid" ? false : undefined,
-      from: filterFrom || undefined,
-      to:   filterTo   || undefined,
-      page: 1,
-      limit: 20,
+    const opts = {
+      type:   filterType   || undefined,
+      status: filterStatus || undefined,
+      from:   filterFrom   || undefined,
+      to:     filterTo     || undefined,
+    };
+    fetchList({ ...opts, page: 1, limit: 20 });
+    fetchSummary(opts).then((s) => {
+      setSummary(s);
+      setSummaryLoaded(true);
     });
   };
-
-  const totalCollected = summaryDepositPaid + summaryBalancePaid;
-  const totalOutstanding = summaryDepositPending + summaryBalancePending;
 
   return (
     <div>
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
         {[
-          { label: "Total Collected",      value: summaryLoaded ? fmt(totalCollected)           : "…", color: "#155724", bg: "#d4edda" },
-          { label: "Deposits Collected",   value: summaryLoaded ? fmt(summaryDepositPaid)        : "…", color: "#003DB4", bg: "#dde8f8" },
-          { label: "Balances Collected",   value: summaryLoaded ? fmt(summaryBalancePaid)        : "…", color: "#003DB4", bg: "#dde8f8" },
-          { label: "Outstanding Balance",  value: summaryLoaded ? fmt(totalOutstanding)          : "…", color: "#856404", bg: "#fff3cd" },
+          { label: "Total Collected",      value: summaryLoaded ? fmt(summary.totalCollected)     : "…", color: "#155724", bg: "#d4edda" },
+          { label: "Deposits Collected",   value: summaryLoaded ? fmt(summary.depositCollected)    : "…", color: "#003DB4", bg: "#dde8f8" },
+          { label: "Balances Collected",   value: summaryLoaded ? fmt(summary.balanceCollected)    : "…", color: "#003DB4", bg: "#dde8f8" },
+          { label: "In-Flight / Outstanding", value: summaryLoaded ? fmt(summary.totalOutstanding) : "…", color: "#856404", bg: "#fff3cd" },
         ].map(({ label, value, color, bg }) => (
           <div
             key={label}
@@ -92,27 +103,29 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       <div style={{ background: "#fff", borderRadius: 10, padding: "1.25rem", marginBottom: "1.5rem", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
           <div>
-            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Deposit Status</label>
+            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Type</label>
             <select
-              value={filterDeposit}
-              onChange={(e) => setFilterDeposit(e.target.value as "" | "paid" | "unpaid")}
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as "" | PaymentType)}
               style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All</option>
-              <option value="paid">Paid</option>
-              <option value="unpaid">Unpaid</option>
+              {(Object.keys(TYPE_LABELS) as PaymentType[]).map((t) => (
+                <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Balance Status</label>
+            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 4, color: "#666" }}>Status</label>
             <select
-              value={filterBalance}
-              onChange={(e) => setFilterBalance(e.target.value as "" | "paid" | "unpaid")}
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as "" | PaymentStatus)}
               style={{ width: "100%", padding: "0.55rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
             >
               <option value="">All</option>
-              <option value="paid">Paid</option>
-              <option value="unpaid">Unpaid</option>
+              {(Object.keys(STATUS_STYLES) as PaymentStatus[]).map((s) => (
+                <option key={s} value={s}>{STATUS_STYLES[s].label}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -147,13 +160,14 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table — one row per payment ATTEMPT, not per request. A request with
+          a failed retry followed by a successful one shows both rows. */}
       <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1080 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Date", "Customer", "Paystack Reference", "Operator", "Deposit", "Balance", "Total", "Status"].map((h) => (
+                {["Date", "Type", "Amount", "Customer", "Operator", "Status", "Detail"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -161,73 +175,48 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
               </tr>
             </thead>
             <tbody>
-              {loading && requests.length === 0 ? (
+              {loading && records.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
+                  <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
                 </tr>
-              ) : requests.length === 0 ? (
+              ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
+                  <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
                 </tr>
               ) : (
-                requests.map((r: RescueRequestListItem) => {
-                  const depositAmt = r.depositAmount;
-                  const balanceAmt = r.balanceAmount;
-                  const totalAmt   = r.totalAmount ?? (
-                    depositAmt !== undefined && balanceAmt !== undefined ? depositAmt + balanceAmt : undefined
-                  );
-                  const fullyPaid  = r.depositPaid && r.balancePaid;
+                records.map((p: PaymentRecord) => {
+                  const statusStyle = STATUS_STYLES[p.status];
+                  const operatorName = p.payoutOperator?.businessName ?? p.assignedOperator?.businessName;
                   return (
-                    <tr key={r.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
+                    <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.88rem", color: "#666" }}>
-                        {fmtDate(r.createdAt)}
+                        {fmtDate(p.createdAt)}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {r.customer.deleted ? "Deleted customer" : r.customer.phoneNumber || "Not provided"}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333" }}>
-                        {r.depositReference || r.balanceReference ? (
-                          <div style={{ display: "grid", gap: 4 }}>
-                            {r.depositReference && (
-                              <code style={{ whiteSpace: "nowrap" }}>Deposit: {r.depositReference}</code>
-                            )}
-                            {r.balanceReference && (
-                              <code style={{ whiteSpace: "nowrap" }}>Balance: {r.balanceReference}</code>
-                            )}
-                          </div>
-                        ) : "—"}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {r.assignedOperator?.businessName ?? <span style={{ color: "#aaa" }}>Unassigned</span>}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem" }}>
-                        <div style={{ fontSize: "0.9rem", fontWeight: 600, color: r.depositPaid ? "#155724" : "#721c24" }}>
-                          {r.depositPaid ? "✓" : "✗"} {fmtMaybe(depositAmt)}
-                        </div>
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem" }}>
-                        {r.status === "COMPLETED" || r.balancePaid ? (
-                          <div style={{ fontSize: "0.9rem", fontWeight: 600, color: r.balancePaid ? "#155724" : "#721c24" }}>
-                            {r.balancePaid ? "✓" : "✗"} {fmtMaybe(balanceAmt)}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: "0.85rem", color: "#aaa" }}>Not due</span>
-                        )}
+                        {TYPE_LABELS[p.type]}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333" }}>
-                        {fmtMaybe(totalAmt)}
+                        {fmt(p.amount)}
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
+                        {p.customer.phoneNumber || "Not provided"}
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
+                        {operatorName ?? <span style={{ color: "#aaa" }}>Unassigned</span>}
                       </td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <span
                           style={{
                             display: "inline-block", padding: "0.3rem 0.7rem",
-                            background: fullyPaid ? "#d4edda" : r.depositPaid ? "#fff3cd" : "#f8d7da",
-                            color: fullyPaid ? "#155724" : r.depositPaid ? "#856404" : "#721c24",
+                            background: statusStyle.bg, color: statusStyle.color,
                             borderRadius: 4, fontSize: "0.8rem", fontWeight: 600,
                           }}
                         >
-                          {fullyPaid ? "Settled" : r.depositPaid ? "Partial" : "Pending"}
+                          {statusStyle.label}
                         </span>
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#721c24" }}>
+                        {p.failureReason ?? (p.blockReason ? `Blocked: ${p.blockReason}` : "—")}
                       </td>
                     </tr>
                   );
@@ -241,7 +230,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       {/* Pagination */}
       <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontSize: "0.9rem", color: "#666" }}>
-          Page {page} of {Math.ceil(total / limit)} ({total} total)
+          Page {page} of {Math.max(1, Math.ceil(total / limit))} ({total} total)
         </span>
         <div style={{ display: "flex", gap: 10 }}>
           <button
