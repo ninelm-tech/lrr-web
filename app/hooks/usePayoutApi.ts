@@ -11,6 +11,12 @@ export interface PayoutListItem {
   blockReason:
     | "NO_BANK_DETAILS"
     | "INSUFFICIENT_BALANCE"
+    | "ACCOUNT_RESTRICTED"
+    | "PAYOUT_ON_HOLD"
+    | "INVALID_RECIPIENT"
+    | "INVALID_AMOUNT"
+    | "INVALID_REFERENCE"
+    | "PAYSTACK_VALIDATION"
     | "AWAITING_OTP"
     | "NEEDS_CUSTOMER_DETAILS"
     | null;
@@ -24,6 +30,12 @@ export interface PayoutListItem {
   // payout paid directly at Paystack). This row's own status says nothing
   // about that — never offer Retry when this is true.
   alreadySucceeded: boolean;
+  // Only the newest attempt for a job may be retried. Older failures remain
+  // visible as immutable ledger history.
+  isLatestAttempt?: boolean;
+  // Authoritative server-side decision. Optional during rolling deployment
+  // so the web remains compatible with the preceding API version.
+  canRetry?: boolean;
 }
 
 export function usePayoutApi() {
