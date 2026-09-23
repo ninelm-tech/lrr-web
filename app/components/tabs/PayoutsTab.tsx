@@ -15,6 +15,12 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
 const BLOCK_REASON_LABELS: Record<string, string> = {
   NO_BANK_DETAILS: "No bank details on file",
   INSUFFICIENT_BALANCE: "Insufficient platform balance",
+  ACCOUNT_RESTRICTED: "Transfers are not enabled for this Paystack business",
+  PAYOUT_ON_HOLD: "Payouts are on hold at Paystack",
+  INVALID_RECIPIENT: "Transfer recipient needs attention",
+  INVALID_AMOUNT: "Paystack rejected the payout amount",
+  INVALID_REFERENCE: "Paystack rejected the payout reference",
+  PAYSTACK_VALIDATION: "Paystack rejected the transfer during validation",
   AWAITING_OTP: "Awaiting OTP at Paystack",
   NEEDS_CUSTOMER_DETAILS: "Paystack needs more recipient details",
 };
@@ -111,8 +117,10 @@ export default function PayoutsTab() {
               // already succeeded, retrying would risk a second real
               // transfer, so the server refuses it and this button never
               // offers it in the first place.
-              const canRetry = (p.status === "FAILED" || p.status === "BLOCKED") && !p.alreadySucceeded;
+              const isLatestAttempt = p.isLatestAttempt ?? true;
+              const canRetry = p.canRetry ?? ((p.status === "FAILED" || p.status === "BLOCKED") && isLatestAttempt && !p.alreadySucceeded);
               const paidElsewhere = p.alreadySucceeded && p.status !== "SUCCEEDED";
+              const superseded = !isLatestAttempt && !p.alreadySucceeded;
               return (
                 <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
                   <td style={{ padding: "0.9rem 1rem", fontSize: "0.85rem", color: "#666" }}>
@@ -153,6 +161,11 @@ export default function PayoutsTab() {
                     {paidElsewhere && (
                       <span style={{ fontSize: "0.78rem", color: "#999", fontStyle: "italic" }}>
                         Paid via a different attempt
+                      </span>
+                    )}
+                    {superseded && (
+                      <span style={{ fontSize: "0.78rem", color: "#999", fontStyle: "italic" }}>
+                        Superseded by a newer attempt
                       </span>
                     )}
                   </td>
