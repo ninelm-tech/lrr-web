@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import { usePaymentApi } from "../../hooks";
 import type { UserRole } from "../../types";
 import type { PaymentRecord, PaymentType, PaymentStatus } from "../../hooks/usePaymentApi";
@@ -67,6 +68,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
   const [filterStatus, setFilterStatus] = useState<"" | PaymentStatus>("");
   const [filterFrom,   setFilterFrom]   = useState("");
   const [filterTo,     setFilterTo]     = useState("");
+  const [expandedPaymentId, setExpandedPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchList({ page: 1, limit: 20 });
@@ -178,10 +180,10 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
           a failed retry followed by a successful one shows both rows. */}
       <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1280 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Payment time", "Type", "Amount", "References", "Customer", "Operator", "Status", "Detail"].map((h) => (
+                {["Time", "Reference", "Actors", "Type", "Amount", "Status"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -191,65 +193,96 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <tbody>
               {loading && records.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
+                  <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
+                  <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
                 </tr>
               ) : (
                 records.map((p: PaymentRecord) => {
                   const statusStyle = STATUS_STYLES[p.status];
                   const operatorName = p.payoutOperator?.businessName ?? p.assignedOperator?.businessName;
                   const paystackReference = paystackReferenceFor(p);
+                  const detail = p.failureReason
+                    ? { label: "Failure reason", value: p.failureReason }
+                    : p.blockReason
+                      ? { label: "Blocked reason", value: p.blockReason }
+                      : null;
+                  const isExpanded = expandedPaymentId === p.id;
                   return (
-                    <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
-                      <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
-                        <span style={{ display: "block", fontSize: "1rem", fontWeight: 700, color: "#17213a" }}>
-                          {fmtPaymentTime(p.createdAt)}
-                        </span>
-                        <span style={{ display: "block", marginTop: 3, fontSize: "0.78rem", color: "#7b8496" }}>
-                          {fmtPaymentDate(p.createdAt)}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {TYPE_LABELS[p.type]}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333" }}>
-                        {fmt(p.amount)}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
-                        <code title={p.rescueRequestId} style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#003DB4" }}>
-                          #{p.rescueRequestId.slice(-6).toUpperCase()}
-                        </code>
-                        <span
-                          title={paystackReference ?? "No Paystack reference"}
-                          style={{ display: "block", marginTop: 5, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: "0.72rem", color: "#7b8496" }}
-                        >
-                          {paystackReference ?? "No Paystack reference"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {p.customer.phoneNumber || "Not provided"}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
-                        {operatorName ?? <span style={{ color: "#aaa" }}>Unassigned</span>}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem" }}>
-                        <span
-                          style={{
-                            display: "inline-block", padding: "0.3rem 0.7rem",
-                            background: statusStyle.bg, color: statusStyle.color,
-                            borderRadius: 4, fontSize: "0.8rem", fontWeight: 600,
-                          }}
-                        >
-                          {statusStyle.label}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#721c24" }}>
-                        {p.failureReason ?? (p.blockReason ? `Blocked: ${p.blockReason}` : "—")}
-                      </td>
-                    </tr>
+                    <Fragment key={p.id}>
+                      <tr style={{ borderBottom: isExpanded ? "none" : "1px solid #f0f8ff" }}>
+                        <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
+                          <span style={{ display: "block", fontSize: "1rem", fontWeight: 700, color: "#17213a" }}>
+                            {fmtPaymentTime(p.createdAt)}
+                          </span>
+                          <span style={{ display: "block", marginTop: 3, fontSize: "0.78rem", color: "#7b8496" }}>
+                            {fmtPaymentDate(p.createdAt)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.9rem 1rem", whiteSpace: "nowrap" }}>
+                          <code title={p.rescueRequestId} style={{ display: "block", fontSize: "0.86rem", fontWeight: 700, color: "#003DB4" }}>
+                            #{p.rescueRequestId.slice(-6).toUpperCase()}
+                          </code>
+                          <span
+                            title={paystackReference ?? "No Paystack reference"}
+                            style={{ display: "block", marginTop: 5, maxWidth: 210, overflow: "hidden", textOverflow: "ellipsis", fontFamily: "monospace", fontSize: "0.72rem", color: "#7b8496" }}
+                          >
+                            {paystackReference ?? "No Paystack reference"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.9rem 1rem" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "62px minmax(0, 1fr)", gap: "6px 8px", alignItems: "center", fontSize: "0.8rem" }}>
+                            <span style={{ color: "#8892a6", fontWeight: 600 }}>Customer</span>
+                            <span style={{ color: "#333" }}>{p.customer.phoneNumber || "Not provided"}</span>
+                            <span style={{ color: "#8892a6", fontWeight: 600 }}>Operator</span>
+                            <span style={{ color: operatorName ? "#333" : "#aaa" }}>{operatorName ?? "Unassigned"}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
+                          {TYPE_LABELS[p.type]}
+                        </td>
+                        <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333", whiteSpace: "nowrap" }}>
+                          {fmt(p.amount)}
+                        </td>
+                        <td style={{ padding: "0.9rem 1rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                              style={{
+                                display: "inline-block", padding: "0.3rem 0.7rem",
+                                background: statusStyle.bg, color: statusStyle.color,
+                                borderRadius: 4, fontSize: "0.8rem", fontWeight: 600,
+                              }}
+                            >
+                              {statusStyle.label}
+                            </span>
+                            {detail && (
+                              <button
+                                type="button"
+                                aria-label={`${isExpanded ? "Hide" : "Show"} payment details`}
+                                aria-expanded={isExpanded}
+                                aria-controls={`payment-detail-${p.id}`}
+                                title={`${isExpanded ? "Hide" : "Show"} payment details`}
+                                onClick={() => setExpandedPaymentId(isExpanded ? null : p.id)}
+                                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, padding: 0, border: "1px solid #c8d6ec", borderRadius: 6, background: isExpanded ? "#eaf2ff" : "#fff", color: "#003DB4", cursor: "pointer" }}
+                              >
+                                <Info size={15} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {detail && isExpanded && (
+                        <tr id={`payment-detail-${p.id}`} style={{ borderBottom: "1px solid #dde8f8" }}>
+                          <td colSpan={6} style={{ padding: "0 1rem 0.9rem" }}>
+                            <div style={{ padding: "0.8rem 1rem", borderLeft: `3px solid ${statusStyle.color}`, background: "#f8faff", color: "#49566a", fontSize: "0.84rem" }}>
+                              <strong style={{ color: "#17213a" }}>{detail.label}:</strong> {detail.value}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })
               )}
