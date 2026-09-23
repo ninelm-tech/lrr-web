@@ -19,6 +19,13 @@ function fmtDate(d: string) {
   });
 }
 
+function paystackReferenceFor(payment: Pick<PaymentRecord, "id" | "type" | "paystackReference">) {
+  if (payment.paystackReference) return payment.paystackReference;
+  if (payment.type === "REFUND") return null;
+  const prefix = payment.type === "PAYOUT" ? "payout" : payment.type === "BALANCE" ? "BAL" : "DEP";
+  return `${prefix}_${payment.id}`;
+}
+
 const STATUS_STYLES: Record<PaymentStatus, { label: string; bg: string; color: string }> = {
   PENDING:             { label: "Pending",    bg: "#fff3cd", color: "#856404" },
   SUBMITTED:           { label: "Submitted",  bg: "#dde8f8", color: "#003DB4" },
@@ -37,6 +44,8 @@ const TYPE_LABELS: Record<PaymentType, string> = {
 };
 
 export default function PaymentsTab({ role }: PaymentsTabProps) {
+  void role;
+
   const {
     records, loading, error, total, page, limit,
     fetchPaymentList: fetchList, fetchSummary,
@@ -60,7 +69,7 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
       setSummary(s);
       setSummaryLoaded(true);
     });
-  }, []);
+  }, [fetchList, fetchSummary]);
 
   const applyFilters = () => {
     const opts = {
@@ -164,10 +173,10 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
           a failed retry followed by a successful one shows both rows. */}
       <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,61,180,0.08)" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1080 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1440 }}>
             <thead>
               <tr style={{ background: "#F6FAFF", borderBottom: "2px solid #dde8f8" }}>
-                {["Date", "Type", "Amount", "Customer", "Operator", "Status", "Detail"].map((h) => (
+                {["Date", "Type", "Amount", "Paystack Reference", "Rescue ID", "Customer", "Operator", "Status", "Detail"].map((h) => (
                   <th key={h} style={{ padding: "0.9rem 1rem", textAlign: "left", fontWeight: 600, fontSize: "0.85rem", color: "#666" }}>
                     {h}
                   </th>
@@ -177,16 +186,17 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
             <tbody>
               {loading && records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
+                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#003DB4" }}>Loading payments...</td>
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
+                  <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#999" }}>No payment records found</td>
                 </tr>
               ) : (
                 records.map((p: PaymentRecord) => {
                   const statusStyle = STATUS_STYLES[p.status];
                   const operatorName = p.payoutOperator?.businessName ?? p.assignedOperator?.businessName;
+                  const paystackReference = paystackReferenceFor(p);
                   return (
                     <tr key={p.id} style={{ borderBottom: "1px solid #f0f8ff" }}>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.88rem", color: "#666" }}>
@@ -197,6 +207,12 @@ export default function PaymentsTab({ role }: PaymentsTabProps) {
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.95rem", fontWeight: 700, color: "#333" }}>
                         {fmt(p.amount)}
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333", fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                        {paystackReference ?? <span style={{ color: "#aaa", fontFamily: "inherit" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.82rem", color: "#333", fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                        {p.rescueRequestId}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {p.customer.phoneNumber || "Not provided"}

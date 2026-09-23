@@ -45,6 +45,7 @@ export interface PaymentRecord {
   failureReason: string | null;
   blockReason: string | null;
   checkoutUrl: string | null;
+  paystackReference?: string | null;
   verifyAttempts: number;
   createdAt: string;
   settledAt: string | null;
