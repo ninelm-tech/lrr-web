@@ -227,10 +227,11 @@ interface StatsModalProps {
   onClearBankDetails: () => Promise<void>;
   onUpdateAddress: (address: string, latitude: number, longitude: number) => Promise<void>;
   onUpdateRadius: (serviceRadius: number) => Promise<void>;
+  onSetIsTest: (isTest: boolean) => Promise<void>;
   viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, viewerRole }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, onSetIsTest, viewerRole }: StatsModalProps) {
   const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
 
   const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
@@ -299,6 +300,22 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
       setRadiusMsg({ msg: err instanceof Error ? err.message : "Failed to update service radius", ok: false });
     } finally {
       setSavingRadius(false);
+    }
+  }
+
+  const [savingIsTest, setSavingIsTest] = useState(false);
+  const [isTestMsg, setIsTestMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  async function handleToggleIsTest() {
+    setSavingIsTest(true);
+    setIsTestMsg(null);
+    try {
+      await onSetIsTest(!operator.isTest);
+      setIsTestMsg({ msg: `Marked as ${!operator.isTest ? "a test" : "a real"} operator.`, ok: true });
+    } catch (err) {
+      setIsTestMsg({ msg: err instanceof Error ? err.message : "Failed to update", ok: false });
+    } finally {
+      setSavingIsTest(false);
     }
   }
 
@@ -595,6 +612,37 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
             ))}
           </div>
 
+          {viewerRole === "SUPER_ADMIN" && (
+            <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid #eef2fa" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div>
+                  <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>
+                    Test Operator
+                  </p>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#8892a6" }}>
+                    Only matches test-customer requests, never real ones.
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleIsTest}
+                  disabled={savingIsTest}
+                  style={{
+                    padding: "0.4rem 0.9rem", borderRadius: 20, fontWeight: 600, fontSize: "0.82rem",
+                    border: `1px solid ${operator.isTest ? "#16a34a" : "#d1d5db"}`,
+                    background: operator.isTest ? "#dcfce7" : "#f3f4f6",
+                    color: operator.isTest ? "#16a34a" : "#6b7280",
+                    cursor: savingIsTest ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {savingIsTest ? "Saving…" : operator.isTest ? "On" : "Off"}
+                </button>
+              </div>
+              {isTestMsg && (
+                <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", fontWeight: 600, color: isTestMsg.ok ? "#19a56b" : "#dc2626" }}>{isTestMsg.msg}</p>
+              )}
+            </div>
+          )}
+
           {(() => {
             const previewLat = editingAddress && latLng ? latLng.lat : Number(operator.latitude);
             const previewLng = editingAddress && latLng ? latLng.lng : Number(operator.longitude);
@@ -784,7 +832,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
 }
 
 export default function OperatorsTab() {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, fetchBanks, saveBankDetails, clearBankDetails, updateOperator } = useOperatorApi();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, setIsTest, fetchBanks, saveBankDetails, clearBankDetails, updateOperator } = useOperatorApi();
   const { deleteOperator } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
@@ -1099,6 +1147,10 @@ export default function OperatorsTab() {
           }}
           onUpdateRadius={async (serviceRadius) => {
             const updated = await updateOperator(selectedOp.id, { serviceRadius });
+            setSelectedOp(updated);
+          }}
+          onSetIsTest={async (isTest) => {
+            const updated = await setIsTest(selectedOp.id, isTest);
             setSelectedOp(updated);
           }}
           viewerRole={myRole}

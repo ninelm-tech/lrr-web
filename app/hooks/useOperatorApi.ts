@@ -47,6 +47,9 @@ export interface Operator {
   serviceRadius: number;
   status:        OperatorStatus;
   isAvailable:   boolean;
+  // Routes this operator to test-customer requests only — see
+  // OperatorService.findAndRankCandidates. SUPER_ADMIN can set it.
+  isTest:        boolean;
   verifiedAt:    string | null;
   createdAt:     string;
   updatedAt:     string;
@@ -275,6 +278,27 @@ export function useOperatorApi() {
     }
   }, []);
 
+  /** SUPER_ADMIN only — see OperatorController.setIsTest. */
+  const setIsTest = useCallback(async (id: string, isTest: boolean): Promise<Operator> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/operators/${id}/is-test`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ isTest }),
+      });
+      setOperators((prev) => prev.map((op) => op.id === id ? { ...op, isTest } : op));
+      return res.data as Operator;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update test-operator flag";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ── Members ──────────────────────────────────────────────────────────────
 
   const fetchMembers = useCallback(async (operatorId: string): Promise<OperatorMember[]> => {
@@ -341,6 +365,7 @@ export function useOperatorApi() {
     clearBankDetails,
     updateStatus,
     setAvailability,
+    setIsTest,
     // Members
     fetchMembers,
     addMember,
