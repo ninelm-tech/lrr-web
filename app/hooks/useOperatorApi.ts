@@ -82,6 +82,24 @@ export interface OperatorLeaderboardEntry {
   stats:        OperatorStats;
 }
 
+// Staff onboarding from a physical intake form — no OTP, password optional
+// (left unset, the operator uses "Forgot password" before first login).
+export interface AdminCreateOperatorPayload {
+  name:                 string;
+  businessName:         string;
+  contactName:          string;
+  phoneNumber:          string;
+  businessPhoneNumber:  string;
+  email?:               string;
+  password?:            string;
+  type?:                string;
+  address:              string;
+  latitude:             number;
+  longitude:            number;
+  serviceRadius?:       number;
+  truckClasses:         string[];
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useOperatorApi() {
@@ -347,6 +365,29 @@ export function useOperatorApi() {
     }
   }, []);
 
+  // ── Staff onboarding ─────────────────────────────────────────────────────
+
+  const adminCreate = useCallback(async (
+    data: AdminCreateOperatorPayload,
+  ): Promise<{ userId: string; operatorId: string; status: string }> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/operators/admin-create", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(data),
+      });
+      return res.data as { userId: string; operatorId: string; status: string };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to onboard operator";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     // State
     operators,
@@ -370,5 +411,7 @@ export function useOperatorApi() {
     fetchMembers,
     addMember,
     removeMember,
+    // Staff onboarding
+    adminCreate,
   };
 }

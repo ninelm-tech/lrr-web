@@ -5,7 +5,7 @@ import { CheckCircle2, EllipsisVertical, Eye, MapPin, Pencil, RotateCcw, Trash2,
 import { useOperatorApi, useAuthState, useAccountDeletionApi } from "../../hooks";
 import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
 import ServiceRadiusMap from "../ServiceRadiusMap";
-import type { Operator, OperatorStats } from "../../hooks";
+import type { Operator, OperatorStats, AdminCreateOperatorPayload } from "../../hooks";
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   PENDING:   { bg: "#fff3cd", text: "#856404", label: "Pending" },
@@ -215,6 +215,227 @@ function OperatorActionsMenu({
         document.body,
       )}
     </>
+  );
+}
+
+const TRUCK_CLASS_LABELS: Record<string, string> = {
+  LIGHT_DUTY: "Light Duty",
+  TEN_TYRE: "10-Tyre",
+  LOW_BED: "Low Bed",
+  HIAB: "Hiab",
+};
+
+interface OnboardOperatorModalProps {
+  onClose: () => void;
+  onCreate: (data: AdminCreateOperatorPayload) => Promise<void>;
+}
+
+function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) {
+  const [contactName, setContactName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [businessPhoneNumber, setBusinessPhoneNumber] = useState("");
+  const [sameAsPersonalPhone, setSameAsPersonalPhone] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [type, setType] = useState("TOW_TRUCK");
+  const [serviceRadius, setServiceRadius] = useState("10");
+  const [truckClasses, setTruckClasses] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [addressListRect, setAddressListRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const { address, setAddress, suggestions, selectSuggestion, latLng, mapsReady } = useGooglePlacesAutocomplete();
+
+  function openAddressList() {
+    const rect = addressInputRef.current?.getBoundingClientRect();
+    if (rect) setAddressListRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  function toggleTruckClass(value: string) {
+    setTruckClasses((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!contactName || !businessName || !phoneNumber) {
+      setError("Contact name, business name, and phone number are required.");
+      return;
+    }
+    const resolvedBusinessPhone = sameAsPersonalPhone ? phoneNumber : businessPhoneNumber;
+    if (!resolvedBusinessPhone) {
+      setError("Business phone number is required.");
+      return;
+    }
+    if (!address || !latLng) {
+      setError("Please select the address from the suggestions list so we can pinpoint the location.");
+      return;
+    }
+    if (truckClasses.length === 0) {
+      setError("Select at least one truck class.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await onCreate({
+        name: contactName,
+        contactName,
+        businessName,
+        phoneNumber,
+        businessPhoneNumber: resolvedBusinessPhone,
+        email: email || undefined,
+        password: password || undefined,
+        type,
+        address,
+        latitude: latLng.lat,
+        longitude: latLng.lng,
+        serviceRadius: Number(serviceRadius) || 10,
+        truckClasses,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to onboard operator");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const fieldLabelStyle: React.CSSProperties = { display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: 4, color: "#666" };
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "0.55rem 0.7rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+      onClick={onClose}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{ background: "#fff", borderRadius: 14, width: 640, maxWidth: "92vw", maxHeight: "88vh", overflow: "auto", boxShadow: "0 12px 40px rgba(7,21,47,0.22)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "1.5rem 1.75rem", borderBottom: "1px solid #f0f3f8" }}>
+          <div>
+            <h2 style={{ margin: "0 0 0.2rem 0", fontSize: "1.3rem", color: "#07152f" }}>Onboard operator</h2>
+            <p style={{ margin: 0, color: "#8892a6", fontSize: "0.88rem" }}>From a physical intake form — no OTP needed, goes active immediately.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, flexShrink: 0, marginLeft: 12, background: "#F6FAFF", border: "none", borderRadius: "50%", color: "#6c7890", cursor: "pointer" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "1.5rem 1.75rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+          {error && (
+            <div style={{ background: "#f8d7da", color: "#721c24", padding: "0.75rem 1rem", borderRadius: 8, border: "1px solid #f5c6cb", fontSize: "0.88rem" }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div>
+              <label style={fieldLabelStyle}>Contact name *</label>
+              <input style={inputStyle} value={contactName} onChange={(e) => setContactName(e.target.value)} />
+            </div>
+            <div>
+              <label style={fieldLabelStyle}>Business name *</label>
+              <input style={inputStyle} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+            </div>
+            <div>
+              <label style={fieldLabelStyle}>Phone number *</label>
+              <input style={inputStyle} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+234..." />
+            </div>
+            <div>
+              <label style={fieldLabelStyle}>Email (optional)</label>
+              <input style={inputStyle} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.88rem", color: "#333", marginBottom: 8 }}>
+              <input type="checkbox" checked={sameAsPersonalPhone} onChange={(e) => setSameAsPersonalPhone(e.target.checked)} />
+              Business dispatch line is the same number
+            </label>
+            {!sameAsPersonalPhone && (
+              <input style={inputStyle} value={businessPhoneNumber} onChange={(e) => setBusinessPhoneNumber(e.target.value)} placeholder="+234..." />
+            )}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div>
+              <label style={fieldLabelStyle}>Trade</label>
+              <select style={inputStyle} value={type} onChange={(e) => setType(e.target.value)}>
+                {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={fieldLabelStyle}>Service radius (km)</label>
+              <input style={inputStyle} type="number" min={1} value={serviceRadius} onChange={(e) => setServiceRadius(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label style={fieldLabelStyle}>Address *</label>
+            <input
+              ref={addressInputRef}
+              style={inputStyle}
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); openAddressList(); }}
+              onFocus={openAddressList}
+              placeholder={mapsReady ? "Search for an address…" : "Loading maps…"}
+            />
+            {suggestions.length > 0 && addressListRect && typeof document !== "undefined" && createPortal(
+              <div style={{ position: "fixed", top: addressListRect.top, left: addressListRect.left, width: addressListRect.width, zIndex: 1000, background: "#fff", border: "1px solid #dde8f8", borderRadius: 8, maxHeight: 200, overflowY: "auto", boxShadow: "0 8px 20px rgba(7,21,47,0.16)" }}>
+                {suggestions.map((s) => (
+                  <div
+                    key={s.place_id}
+                    onMouseDown={() => selectSuggestion(s)}
+                    style={{ padding: "0.5rem 0.75rem", fontSize: "0.88rem", cursor: "pointer" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F6FAFF"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+                  >
+                    {s.description}
+                  </div>
+                ))}
+              </div>,
+              document.body,
+            )}
+            {latLng && (
+              <p style={{ margin: "6px 0 0", fontSize: "0.78rem", color: "#8892a6" }}>📍 {latLng.lat.toFixed(4)}, {latLng.lng.toFixed(4)}</p>
+            )}
+          </div>
+
+          <div>
+            <label style={fieldLabelStyle}>Fleet / truck classes *</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {Object.entries(TRUCK_CLASS_LABELS).map(([value, label]) => (
+                <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.9rem", color: "#333" }}>
+                  <input type="checkbox" checked={truckClasses.includes(value)} onChange={() => toggleTruckClass(value)} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={fieldLabelStyle}>Password (optional)</label>
+            <input style={inputStyle} type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank — they'll set one via Forgot Password" />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "1.25rem 1.75rem", borderTop: "1px solid #f0f3f8" }}>
+          <button type="button" onClick={onClose} style={{ padding: "0.6rem 1.1rem", background: "#F6FAFF", color: "#003DB4", border: "1px solid #003DB4", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={submitting} style={{ padding: "0.6rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: submitting ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.9rem", opacity: submitting ? 0.7 : 1 }}>
+            {submitting ? "Onboarding…" : "Onboard operator"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -832,7 +1053,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
 }
 
 export default function OperatorsTab() {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, setIsTest, fetchBanks, saveBankDetails, clearBankDetails, updateOperator } = useOperatorApi();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, setIsTest, fetchBanks, saveBankDetails, clearBankDetails, updateOperator, adminCreate } = useOperatorApi();
   const { deleteOperator } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
@@ -843,6 +1064,7 @@ export default function OperatorsTab() {
   const [selectedOp, setSelectedOp] = useState<Operator | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -897,6 +1119,13 @@ export default function OperatorsTab() {
     }
   };
 
+  const handleOnboardOperator = async (data: AdminCreateOperatorPayload) => {
+    await adminCreate(data);
+    showToast(`${data.businessName} onboarded and active`);
+    setShowOnboardModal(false);
+    await fetchAll();
+  };
+
   const filtered = operators.filter((op) => {
     if (filterStatus && op.status !== filterStatus) return false;
     if (filterType && op.type !== filterType) return false;
@@ -933,6 +1162,15 @@ export default function OperatorsTab() {
           {toast.msg}
         </div>
       )}
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+        <button
+          onClick={() => setShowOnboardModal(true)}
+          style={{ padding: "0.6rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}
+        >
+          + Onboard operator
+        </button>
+      </div>
 
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
@@ -1154,6 +1392,14 @@ export default function OperatorsTab() {
             setSelectedOp(updated);
           }}
           viewerRole={myRole}
+        />
+      )}
+
+      {/* Onboard operator modal */}
+      {showOnboardModal && (
+        <OnboardOperatorModal
+          onClose={() => setShowOnboardModal(false)}
+          onCreate={handleOnboardOperator}
         />
       )}
     </div>
