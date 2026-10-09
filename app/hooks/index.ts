@@ -28,7 +28,8 @@ export type { UserListItem, UserListResult, ListUsersOptions }    from "./useAut
 export type { AdminOverviewStats, PendingOffer }                   from "./useRescueRequestApi";
 export type { Operator, OperatorMember, OperatorStats,
               OperatorStatus, OperatorMemberRole,
-              OperatorLeaderboardEntry }                           from "./useOperatorApi";
+              OperatorLeaderboardEntry,
+              AdminCreateOperatorPayload }                         from "./useOperatorApi";
 export type { PaymentRecord, PaymentSummary, PaymentListOptions } from "./usePaymentApi";
 export type { PlatformSettings }                                   from "./useSettingsApi";
 export type { RatingDetail }                                       from "./useRatingApi";
