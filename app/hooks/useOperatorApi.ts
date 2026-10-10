@@ -62,6 +62,12 @@ export interface Operator {
   paystackRecipientCode: string | null;
   deletedAt:             string | null;
   members?: OperatorMember[];
+  // Only populated by fetchMe() below — a platform-wide setting riding
+  // along on the GET /operators/me response (plain number, not a Decimal),
+  // not a real column on the Operator record. Every other method that
+  // returns an Operator (fetchAll, fetchById, updateOperator,
+  // saveBankDetails, setDepositPercent, …) leaves this undefined.
+  platformDefaultDepositPercent?: number;
 }
 
 export interface OperatorMember {
@@ -130,13 +136,23 @@ export function useOperatorApi() {
     }
   }, []);
 
-  /** Returns the operator record that belongs to the currently-logged-in user. */
+  /**
+   * Returns the operator record that belongs to the currently-logged-in
+   * user, with `platformDefaultDepositPercent` merged on from the response's
+   * sibling field (see the Operator interface's own comment on that field) —
+   * callers that only care about the operator itself can keep treating the
+   * result exactly like before; OperatorProfileForm reads the extra field.
+   */
   const fetchMe = useCallback(async (): Promise<Operator | null> => {
     setLoading(true);
     setError(null);
     try {
       const res = await apiFetch("/operators/me");
-      return (res.data ?? null) as Operator | null;
+      if (!res.data) return null;
+      return {
+        ...(res.data as Operator),
+        platformDefaultDepositPercent: res.platformDefaultDepositPercent as number | undefined,
+      };
     } catch (err) {
       // 404 means this user has no operator account — not a hard error
       return null;
