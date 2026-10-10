@@ -45,6 +45,9 @@ export interface Operator {
   latitude:      number | string;
   longitude:     number | string;
   serviceRadius: number;
+  // Prisma Decimal field, serializes over JSON the same way as latitude —
+  // null means "no override, use the platform default".
+  depositPercentOverride: number | string | null;
   status:        OperatorStatus;
   isAvailable:   boolean;
   // Routes this operator to test-customer requests only — see
@@ -98,6 +101,7 @@ export interface AdminCreateOperatorPayload {
   longitude:            number;
   serviceRadius?:       number;
   truckClasses:         string[];
+  depositPercentOverride?: number;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -246,6 +250,31 @@ export function useOperatorApi() {
       return updated;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to remove bank details";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Set or clear an operator's deposit percentage override. null clears it back to the platform default. */
+  const setDepositPercent = useCallback(async (
+    id: string,
+    depositPercentOverride: number | null,
+  ): Promise<Operator> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/operators/${id}/deposit-percent`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ depositPercentOverride }),
+      });
+      const updated = res.data as Operator;
+      setOperators((prev) => prev.map((op) => (op.id === id ? { ...op, ...updated } : op)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update deposit percentage";
       setError(msg);
       throw err;
     } finally {
@@ -404,6 +433,7 @@ export function useOperatorApi() {
     updateOperator,
     saveBankDetails,
     clearBankDetails,
+    setDepositPercent,
     updateStatus,
     setAvailability,
     setIsTest,
