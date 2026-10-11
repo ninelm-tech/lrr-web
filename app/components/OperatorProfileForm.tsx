@@ -80,6 +80,7 @@ export default function OperatorProfileForm() {
         setServiceRadius(String(op.serviceRadius ?? 10));
         setTruckClasses((op.truckClasses ?? []) as TruckClass[]);
         setPlatformDefaultDepositPercent(op.platformDefaultDepositPercent ?? null);
+        setDepositPercentInput(op.depositPercentOverride != null ? String(Number(op.depositPercentOverride)) : "");
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -119,7 +120,7 @@ export default function OperatorProfileForm() {
     try {
       const updated = await setDepositPercent(operator.id, value);
       setOperator(updated);
-      setDepositPercentInput("");
+      setDepositPercentInput(updated.depositPercentOverride != null ? String(Number(updated.depositPercentOverride)) : "");
       setDepositMsg({ msg: "Deposit percentage updated.", ok: true });
     } catch (err) {
       setDepositMsg({ msg: err instanceof Error ? err.message : "Failed to update deposit percentage", ok: false });

@@ -240,7 +240,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
   const [password, setPassword] = useState("");
   const [type, setType] = useState("TOW_TRUCK");
   const [serviceRadius, setServiceRadius] = useState("10");
-  const [depositPercent, setDepositPercent] = useState("");
+  const [depositPercentInput, setDepositPercentInput] = useState("");
   const [truckClasses, setTruckClasses] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -296,7 +296,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
         longitude: latLng.lng,
         serviceRadius: Number(serviceRadius) || 10,
         truckClasses,
-        ...(depositPercent.trim() !== "" && { depositPercentOverride: Number(depositPercent) }),
+        ...(depositPercentInput.trim() !== "" && { depositPercentOverride: Number(depositPercentInput) }),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to onboard operator");
@@ -381,7 +381,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
 
           <div>
             <label style={fieldLabelStyle}>Deposit % (optional)</label>
-            <input style={inputStyle} type="number" min={0} max={100} value={depositPercent} onChange={(e) => setDepositPercent(e.target.value)} placeholder="Platform default" />
+            <input style={inputStyle} type="number" min={0} max={100} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
           </div>
 
           <div>
@@ -457,7 +457,7 @@ interface StatsModalProps {
   onUpdateRadius: (serviceRadius: number) => Promise<void>;
   onSetIsTest: (isTest: boolean) => Promise<void>;
   onSetDepositPercent: (depositPercentOverride: number | null) => Promise<void>;
-  platformDefaultDepositPercent: number;
+  platformDefaultDepositPercent: number | null;
   viewerRole: string | null;
 }
 
@@ -896,7 +896,9 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                 <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>
                   {operator.depositPercentOverride != null
                     ? `${Number(operator.depositPercentOverride)}%`
-                    : `Using platform default (${platformDefaultDepositPercent}%)`}
+                    : platformDefaultDepositPercent != null
+                      ? `Using platform default (${platformDefaultDepositPercent}%)`
+                      : "Using platform default"}
                 </p>
               )}
               {depositMsg && (
@@ -1151,7 +1153,10 @@ export default function OperatorsTab() {
   const { deleteOperator } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
   const { settings: platformSettings, fetchSettings } = useSettingsApi();
-  const platformDefaultDepositPercent = platformSettings?.depositPercent ?? 10;
+  // GET /admin/settings is SUPER_ADMIN-only; ADMIN/PRODUCT viewers always 403 here,
+  // so platformSettings stays null for them. Never fall back to a guessed number —
+  // StatsModal shows "Using platform default" with no number in that case.
+  const platformDefaultDepositPercent = platformSettings?.depositPercent ?? null;
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
   const [filterStatus, setFilterStatus] = useState("");
@@ -1170,7 +1175,9 @@ export default function OperatorsTab() {
       setStatsMap(m);
     });
     fetchBanks().then(setBanks);
-    fetchSettings();
+    // ADMIN/PRODUCT viewers 403 on this SUPER_ADMIN-only endpoint — expected,
+    // not an error worth surfacing. Swallow so it isn't an unhandled rejection.
+    fetchSettings().catch(() => {});
   }, [fetchAll, fetchAllStats, fetchBanks, fetchSettings]);
 
   const showToast = (msg: string, ok = true) => {
