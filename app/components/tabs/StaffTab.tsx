@@ -123,7 +123,7 @@ export default function StaffTab() {
       setEditingId(null);
       setRowMsg({
         text: patch.role
-          ? "Saved. The new role applies when they next sign in — an existing session can keep the old role for up to 7 days."
+          ? "Saved. The new role applies when they next sign in — an existing session can keep the old role for up to 24 hours."
           : "Saved.",
         ok: true,
       });

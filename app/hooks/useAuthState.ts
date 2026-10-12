@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { AUTH_CHANGED_EVENT, getRole, getToken, getUserName } from "../lib/session";
+import { AUTH_CHANGED_EVENT, getRole, getToken, getUserName, hasSessionCookie } from "../lib/session";
 import type { UserRole } from "../types";
 
 export interface AuthState {
@@ -45,7 +45,11 @@ export function useAuthState(): AuthState {
     function sync() {
       setState({
         ready: true,
-        isLoggedIn: Boolean(getToken()),
+        // Both signals, same as the proxy and /login decide on: a token with
+        // no cookie is an expired session (the cookie is what lapses), and
+        // treating it as logged in is what offered "Go to Dashboard" only to
+        // bounce the user to the login form.
+        isLoggedIn: Boolean(getToken()) && hasSessionCookie(),
         role: getRole(),
         userName: getUserName(),
       });
