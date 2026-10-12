@@ -117,7 +117,7 @@ export default function OperatorMembersTab() {
         <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", border: "1px solid #e8edf5" }}>
           <h3 style={{ margin: "0 0 1rem", fontSize: "1rem", fontWeight: 700, color: navy }}>Add team member</h3>
           <p style={{ margin: "0 0 1rem", fontSize: "0.84rem", color: "#6c7890" }}>
-            The person must already have an LRR account. Enter their User ID (found in Admin → Manage Users).
+            The person must already have an LRR account. Enter their User ID. Platform admins can copy it from the Customers page.
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <input

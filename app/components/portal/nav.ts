@@ -46,7 +46,10 @@ export const PORTAL_NAV: PortalNavItem[] = [
   // Who's allowed to operate/manage accounts — administration, not the
   // live work itself (that's Dispatch Board/Requests above).
   { label: "Operators",    href: "/operators", icon: "car",              section: "Administration", roles: STAFF_VISIBILITY },
-  { label: "Manage Users", href: "/users",     icon: "users",            section: "Administration", roles: ADMINS },
+  // Internal team only (super admin / admin / product). Operators are managed
+  // under Operators, customers under Customers.
+  { label: "Staff",        href: "/users",     icon: "user-cog",         section: "Administration", roles: ADMINS },
+  { label: "Customers",    href: "/customers", icon: "users",            section: "Administration", roles: ADMINS },
   { label: "Platform Settings", href: "/platform-settings", icon: "settings", section: "Administration", roles: SUPER_ADMIN_ONLY },
   { label: "Audit Log",    href: "/audit-log", icon: "audit-log",        section: "Administration", roles: SUPER_ADMIN_ONLY },
   { label: "Team",         href: "/team",      icon: "user-cog",         section: "Business",       roles: OPERATOR },

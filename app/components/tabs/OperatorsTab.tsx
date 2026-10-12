@@ -456,6 +456,11 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
   const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
 
   const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
+  // Day-to-day onboarding (address, service radius, payout account) is open to
+  // PRODUCT as well as admins — mirrors the server. Verify/suspend and delete
+  // stay behind canManage/canDelete above.
+  const canEditOnboarding =
+    viewerRole === "ADMIN" || viewerRole === "SUPER_ADMIN" || viewerRole === "PRODUCT";
   const [editingBank, setEditingBank] = useState(!hasBankOnFile);
   const [bankCode, setBankCode] = useState("");
   const [bankSearch, setBankSearch] = useState("");
@@ -659,7 +664,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
             <div style={{ gridColumn: "1 / -1" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Address</p>
-                {!editingAddress && viewerRole !== "PRODUCT" && (
+                {!editingAddress && canEditOnboarding && (
                   <button
                     onClick={startEditingAddress}
                     aria-label="Edit address"
@@ -757,7 +762,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Service Radius</p>
-                {!editingRadius && viewerRole !== "PRODUCT" && (
+                {!editingRadius && canEditOnboarding && (
                   <button
                     onClick={() => { setRadiusValue(String(operator.serviceRadius)); setRadiusMsg(null); setEditingRadius(true); }}
                     aria-label="Edit service radius"
@@ -925,7 +930,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                 <strong>{operator.bankName}</strong> ····{operator.accountNumberLast4}
                 <span style={{ color: "#8892a6" }}> ({operator.accountName})</span>
               </p>
-              {viewerRole !== "PRODUCT" && (
+              {canEditOnboarding && (
                 <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
                   <button
                     onClick={() => setEditingBank(true)}
@@ -957,7 +962,7 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
           {msg && !editingBank && (
             <p style={{ margin: "0.6rem 0 0", fontSize: "0.85rem", fontWeight: 600, color: msg.ok ? "#19a56b" : "#dc2626" }}>{msg.msg}</p>
           )}
-          {viewerRole !== "PRODUCT" && editingBank && (
+          {canEditOnboarding && editingBank && (
             <div style={{ background: "#F9FAFC", border: "1px solid #f0f3f8", borderRadius: 10, padding: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <div>
@@ -1304,19 +1309,6 @@ export default function OperatorsTab() {
                         )}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", textAlign: "center" }}>
-                        {myRole === "PRODUCT" ? (
-                          <span
-                            style={{
-                              display: "inline-block", padding: "0.3rem 0.7rem",
-                              background: op.isAvailable ? "#d4edda" : "#e2e3e5",
-                              color: op.isAvailable ? "#155724" : "#383d41",
-                              borderRadius: 4, fontSize: "0.82rem", fontWeight: 600,
-                              opacity: op.status !== "ACTIVE" ? 0.5 : 1,
-                            }}
-                          >
-                            {op.isAvailable ? "Online" : "Offline"}
-                          </span>
-                        ) : (
                           <button
                             onClick={() => handleAvailability(op)}
                             disabled={actionLoading === op.id + "avail" || op.status !== "ACTIVE"}
@@ -1331,7 +1323,6 @@ export default function OperatorsTab() {
                           >
                             {op.isAvailable ? "Online" : "Offline"}
                           </button>
-                        )}
                       </td>
                       <td style={{ padding: "0.9rem 1rem", fontSize: "0.9rem", color: "#333" }}>
                         {opStats ? pct(opStats.acceptanceRate) : "—"}
