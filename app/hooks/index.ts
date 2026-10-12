@@ -22,6 +22,8 @@ export { usePayoutApi }       from "./usePayoutApi";
 export { useDispatchBoardApi } from "./useDispatchBoardApi";
 export { useAuditLogApi }     from "./useAuditLogApi";
 export { useAccountDeletionApi } from "./useAccountDeletionApi";
+export { useStaffApi }        from "./useStaffApi";
+export { useCustomersApi }    from "./useCustomersApi";
 
 // Re-export types that components commonly need
 export type { UserListItem, UserListResult, ListUsersOptions }    from "./useAuthApi";
@@ -36,3 +38,5 @@ export type { RatingDetail }                                       from "./useRa
 export type { PayoutListItem }                                     from "./usePayoutApi";
 export type { DispatchBoardRow, DispatchBoardOffer }               from "./useDispatchBoardApi";
 export type { AuditLogEntry, AuditLogListMeta }                    from "./useAuditLogApi";
+export type { StaffMember, StaffListResult }                       from "./useStaffApi";
+export type { CustomerListItem, CustomerListResult }               from "./useCustomersApi";

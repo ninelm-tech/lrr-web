@@ -1,6 +1,6 @@
 /**
  * Portal route group — one shell for every role.
- * Routes: /dashboard /requests /operators /users /team /payments /settings
+ * Routes: /dashboard /requests /operators /users /customers /team /payments /settings
  */
 import PortalShell from "../components/portal/PortalShell";
 
