@@ -111,8 +111,11 @@ export default function OperatorProfileForm() {
     if (!operator) return;
     const trimmed = depositPercentInput.trim();
     const value = trimmed === "" ? null : Number(trimmed);
-    if (value !== null && (Number.isNaN(value) || value < 0 || value > 100)) {
-      setDepositMsg({ msg: "Enter a number between 0 and 100, or leave blank for the platform default.", ok: false });
+    // Floor is the live platform default (falls back to 0 if unknown) — the
+    // backend is authoritative; this is a UI nicety, not the real enforcement.
+    const minDeposit = platformDefaultDepositPercent ?? 0;
+    if (value !== null && (Number.isNaN(value) || value < minDeposit || value > 50)) {
+      setDepositMsg({ msg: `Enter a number between ${minDeposit} and 50, or leave blank for the platform default.`, ok: false });
       return;
     }
     setDepositMsg(null);
@@ -334,7 +337,7 @@ export default function OperatorProfileForm() {
           <div>
             <label htmlFor="op-deposit" style={labelStyle}>Deposit percentage override</label>
             <input
-              id="op-deposit" type="number" min={0} max={100} style={inputStyle}
+              id="op-deposit" type="number" min={platformDefaultDepositPercent ?? 0} max={50} style={inputStyle}
               value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)}
               placeholder="Platform default"
             />

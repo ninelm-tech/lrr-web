@@ -381,7 +381,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
 
           <div>
             <label style={fieldLabelStyle}>Deposit % (optional)</label>
-            <input style={inputStyle} type="number" min={0} max={100} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
+            <input style={inputStyle} type="number" min={0} max={50} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
           </div>
 
           <div>
@@ -546,8 +546,12 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
   async function handleSaveDeposit() {
     const trimmed = depositValue.trim();
     const n = trimmed === "" ? null : Number(trimmed);
-    if (n !== null && (Number.isNaN(n) || n < 0 || n > 100)) {
-      setDepositMsg({ msg: "Enter a number between 0 and 100, or leave blank for the platform default.", ok: false });
+    // Floor is the live platform default (falls back to 0 if unknown, e.g.
+    // ADMIN/PRODUCT roles whose GET /admin/settings 403s) — the backend is
+    // authoritative; this is a UI nicety, not the real enforcement.
+    const minDeposit = platformDefaultDepositPercent ?? 0;
+    if (n !== null && (Number.isNaN(n) || n < minDeposit || n > 50)) {
+      setDepositMsg({ msg: `Enter a number between ${minDeposit} and 50, or leave blank for the platform default.`, ok: false });
       return;
     }
     setSavingDeposit(true);
@@ -869,8 +873,8 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                 <div>
                   <input
                     type="number"
-                    min={0}
-                    max={100}
+                    min={platformDefaultDepositPercent ?? 0}
+                    max={50}
                     value={depositValue}
                     onChange={(e) => setDepositValue(e.target.value)}
                     placeholder="Platform default"
