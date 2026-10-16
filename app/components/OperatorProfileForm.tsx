@@ -35,7 +35,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function OperatorProfileForm() {
-  const { fetchMe, updateOperator, fetchBanks, saveBankDetails } = useOperatorApi();
+  const { fetchMe, updateOperator, fetchBanks, saveBankDetails, setDepositPercent } = useOperatorApi();
 
   const [operator, setOperator] = useState<Operator | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -57,6 +57,14 @@ export default function OperatorProfileForm() {
   const [resolving, setResolving] = useState(false);
   const [bankMsg, setBankMsg] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Local setter named setDepositPercentInput (not setDepositPercent) so it
+  // can't collide with the useOperatorApi().setDepositPercent function
+  // destructured above — same identifier, same file scope, easy to mix up.
+  const [depositPercentInput, setDepositPercentInput] = useState("");
+  const [savingDeposit, setSavingDeposit] = useState(false);
+  const [depositMsg, setDepositMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [platformDefaultDepositPercent, setPlatformDefaultDepositPercent] = useState<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     fetchMe()
@@ -71,6 +79,8 @@ export default function OperatorProfileForm() {
         setType(op.type ?? "TOW_TRUCK");
         setServiceRadius(String(op.serviceRadius ?? 10));
         setTruckClasses((op.truckClasses ?? []) as TruckClass[]);
+        setPlatformDefaultDepositPercent(op.platformDefaultDepositPercent ?? null);
+        setDepositPercentInput(op.depositPercentOverride != null ? String(Number(op.depositPercentOverride)) : "");
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -94,6 +104,31 @@ export default function OperatorProfileForm() {
       setBankMsg({ msg: err instanceof Error ? err.message : "Failed to save bank details", ok: false });
     } finally {
       setResolving(false);
+    }
+  }
+
+  async function handleSaveDepositPercent() {
+    if (!operator) return;
+    const trimmed = depositPercentInput.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    // Floor is the live platform default (falls back to 0 if unknown) — the
+    // backend is authoritative; this is a UI nicety, not the real enforcement.
+    const minDeposit = platformDefaultDepositPercent ?? 0;
+    if (value !== null && (Number.isNaN(value) || value < minDeposit || value > 50)) {
+      setDepositMsg({ msg: `Enter a number between ${minDeposit} and 50, or leave blank for the platform default.`, ok: false });
+      return;
+    }
+    setDepositMsg(null);
+    setSavingDeposit(true);
+    try {
+      const updated = await setDepositPercent(operator.id, value);
+      setOperator(updated);
+      setDepositPercentInput(updated.depositPercentOverride != null ? String(Number(updated.depositPercentOverride)) : "");
+      setDepositMsg({ msg: "Deposit percentage updated.", ok: true });
+    } catch (err) {
+      setDepositMsg({ msg: err instanceof Error ? err.message : "Failed to update deposit percentage", ok: false });
+    } finally {
+      setSavingDeposit(false);
     }
   }
 
@@ -272,6 +307,56 @@ export default function OperatorProfileForm() {
           {bankMsg && (
             <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600, color: bankMsg.ok ? "#19a56b" : "#dc2626" }}>
               {bankMsg.msg}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid #dde8f8" }}>
+        <h3 style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "1.05rem", color: navy }}>
+          Deposit percentage
+        </h3>
+        <p style={{ margin: "0 0 1rem", color: "#6c7890", fontSize: "0.85rem" }}>
+          The share of a job total that a customer pays upfront before you are dispatched. Leave blank to use the platform default.
+        </p>
+        <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "#333" }}>
+          {/*
+            platformDefaultDepositPercent comes from GET /operators/me (see
+            useOperatorApi's fetchMe) rather than GET /admin/settings, which
+            is SUPER_ADMIN-only and unreachable from this operator-facing
+            form — same number StatsModal shows staff, fetched a different
+            way for this audience.
+          */}
+          Currently: {operator.depositPercentOverride != null
+            ? `${Number(operator.depositPercentOverride)}%`
+            : platformDefaultDepositPercent != null
+              ? `using the platform default (${platformDefaultDepositPercent}%)`
+              : "using the platform default"}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+          <div>
+            <label htmlFor="op-deposit" style={labelStyle}>Deposit percentage override</label>
+            <input
+              id="op-deposit" type="number" min={platformDefaultDepositPercent ?? 0} max={50} style={inputStyle}
+              value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)}
+              placeholder="Platform default"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveDepositPercent}
+            disabled={savingDeposit}
+            style={{
+              alignSelf: "flex-start", padding: "0.6rem 1.2rem", background: "#fff", color: blue,
+              border: `1.5px solid ${blue}`, borderRadius: 10, fontWeight: 700, fontSize: "0.88rem", fontFamily: dm,
+              cursor: savingDeposit ? "not-allowed" : "pointer", opacity: savingDeposit ? 0.6 : 1,
+            }}
+          >
+            {savingDeposit ? "Saving…" : "Save"}
+          </button>
+          {depositMsg && (
+            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600, color: depositMsg.ok ? "#19a56b" : "#dc2626" }}>
+              {depositMsg.msg}
             </p>
           )}
         </div>

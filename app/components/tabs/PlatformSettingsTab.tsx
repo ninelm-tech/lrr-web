@@ -68,12 +68,12 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Deposit (%) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 10)</span>
+            Deposit (%) <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: 10, max: 50)</span>
           </label>
           <input
             type="number"
             min={0}
-            max={100}
+            max={50}
             step="0.1"
             value={depositPercent}
             onChange={(e) => setDepositPercent(e.target.value)}

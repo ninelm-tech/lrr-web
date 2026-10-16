@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, EllipsisVertical, Eye, MapPin, Pencil, RotateCcw, Trash2, X, XCircle } from "lucide-react";
-import { useOperatorApi, useAuthState, useAccountDeletionApi } from "../../hooks";
+import { useOperatorApi, useAuthState, useAccountDeletionApi, useSettingsApi } from "../../hooks";
 import { useGooglePlacesAutocomplete } from "../../hooks/useGooglePlacesAutocomplete";
 import ServiceRadiusMap from "../ServiceRadiusMap";
 import type { Operator, OperatorStats, AdminCreateOperatorPayload } from "../../hooks";
@@ -240,6 +240,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
   const [password, setPassword] = useState("");
   const [type, setType] = useState("TOW_TRUCK");
   const [serviceRadius, setServiceRadius] = useState("10");
+  const [depositPercentInput, setDepositPercentInput] = useState("");
   const [truckClasses, setTruckClasses] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -295,6 +296,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
         longitude: latLng.lng,
         serviceRadius: Number(serviceRadius) || 10,
         truckClasses,
+        ...(depositPercentInput.trim() !== "" && { depositPercentOverride: Number(depositPercentInput) }),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to onboard operator");
@@ -378,6 +380,11 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
           </div>
 
           <div>
+            <label style={fieldLabelStyle}>Deposit % (optional)</label>
+            <input style={inputStyle} type="number" min={0} max={50} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
+          </div>
+
+          <div>
             <label style={fieldLabelStyle}>Address *</label>
             <input
               ref={addressInputRef}
@@ -449,10 +456,12 @@ interface StatsModalProps {
   onUpdateAddress: (address: string, latitude: number, longitude: number) => Promise<void>;
   onUpdateRadius: (serviceRadius: number) => Promise<void>;
   onSetIsTest: (isTest: boolean) => Promise<void>;
+  onSetDepositPercent: (depositPercentOverride: number | null) => Promise<void>;
+  platformDefaultDepositPercent: number | null;
   viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, onSetIsTest, viewerRole }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, onSetIsTest, onSetDepositPercent, platformDefaultDepositPercent, viewerRole }: StatsModalProps) {
   const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
 
   const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
@@ -526,6 +535,35 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
       setRadiusMsg({ msg: err instanceof Error ? err.message : "Failed to update service radius", ok: false });
     } finally {
       setSavingRadius(false);
+    }
+  }
+
+  const [editingDeposit, setEditingDeposit] = useState(false);
+  const [depositValue, setDepositValue] = useState("");
+  const [savingDeposit, setSavingDeposit] = useState(false);
+  const [depositMsg, setDepositMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  async function handleSaveDeposit() {
+    const trimmed = depositValue.trim();
+    const n = trimmed === "" ? null : Number(trimmed);
+    // Floor is the live platform default (falls back to 0 if unknown, e.g.
+    // ADMIN/PRODUCT roles whose GET /admin/settings 403s) — the backend is
+    // authoritative; this is a UI nicety, not the real enforcement.
+    const minDeposit = platformDefaultDepositPercent ?? 0;
+    if (n !== null && (Number.isNaN(n) || n < minDeposit || n > 50)) {
+      setDepositMsg({ msg: `Enter a number between ${minDeposit} and 50, or leave blank for the platform default.`, ok: false });
+      return;
+    }
+    setSavingDeposit(true);
+    setDepositMsg(null);
+    try {
+      await onSetDepositPercent(n);
+      setDepositMsg({ msg: "Deposit percentage updated.", ok: true });
+      setEditingDeposit(false);
+    } catch (err) {
+      setDepositMsg({ msg: err instanceof Error ? err.message : "Failed to update deposit percentage", ok: false });
+    } finally {
+      setSavingDeposit(false);
     }
   }
 
@@ -814,6 +852,63 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                 <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.serviceRadius} km</p>
               )}
             </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Deposit %</p>
+                {!editingDeposit && viewerRole !== "PRODUCT" && (
+                  <button
+                    onClick={() => { setDepositValue(operator.depositPercentOverride != null ? String(Number(operator.depositPercentOverride)) : ""); setDepositMsg(null); setEditingDeposit(true); }}
+                    aria-label="Edit deposit percentage"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 24, height: 24, background: "none", border: "none",
+                      color: "#003DB4", cursor: "pointer",
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
+              </div>
+              {editingDeposit ? (
+                <div>
+                  <input
+                    type="number"
+                    min={platformDefaultDepositPercent ?? 0}
+                    max={50}
+                    value={depositValue}
+                    onChange={(e) => setDepositValue(e.target.value)}
+                    placeholder="Platform default"
+                    style={{ width: "100%", padding: "0.5rem 0.6rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      onClick={() => { setEditingDeposit(false); setDepositMsg(null); }}
+                      style={{ padding: "0.4rem 0.8rem", background: "#fff", color: "#6c7890", border: "1px solid #dde8f8", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveDeposit}
+                      disabled={savingDeposit}
+                      style={{ padding: "0.4rem 0.8rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: savingDeposit ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                    >
+                      {savingDeposit ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>
+                  {operator.depositPercentOverride != null
+                    ? `${Number(operator.depositPercentOverride)}%`
+                    : platformDefaultDepositPercent != null
+                      ? `Using platform default (${platformDefaultDepositPercent}%)`
+                      : "Using platform default"}
+                </p>
+              )}
+              {depositMsg && (
+                <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", fontWeight: 600, color: depositMsg.ok ? "#19a56b" : "#dc2626" }}>{depositMsg.msg}</p>
+              )}
+            </div>
             {[
               { label: "Status",         value: STATUS_STYLES[operator.status]?.label ?? operator.status },
               {
@@ -1058,9 +1153,14 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
 }
 
 export default function OperatorsTab() {
-  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, setIsTest, fetchBanks, saveBankDetails, clearBankDetails, updateOperator, adminCreate } = useOperatorApi();
+  const { operators, loading, error, fetchAll, fetchAllStats, updateStatus, setAvailability, setIsTest, setDepositPercent, fetchBanks, saveBankDetails, clearBankDetails, updateOperator, adminCreate } = useOperatorApi();
   const { deleteOperator } = useAccountDeletionApi();
   const { role: myRole } = useAuthState();
+  const { settings: platformSettings, fetchSettings } = useSettingsApi();
+  // GET /admin/settings is SUPER_ADMIN-only; ADMIN/PRODUCT viewers always 403 here,
+  // so platformSettings stays null for them. Never fall back to a guessed number —
+  // StatsModal shows "Using platform default" with no number in that case.
+  const platformDefaultDepositPercent = platformSettings?.depositPercent ?? null;
   const [statsMap, setStatsMap] = useState<Record<string, OperatorStats>>({});
   const [banks, setBanks] = useState<Array<{ name: string; code: string }>>([]);
   const [filterStatus, setFilterStatus] = useState("");
@@ -1079,7 +1179,10 @@ export default function OperatorsTab() {
       setStatsMap(m);
     });
     fetchBanks().then(setBanks);
-  }, [fetchAll, fetchAllStats, fetchBanks]);
+    // ADMIN/PRODUCT viewers 403 on this SUPER_ADMIN-only endpoint — expected,
+    // not an error worth surfacing. Swallow so it isn't an unhandled rejection.
+    fetchSettings().catch(() => {});
+  }, [fetchAll, fetchAllStats, fetchBanks, fetchSettings]);
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok });
@@ -1382,6 +1485,11 @@ export default function OperatorsTab() {
             const updated = await setIsTest(selectedOp.id, isTest);
             setSelectedOp(updated);
           }}
+          onSetDepositPercent={async (depositPercentOverride) => {
+            const updated = await setDepositPercent(selectedOp.id, depositPercentOverride);
+            setSelectedOp(updated);
+          }}
+          platformDefaultDepositPercent={platformDefaultDepositPercent}
           viewerRole={myRole}
         />
       )}
