@@ -3,6 +3,20 @@
 import { useEffect, useState } from "react";
 import { useSettingsApi } from "../../hooks";
 
+// `undefined` guards against a deploy-skew window where the web build ships
+// before the service's matching field lands, and GET /admin/settings still
+// returns the pre-migration shape.
+function formatPhoneLines(numbers: string[] | undefined): string {
+  return (numbers ?? []).join("\n");
+}
+
+function parsePhoneLines(value: string): string[] {
+  return value
+    .split("\n")
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
 export default function PlatformSettingsTab() {
   const { settings, loading, error, fetchSettings, updateSettings } = useSettingsApi();
   const [serviceFeePercent, setServiceFeePercent] = useState("");
@@ -10,8 +24,9 @@ export default function PlatformSettingsTab() {
   const [dispatchWindowMinutes, setDispatchWindowMinutes] = useState("");
   const [quoteCollectionMinutes, setQuoteCollectionMinutes] = useState("");
   const [dispatchBatchSize, setDispatchBatchSize] = useState("");
-  const [disputeAlertPhoneNumber, setDisputeAlertPhoneNumber] = useState("");
+  const [disputeAlertPhoneNumbers, setDisputeAlertPhoneNumbers] = useState("");
   const [testCustomerPhoneNumbers, setTestCustomerPhoneNumbers] = useState("");
+  const [newRequestAlertPhoneNumbers, setNewRequestAlertPhoneNumbers] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -26,8 +41,9 @@ export default function PlatformSettingsTab() {
       setDispatchWindowMinutes(String(settings.dispatchWindowMinutes));
       setQuoteCollectionMinutes(String(settings.quoteCollectionMinutes));
       setDispatchBatchSize(String(settings.dispatchBatchSize));
-      setDisputeAlertPhoneNumber(settings.disputeAlertPhoneNumber ?? "");
-      setTestCustomerPhoneNumbers(settings.testCustomerPhoneNumbers.join("\n"));
+      setDisputeAlertPhoneNumbers(formatPhoneLines(settings.disputeAlertPhoneNumbers));
+      setTestCustomerPhoneNumbers(formatPhoneLines(settings.testCustomerPhoneNumbers));
+      setNewRequestAlertPhoneNumbers(formatPhoneLines(settings.newRequestAlertPhoneNumbers));
     }
   }, [settings]);
 
@@ -40,11 +56,9 @@ export default function PlatformSettingsTab() {
       dispatchWindowMinutes: Number(dispatchWindowMinutes),
       quoteCollectionMinutes: Number(quoteCollectionMinutes),
       dispatchBatchSize: Number(dispatchBatchSize),
-      disputeAlertPhoneNumber: disputeAlertPhoneNumber || null,
-      testCustomerPhoneNumbers: testCustomerPhoneNumbers
-        .split("\n")
-        .map((n) => n.trim())
-        .filter(Boolean),
+      disputeAlertPhoneNumbers: parsePhoneLines(disputeAlertPhoneNumbers),
+      testCustomerPhoneNumbers: parsePhoneLines(testCustomerPhoneNumbers),
+      newRequestAlertPhoneNumbers: parsePhoneLines(newRequestAlertPhoneNumbers),
     });
     setSaved(true);
   }
@@ -136,17 +150,35 @@ export default function PlatformSettingsTab() {
         </div>
         <div>
           <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
-            Dispute alert number <span style={{ fontWeight: 400, color: "#8892a6" }}>(default: none — alerts disabled)</span>
+            Dispute/exception alert numbers <span style={{ fontWeight: 400, color: "#8892a6" }}>(one per line, max 10 — default: none, alerts disabled)</span>
           </label>
-          <input
-            type="tel"
-            placeholder="e.g. +2348012345678"
-            value={disputeAlertPhoneNumber}
-            onChange={(e) => setDisputeAlertPhoneNumber(e.target.value)}
-            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8 }}
+          <textarea
+            placeholder={"+2348012345678\n+2348023456789"}
+            value={disputeAlertPhoneNumbers}
+            onChange={(e) => setDisputeAlertPhoneNumbers(e.target.value)}
+            rows={3}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }}
           />
           <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
-            WhatsApp number alerted the moment a customer raises a dispute. Leave blank to disable staff alerts.
+            WhatsApp numbers alerted when a customer raises a dispute, a job gets a low rating, or a completed
+            job&apos;s confirmation stalls. The first number is also shown to customers as the support line.
+            Leave blank to disable these alerts.
+          </p>
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "0.95rem", fontWeight: 600, marginBottom: 8 }}>
+            New-request alert numbers <span style={{ fontWeight: 400, color: "#8892a6" }}>(one per line, max 10 — default: none, alerts disabled)</span>
+          </label>
+          <textarea
+            placeholder={"+2348012345678\n+2348023456789"}
+            value={newRequestAlertPhoneNumbers}
+            onChange={(e) => setNewRequestAlertPhoneNumbers(e.target.value)}
+            rows={3}
+            style={{ width: "100%", padding: "0.75rem", border: "1.5px solid #dde8f8", borderRadius: 8, fontFamily: "inherit", resize: "vertical" }}
+          />
+          <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#8892a6" }}>
+            WhatsApp numbers alerted every time a customer&apos;s request becomes dispatch-ready. Separate from
+            the dispute/exception numbers above, since this fires on routine traffic, not just exceptions.
           </p>
         </div>
         <div>
