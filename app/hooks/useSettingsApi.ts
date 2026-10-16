@@ -7,8 +7,9 @@ export interface PlatformSettings {
   dispatchWindowMinutes: number;
   quoteCollectionMinutes: number;
   dispatchBatchSize: number;
-  disputeAlertPhoneNumber: string | null;
+  disputeAlertPhoneNumbers: string[];
   testCustomerPhoneNumbers: string[];
+  newRequestAlertPhoneNumbers: string[];
 }
 
 export function useSettingsApi() {
