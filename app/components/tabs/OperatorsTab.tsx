@@ -455,13 +455,14 @@ interface StatsModalProps {
   onClearBankDetails: () => Promise<void>;
   onUpdateAddress: (address: string, latitude: number, longitude: number) => Promise<void>;
   onUpdateRadius: (serviceRadius: number) => Promise<void>;
+  onUpdatePhone: (phoneNumber: string) => Promise<void>;
   onSetIsTest: (isTest: boolean) => Promise<void>;
   onSetDepositPercent: (depositPercentOverride: number | null) => Promise<void>;
   platformDefaultDepositPercent: number | null;
   viewerRole: string | null;
 }
 
-function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, onSetIsTest, onSetDepositPercent, platformDefaultDepositPercent, viewerRole }: StatsModalProps) {
+function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClearBankDetails, onUpdateAddress, onUpdateRadius, onUpdatePhone, onSetIsTest, onSetDepositPercent, platformDefaultDepositPercent, viewerRole }: StatsModalProps) {
   const [activeTab, setActiveTab] = useState<"details" | "performance" | "payouts">("details");
 
   const hasBankOnFile = Boolean(operator.bankName && operator.accountNumberLast4);
@@ -535,6 +536,27 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
       setRadiusMsg({ msg: err instanceof Error ? err.message : "Failed to update service radius", ok: false });
     } finally {
       setSavingRadius(false);
+    }
+  }
+
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneMsg, setPhoneMsg] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  async function handleSavePhone() {
+    const trimmed = phoneValue.trim();
+    if (!trimmed) return;
+    setSavingPhone(true);
+    setPhoneMsg(null);
+    try {
+      await onUpdatePhone(trimmed);
+      setPhoneMsg({ msg: "Phone number updated.", ok: true });
+      setEditingPhone(false);
+    } catch (err) {
+      setPhoneMsg({ msg: err instanceof Error ? err.message : "Failed to update phone number", ok: false });
+    } finally {
+      setSavingPhone(false);
     }
   }
 
@@ -796,6 +818,58 @@ function StatsModal({ operator, stats, onClose, banks, onSaveBankDetails, onClea
                   );
                 })()}
               </p>
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ margin: "0 0 2px 0", fontSize: "0.76rem", color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.03em" }}>Phone Number</p>
+                {!editingPhone && canEditOnboarding && (
+                  <button
+                    onClick={() => { setPhoneValue(operator.phoneNumber); setPhoneMsg(null); setEditingPhone(true); }}
+                    aria-label="Edit phone number"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: 24, height: 24, background: "none", border: "none",
+                      color: "#003DB4", cursor: "pointer",
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                )}
+              </div>
+              {editingPhone ? (
+                <div>
+                  <input
+                    type="text"
+                    value={phoneValue}
+                    onChange={(e) => setPhoneValue(e.target.value)}
+                    placeholder="+234..."
+                    style={{ width: "100%", padding: "0.4rem 0.5rem", borderRadius: 7, border: "1px solid #dde8f8", boxSizing: "border-box", fontSize: "0.9rem" }}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      onClick={() => { setEditingPhone(false); setPhoneMsg(null); }}
+                      style={{ padding: "0.4rem 0.8rem", background: "#fff", color: "#6c7890", border: "1px solid #dde8f8", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSavePhone}
+                      disabled={savingPhone || !phoneValue.trim()}
+                      style={{
+                        padding: "0.4rem 0.8rem", background: !phoneValue.trim() ? "#c7d2e0" : "#003DB4", color: "#fff",
+                        border: "none", borderRadius: 6, cursor: savingPhone ? "not-allowed" : "pointer", fontWeight: 600, fontSize: "0.85rem",
+                      }}
+                    >
+                      {savingPhone ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                  {phoneMsg && (
+                    <p style={{ margin: "0.5rem 0 0", fontSize: "0.82rem", fontWeight: 600, color: phoneMsg.ok ? "#19a56b" : "#dc2626" }}>{phoneMsg.msg}</p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "0.95rem", color: "#333" }}>{operator.phoneNumber}</p>
+              )}
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1479,6 +1553,10 @@ export default function OperatorsTab() {
           }}
           onUpdateRadius={async (serviceRadius) => {
             const updated = await updateOperator(selectedOp.id, { serviceRadius });
+            setSelectedOp(updated);
+          }}
+          onUpdatePhone={async (phoneNumber) => {
+            const updated = await updateOperator(selectedOp.id, { phoneNumber });
             setSelectedOp(updated);
           }}
           onSetIsTest={async (isTest) => {
