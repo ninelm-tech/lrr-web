@@ -888,6 +888,9 @@ export default function RescueRequestsTab() {
                           )}
                           <p style={{ margin: "2px 0 0 0", fontSize: "0.72rem", fontWeight: 700, color: "#6c7890" }}>
                             {offer.status}
+                            {offer.status === "TIMED_OUT" &&
+                              (offer.deliveryStatus === "undelivered" || offer.deliveryStatus === "failed") &&
+                              " · Not delivered"}
                           </p>
                         </div>
                       </div>

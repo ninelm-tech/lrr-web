@@ -193,6 +193,10 @@ export interface DispatchOfferAdmin {
   motoristFacingTotal?: number;
   offeredAt: string;
   respondedAt?: string;
+  /** Twilio's own status string, verbatim — undefined until a
+   * status-callback has arrived for this offer. */
+  deliveryStatus?: string;
+  deliveryErrorCode?: number;
 }
 
 export interface RequestMediaItem {
