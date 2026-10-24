@@ -173,6 +173,11 @@ export default function DispatchBoardTab() {
               <span style={{ fontSize: "0.82rem", fontWeight: 600, color: isLive ? "#084298" : "#666" }}>
                 {REQUEST_STATUS_LABELS[row.status] ?? row.status}
               </span>
+              {row.needsManualAssignment && (
+                <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: "#fff3cd", color: "#856404", borderRadius: 4, fontSize: "0.82rem", fontWeight: 600, marginLeft: 8 }}>
+                  Needs manual call
+                </span>
+              )}
             </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: isLive ? "0.75rem" : 0 }}>
