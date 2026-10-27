@@ -19,6 +19,7 @@ export interface DispatchBoardRow {
   createdAt: string;
   /** Set once the first quote arrives; absent while still SEARCHING (phase 1). */
   quoteCollectionDeadline: string | null;
+  needsManualAssignment: boolean;
   offers: DispatchBoardOffer[];
 }
 
