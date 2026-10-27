@@ -164,6 +164,20 @@ export default function ProfileSettings() {
     return <div style={{ ...cardStyle, maxWidth: 560 }}><p style={{ margin: 0, color: "#9ca3af", fontSize: "0.9rem" }}>Loading profile…</p></div>;
   }
 
+  // Only a CUSTOMER's phoneNumber is their actual WhatsApp contact — for
+  // every other role it's purely the login/OTP identity and is unrelated
+  // to WhatsApp (an operator's WhatsApp dispatch line is the separate
+  // business phone in OperatorProfileForm, rendered right below this on
+  // the Settings page for that role).
+  const isCustomer = profile?.role === "CUSTOMER";
+  const isOperator = profile?.role === "OPERATOR";
+  const phoneLabel = isCustomer ? "Phone (WhatsApp)" : "Phone (login)";
+  const phoneHelperText = isCustomer
+    ? "Your phone number is how we identify you on WhatsApp — keep it current."
+    : isOperator
+    ? "This is what you log in with — separate from your business phone below, which is what customers and dispatch use on WhatsApp."
+    : "This is what you log in with — it doesn't need to be a WhatsApp number.";
+
   return (
     <div className="lrr-profile-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", alignItems: "start", maxWidth: 1140 }}>
       <style>{`
@@ -178,7 +192,7 @@ export default function ProfileSettings() {
           Personal details
         </h3>
         <p style={{ margin: "0 0 1.25rem", color: "#6c7890", fontSize: "0.85rem" }}>
-          Your phone number is how we identify you on WhatsApp — keep it current.
+          {phoneHelperText}
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
@@ -191,7 +205,7 @@ export default function ProfileSettings() {
             <input id="ps-email" type="email" style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
           <div>
-            <label htmlFor="ps-phone" style={labelStyle}>Phone (WhatsApp)</label>
+            <label htmlFor="ps-phone" style={labelStyle}>{phoneLabel}</label>
             <input
               id="ps-phone"
               style={inputStyle}
