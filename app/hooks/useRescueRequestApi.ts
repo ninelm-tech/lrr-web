@@ -17,6 +17,7 @@ import type {
   RescueRequestDetail,
   RescueRequestListResponse,
   FetchListOptions,
+  ManualCandidate,
 } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -169,6 +170,54 @@ export function useRescueRequestApi() {
     }
   }, [fetchList]);
 
+  // ── Manual dispatch (non-WhatsApp operator) ───────────────────────────────
+
+  /** Live-ranked candidates for a request flagged needsManualAssignment. */
+  const fetchManualCandidates = useCallback(async (id: string): Promise<ManualCandidate[]> => {
+    const res = await apiFetch(`/rescue-requests/${id}/manual-candidates`);
+    return (res?.data ?? []) as ManualCandidate[];
+  }, []);
+
+  /** Staff stand-in for an operator sending ARRIVED — non-WhatsApp operators only. */
+  const markOperatorArrived = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/rescue-requests/${id}/manual-arrived`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      await fetchList();
+      return res;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to mark operator arrived";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchList]);
+
+  /** Staff stand-in for an operator sending DONE — non-WhatsApp operators only. */
+  const markOperatorDone = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/rescue-requests/${id}/manual-done`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      await fetchList();
+      return res;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to mark operator done";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchList]);
+
   const resolveDispute = useCallback(async (id: string, resolutionNote: string, balanceAdjustmentPercent?: number) => {
     setLoading(true);
     setError(null);
@@ -291,6 +340,7 @@ export function useRescueRequestApi() {
     fetchDetail,
     fetchMyRequests,
     fetchAdminOverviewStats,
+    fetchManualCandidates,
     // Offers (operator)
     fetchMyOffers,
     respondToOffer,
@@ -300,5 +350,7 @@ export function useRescueRequestApi() {
     cancelRequest,
     resolveDispute,
     resolveCancellationSettlement,
+    markOperatorArrived,
+    markOperatorDone,
   };
 }

@@ -228,9 +228,10 @@ const TRUCK_CLASS_LABELS: Record<string, string> = {
 interface OnboardOperatorModalProps {
   onClose: () => void;
   onCreate: (data: AdminCreateOperatorPayload) => Promise<void>;
+  platformDefaultDepositPercent: number | null;
 }
 
-function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) {
+function OnboardOperatorModal({ onClose, onCreate, platformDefaultDepositPercent }: OnboardOperatorModalProps) {
   const [contactName, setContactName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -381,7 +382,7 @@ function OnboardOperatorModal({ onClose, onCreate }: OnboardOperatorModalProps) 
 
           <div>
             <label style={fieldLabelStyle}>Deposit % (optional)</label>
-            <input style={inputStyle} type="number" min={0} max={50} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
+            <input style={inputStyle} type="number" min={platformDefaultDepositPercent ?? 0} max={50} value={depositPercentInput} onChange={(e) => setDepositPercentInput(e.target.value)} placeholder="Platform default" />
           </div>
 
           <div>
@@ -1577,6 +1578,7 @@ export default function OperatorsTab() {
         <OnboardOperatorModal
           onClose={() => setShowOnboardModal(false)}
           onCreate={handleOnboardOperator}
+          platformDefaultDepositPercent={platformDefaultDepositPercent}
         />
       )}
     </div>

@@ -75,6 +75,7 @@ export interface RegisterOperatorRequest {
   truckClasses: TruckClass[];
   serviceRadius: number;
   phoneVerificationToken: string; // was optional — see Task 5, now mandatory for every signup
+  whatsappEnabled: boolean;
 }
 
 export interface OperatorResponse {
@@ -125,6 +126,7 @@ export interface AssignedOperator {
   id: string;
   businessName: string;
   phoneNumber?: string;
+  whatsappEnabled: boolean;
 }
 
 export interface PaymentInfo {
@@ -154,6 +156,7 @@ export interface RescueRequestListItem {
   acceptedQuoteAmount?: number;
   customer: Customer;
   assignedOperator?: AssignedOperator;
+  needsManualAssignment: boolean;
   disputed: boolean;
   disputeRaisedAt: string | null;
   disputeResolvedAt: string | null;
@@ -332,4 +335,21 @@ export interface OperatorStats {
   completedToday: number;
   earnings: string;
   status: "ONLINE" | "OFFLINE";
+}
+
+/** A live-ranked candidate for a request flagged needsManualAssignment. */
+export interface ManualCandidate {
+  id: string;
+  businessName: string;
+  phoneNumber: string;
+  distance: number;
+  score: number;
+  stats: {
+    totalOffered: number;
+    totalAccepted: number;
+    totalDeclined: number;
+    totalTimedOut: number;
+    acceptanceRate: number;
+    avgResponseSec: number;
+  };
 }

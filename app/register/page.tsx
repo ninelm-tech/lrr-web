@@ -93,6 +93,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    whatsappEnabled: true,
   });
   const [sameAsPersonalPhone, setSameAsPersonalPhone] = useState(true);
   const [otpRequired, setOtpRequired] = useState(false);
@@ -284,6 +285,7 @@ export default function RegisterPage() {
         truckClasses: formData.truckClasses,
         serviceRadius: Number(formData.serviceRadius),
         phoneVerificationToken: otpToken,
+        whatsappEnabled: formData.whatsappEnabled,
       };
 
       await registerOperator(payload);
@@ -512,6 +514,16 @@ export default function RegisterPage() {
                     ✓ Valid number
                   </p>
                 )}
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.9rem", marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.whatsappEnabled}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, whatsappEnabled: e.target.checked }))
+                    }
+                  />
+                  This business has WhatsApp on this phone number
+                </label>
               </div>
             </div>
 

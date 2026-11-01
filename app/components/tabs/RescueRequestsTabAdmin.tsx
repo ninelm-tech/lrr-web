@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { CheckCircle2, Eye, Flag, Info, MapPin, RefreshCcw, XCircle } from "lucide-react";
 import { useRescueRequestApi, useOperatorApi, useRatingApi } from "../../hooks";
-import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail } from "../../types";
+import type { RescueRequestListItem, RescueRequestStatus, RescueRequestDetail, ManualCandidate } from "../../types";
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   PENDING: { bg: "#fff3cd", text: "#856404" },
@@ -22,7 +22,7 @@ export default function RescueRequestsTab() {
   const {
     requests, loading, error, total, page, limit,
     fetchList, fetchDetail, assignOperator, updateStatus, cancelRequest: cancel, resolveDispute,
-    resolveCancellationSettlement,
+    resolveCancellationSettlement, fetchManualCandidates, markOperatorArrived, markOperatorDone,
   } = useRescueRequestApi();
   const { fetchAll: fetchAllOperators } = useOperatorApi();
   const { resolveFlag: resolveRatingFlag } = useRatingApi();
@@ -32,6 +32,14 @@ export default function RescueRequestsTab() {
   const [selectedDetail, setSelectedDetail] = useState<RescueRequestDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [availableOperators, setAvailableOperators] = useState<AvailableOperator[]>([]);
+  const [manualCandidates, setManualCandidates] = useState<ManualCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  // Tracks a successful "Mark done" locally — status itself stays ARRIVED
+  // server-side until the customer actually CONFIRMs, so this is the only
+  // signal available to hide the button and stop a second click from
+  // re-claiming confirmationDueAt and re-sending the CONFIRM prompt once
+  // StalledConfirmationCheck's own 30-minute alert clears that field.
+  const [manualDoneMarked, setManualDoneMarked] = useState(false);
   const [selectedOperatorId, setSelectedOperatorId] = useState("");
   const [assignPriceNaira, setAssignPriceNaira] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -66,15 +74,24 @@ export default function RescueRequestsTab() {
     setSettlementPercent("");
     setCancellationNote("");
     setCancellationRefundPercent("");
+    setManualCandidates([]);
+    setManualDoneMarked(false);
     if (["DISPATCHING", "WAITING_FOR_DEPOSIT"].includes(req.status)) {
       loadAvailableOperators();
+    }
+    if (req.needsManualAssignment) {
+      setCandidatesLoading(true);
+      fetchManualCandidates(req.id)
+        .then(setManualCandidates)
+        .catch(() => { /* panel just shows no candidates if this fails */ })
+        .finally(() => setCandidatesLoading(false));
     }
     setDetailLoading(true);
     fetchDetail(req.id)
       .then(setSelectedDetail)
       .catch(() => { /* modal still works with list-item data if detail fetch fails */ })
       .finally(() => setDetailLoading(false));
-  }, [loadAvailableOperators, fetchDetail]);
+  }, [loadAvailableOperators, fetchDetail, fetchManualCandidates]);
 
   const handleAssign = async () => {
     const priceNaira = Number(assignPriceNaira);
@@ -99,6 +116,31 @@ export default function RescueRequestsTab() {
       setSelectedRequest(prev => prev ? { ...prev, status: status as RescueRequestStatus } : null);
     } catch (e: unknown) {
       setActionMsg({ text: e instanceof Error ? e.message : "Failed to update status", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  /** Staff stand-in for ARRIVED/DONE over WhatsApp — non-WhatsApp operators only. */
+  const handleManualMarkArrived = async () => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      await markOperatorArrived(selectedRequest.id);
+      setActionMsg({ text: "Marked arrived — customer notified ✓", ok: true });
+      setSelectedRequest(prev => prev ? { ...prev, status: "ARRIVED" as RescueRequestStatus } : null);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to mark arrived", ok: false });
+    } finally { setActionLoading(false); }
+  };
+
+  const handleManualMarkDone = async () => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      const res = await markOperatorDone(selectedRequest.id) as { message?: string };
+      setActionMsg({ text: res?.message ?? "Marked done — awaiting customer confirmation", ok: true });
+      setManualDoneMarked(true);
+    } catch (e: unknown) {
+      setActionMsg({ text: e instanceof Error ? e.message : "Failed to mark done", ok: false });
     } finally { setActionLoading(false); }
   };
 
@@ -557,6 +599,17 @@ export default function RescueRequestsTab() {
                           <Info size={16} />
                         </span>
                       )}
+                      {request.needsManualAssignment && (
+                        <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: "#fff3cd", color: "#856404", borderRadius: 4, fontSize: "0.82rem", fontWeight: 600, marginLeft: 6 }}>
+                          Needs manual call
+                        </span>
+                      )}
+                      {request.assignedOperator?.whatsappEnabled === false &&
+                        request.status === "OPERATOR_ASSIGNED" && (
+                        <span style={{ display: "inline-block", padding: "0.3rem 0.7rem", background: "#d1ecf1", color: "#0c5460", borderRadius: 4, fontSize: "0.82rem", fontWeight: 600, marginLeft: 6 }}>
+                          Call operator — deposit paid, dispatch now
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "0.9rem 1rem", verticalAlign: "middle" }}>
                       <span style={{ display: "block", fontSize: "0.9rem", color: primaryAmount === undefined ? "#aaa" : "#333", fontWeight: 700 }}>
@@ -668,6 +721,14 @@ export default function RescueRequestsTab() {
         const canAssign = ["DISPATCHING", "WAITING_FOR_DEPOSIT", "OPERATOR_ASSIGNED"].includes(selectedRequest.status);
         const canMarkArrived = selectedRequest.status === "OPERATOR_ASSIGNED";
         const canMarkComplete = ["OPERATOR_ASSIGNED", "IN_PROGRESS", "ARRIVED"].includes(selectedRequest.status);
+        // A non-WhatsApp operator's job can't be advanced through the
+        // generic status endpoint (blocked server-side) — staff use the
+        // dedicated manual-arrived/manual-done actions instead, shown in
+        // place of the WhatsApp-path buttons above.
+        const isNonWhatsAppOperator = selectedRequest.assignedOperator?.whatsappEnabled === false;
+        const canManualMarkArrived = isNonWhatsAppOperator
+          && !["ARRIVED", "COMPLETED", "CANCELLED"].includes(selectedRequest.status);
+        const canManualMarkDone = isNonWhatsAppOperator && selectedRequest.status === "ARRIVED" && !manualDoneMarked;
         const colors = STATUS_COLORS[selectedRequest.status] || { bg: "#e2e3e5", text: "#383d41" };
         const settlementPct = settlementPercent.trim() ? Number(settlementPercent) : 100;
         const settlementAmount = selectedDetail?.balanceAmount != null && Number.isFinite(settlementPct)
@@ -899,6 +960,51 @@ export default function RescueRequestsTab() {
                 </div>
               )}
 
+              {/* ── Manual Dispatch Candidates ── */}
+              {selectedRequest.needsManualAssignment && (
+                <div style={{ marginBottom: "1.5rem", padding: "1.25rem", background: "#fff3cd", border: "1px solid #ffe082", borderRadius: 10 }}>
+                  <p style={{ margin: "0 0 0.25rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>
+                    📞 Needs a manual call — no WhatsApp-enabled operator accepted
+                  </p>
+                  <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.82rem", color: "#856404" }}>
+                    Call an operator below to confirm they&apos;ll take the job and agree a price — only then
+                    confirm the assignment, so the customer isn&apos;t sent a payment link before the operator
+                    has actually accepted.
+                  </p>
+                  {candidatesLoading ? (
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#856404" }}>Loading candidates…</p>
+                  ) : manualCandidates.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#856404" }}>No candidates found nearby.</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {manualCandidates.map((candidate) => (
+                        <div key={candidate.id} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "0.6rem 0.8rem", background: "#fff", border: "1px solid #ffe082", borderRadius: 6 }}>
+                          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                            <strong style={{ fontSize: "0.9rem", color: "#333" }}>{candidate.businessName}</strong>
+                            <div style={{ fontSize: "0.78rem", color: "#8892a6" }}>
+                              {candidate.distance.toFixed(1)} km away · {Math.round(candidate.stats.acceptanceRate * 100)}% acceptance
+                            </div>
+                          </div>
+                          <a
+                            href={`tel:${candidate.phoneNumber}`}
+                            style={{ padding: "0.45rem 0.9rem", background: "#28a745", color: "#fff", borderRadius: 6, fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}
+                          >
+                            Call operator
+                          </a>
+                          <button
+                            onClick={() => setSelectedOperatorId(candidate.id)}
+                            disabled={selectedOperatorId === candidate.id}
+                            style={{ padding: "0.45rem 0.9rem", background: selectedOperatorId === candidate.id ? "#ccc" : "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: selectedOperatorId === candidate.id ? "default" : "pointer", fontWeight: 600, fontSize: "0.85rem" }}
+                          >
+                            {selectedOperatorId === candidate.id ? "Selected below ✓" : "Confirm assignment"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ── Manual Assign ── */}
               {canAssign && (
                 <div style={{ marginBottom: "1.5rem", padding: "1.25rem", background: selectedRequest.assignedOperator ? "#f0fff4" : "#fff8e1", border: `1px solid ${selectedRequest.assignedOperator ? "#c8e6c9" : "#ffe082"}`, borderRadius: 10 }}>
@@ -949,17 +1055,36 @@ export default function RescueRequestsTab() {
                 <div style={{ marginBottom: "1.5rem" }}>
                   <p style={{ margin: "0 0 0.75rem 0", fontWeight: 700, color: "#333", fontSize: "0.95rem" }}>Actions</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                    {canMarkArrived && (
-                      <button onClick={() => handleStatusUpdate("ARRIVED")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <CheckCircle2 size={14} /> Mark Arrived
-                      </button>
-                    )}
-                    {canMarkComplete && (
-                      <button onClick={() => handleStatusUpdate("COMPLETED")} disabled={actionLoading}
-                        style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <Flag size={14} /> Mark Complete
-                      </button>
+                    {isNonWhatsAppOperator ? (
+                      <>
+                        {canManualMarkArrived && (
+                          <button onClick={handleManualMarkArrived} disabled={actionLoading}
+                            style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <CheckCircle2 size={14} /> Mark arrived
+                          </button>
+                        )}
+                        {canManualMarkDone && (
+                          <button onClick={handleManualMarkDone} disabled={actionLoading}
+                            style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <Flag size={14} /> Mark done
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {canMarkArrived && (
+                          <button onClick={() => handleStatusUpdate("ARRIVED")} disabled={actionLoading}
+                            style={{ padding: "0.55rem 1.1rem", background: "#28a745", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <CheckCircle2 size={14} /> Mark Arrived
+                          </button>
+                        )}
+                        {canMarkComplete && (
+                          <button onClick={() => handleStatusUpdate("COMPLETED")} disabled={actionLoading}
+                            style={{ padding: "0.55rem 1.1rem", background: "#003DB4", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: "0.88rem", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <Flag size={14} /> Mark Complete
+                          </button>
+                        )}
+                      </>
                     )}
                     {selectedRequest.status === "DISPATCHING" && (
                       <button onClick={() => handleStatusUpdate("IN_PROGRESS")} disabled={actionLoading}
