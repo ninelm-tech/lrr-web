@@ -50,6 +50,7 @@ export interface Operator {
   depositPercentOverride: number | string | null;
   status:        OperatorStatus;
   isAvailable:   boolean;
+  whatsappEnabled: boolean;
   // Routes this operator to test-customer requests only — see
   // OperatorService.findAndRankCandidates. SUPER_ADMIN can set it.
   isTest:        boolean;

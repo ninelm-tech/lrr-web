@@ -16,7 +16,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   DISPATCHING: { bg: "#e2e3e5", text: "#383d41" },
 };
 
-interface AvailableOperator { id: string; businessName: string; phoneNumber: string; }
+interface AvailableOperator { id: string; businessName: string; phoneNumber: string; whatsappEnabled: boolean; }
 
 export default function RescueRequestsTab() {
   const {
@@ -59,6 +59,7 @@ export default function RescueRequestsTab() {
       setAvailableOperators(
         ops.filter(o => o.status === "ACTIVE").map(o => ({
           id: o.id, businessName: o.businessName, phoneNumber: o.phoneNumber,
+          whatsappEnabled: o.whatsappEnabled,
         }))
       );
     } catch { /* silently ignore */ }
@@ -1023,9 +1024,16 @@ export default function RescueRequestsTab() {
                       style={{ flex: "1 1 200px", minWidth: 0, padding: "0.6rem", border: "1px solid #dde8f8", borderRadius: 6, fontSize: "0.9rem" }}
                     >
                       <option value="">— Select operator —</option>
-                      {availableOperators.map(op => (
-                        <option key={op.id} value={op.id}>{op.businessName} ({op.phoneNumber})</option>
-                      ))}
+                      {availableOperators.map(op => {
+                        // The service only accepts a non-WhatsApp operator once
+                        // WhatsApp dispatch has run out and flagged the request.
+                        const blocked = !op.whatsappEnabled && !selectedRequest.needsManualAssignment;
+                        return (
+                          <option key={op.id} value={op.id} disabled={blocked}>
+                            {op.businessName} ({op.phoneNumber}){op.whatsappEnabled ? "" : " · no WhatsApp"}
+                          </option>
+                        );
+                      })}
                     </select>
                     <input
                       type="number"
@@ -1047,6 +1055,11 @@ export default function RescueRequestsTab() {
                   <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "#8892a6" }}>
                     Customer gets a deposit payment link for this price — same fee split as a normal quote.
                   </p>
+                  {!selectedRequest.needsManualAssignment && availableOperators.some(op => !op.whatsappEnabled) && (
+                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#8892a6" }}>
+                      Operators marked “no WhatsApp” can be assigned once WhatsApp dispatch runs out. Use Expand radius on the Dispatch Board to get there sooner.
+                    </p>
+                  )}
                 </div>
               )}
 
