@@ -237,6 +237,7 @@ function OnboardOperatorModal({ onClose, onCreate, platformDefaultDepositPercent
   const [phoneNumber, setPhoneNumber] = useState("");
   const [businessPhoneNumber, setBusinessPhoneNumber] = useState("");
   const [sameAsPersonalPhone, setSameAsPersonalPhone] = useState(true);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [type, setType] = useState("TOW_TRUCK");
@@ -297,6 +298,7 @@ function OnboardOperatorModal({ onClose, onCreate, platformDefaultDepositPercent
         longitude: latLng.lng,
         serviceRadius: Number(serviceRadius) || 10,
         truckClasses,
+        whatsappEnabled,
         ...(depositPercentInput.trim() !== "" && { depositPercentOverride: Number(depositPercentInput) }),
       });
     } catch (err) {
@@ -362,6 +364,15 @@ function OnboardOperatorModal({ onClose, onCreate, platformDefaultDepositPercent
             </label>
             {!sameAsPersonalPhone && (
               <input style={inputStyle} value={businessPhoneNumber} onChange={(e) => setBusinessPhoneNumber(e.target.value)} placeholder="+234..." />
+            )}
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.88rem", color: "#333", marginTop: 8 }}>
+              <input type="checkbox" checked={whatsappEnabled} onChange={(e) => setWhatsappEnabled(e.target.checked)} />
+              This business has WhatsApp on this phone number
+            </label>
+            {!whatsappEnabled && (
+              <p style={{ margin: "4px 0 0 24px", fontSize: "0.78rem", color: "#8892a6" }}>
+                No WhatsApp offers — staff assign their jobs by phone once WhatsApp dispatch runs out.
+              </p>
             )}
           </div>
 
