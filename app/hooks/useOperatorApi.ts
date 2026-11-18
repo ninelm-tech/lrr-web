@@ -109,6 +109,7 @@ export interface AdminCreateOperatorPayload {
   serviceRadius?:       number;
   truckClasses:         string[];
   depositPercentOverride?: number;
+  whatsappEnabled?:     boolean;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
